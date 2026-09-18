@@ -10,8 +10,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -83,10 +81,10 @@ fun HomeScreen(nav: NavHostController) {
                     }
                 }
                 item { ComposeRow(nav) }
-                item { ThoughtCard() }
-                item { RepostCard() }
-                item { QuoteCard() }
-                item { MediaPostCard() }
+                item { ThoughtCard(nav) }
+                item { RepostCard(nav) }
+                item { QuoteCard(nav) }
+                item { MediaPostCard(nav) }
                 item { Text("You're all caught up", color = TextDim, fontSize = 12.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
             } else {
                 item { GroupsChipRow(nav) }
@@ -96,8 +94,8 @@ fun HomeScreen(nav: NavHostController) {
                         color = TextDim, fontSize = 11.sp
                     )
                 }
-                item { GroupFeedCard("Aachen Photo Walk", AvatarOrange, "PK", "Priya Kapoor", "40m", "Golden hour shoot this Sunday — meet at the cathedral steps, 6:30 sharp.") }
-                item { GroupFeedCard("RWTH Board Game Club", AvatarBlue, "JL", "Jonah Lee", "2h", "Anyone up for Catan tonight?", liked = true) }
+                item { GroupFeedCard(nav, "Aachen Photo Walk", AvatarOrange, "PK", "Priya Kapoor", "40m", "Golden hour shoot this Sunday — meet at the cathedral steps, 6:30 sharp.") }
+                item { GroupFeedCard(nav, "RWTH Board Game Club", AvatarBlue, "JL", "Jonah Lee", "2h", "Anyone up for Catan tonight?", liked = true) }
             }
         }
 
@@ -137,7 +135,7 @@ private fun ComposeRow(nav: NavHostController) {
 }
 
 @Composable
-private fun ThoughtCard() {
+private fun ThoughtCard(nav: NavHostController) {
     CircleCard {
         Row {
             Avatar("AO", AvatarOrange, size = 38)
@@ -151,12 +149,14 @@ private fun ThoughtCard() {
                 Text("Finally finished the puzzle we started at Mom's over the summer.", color = TextBody, fontSize = 14.5.sp)
             }
         }
-        Box(Modifier.padding(start = 49.dp)) { PostActionRow() }
+        Box(Modifier.padding(start = 49.dp)) {
+            PostActions(nav, sampleReplies = listOf("Aww, that's so wholesome!"))
+        }
     }
 }
 
 @Composable
-private fun RepostCard() {
+private fun RepostCard(nav: NavHostController) {
     CircleCard {
         Text("↻  You reposted", color = TextMuted, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
         Row(
@@ -176,11 +176,12 @@ private fun RepostCard() {
                 Text("Sea glass hunting turned into a two hour walk. Worth it.", color = TextBody, fontSize = 14.sp)
             }
         }
+        Box(Modifier.padding(start = 43.dp)) { PostActions(nav) }
     }
 }
 
 @Composable
-private fun QuoteCard() {
+private fun QuoteCard(nav: NavHostController) {
     CircleCard {
         Row {
             Avatar("S", AvatarSlate, size = 38)
@@ -204,12 +205,14 @@ private fun QuoteCard() {
                 Text("Some days the good coffee is the whole plan.", color = TextBody, fontSize = 13.sp)
             }
         }
-        Box(Modifier.padding(start = 49.dp)) { PostActionRow(liked = true) }
+        Box(Modifier.padding(start = 49.dp)) {
+            PostActions(nav, initiallyLiked = true)
+        }
     }
 }
 
 @Composable
-private fun MediaPostCard() {
+private fun MediaPostCard(nav: NavHostController) {
     CircleCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Avatar("S", AvatarSlate, size = 32)
@@ -223,7 +226,7 @@ private fun MediaPostCard() {
             modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(11.dp)).background(SurfaceAlt),
             contentAlignment = Alignment.Center
         ) { Icon(Icons.Outlined.Image, contentDescription = null, tint = TextDim) }
-        PostActionRow()
+        PostActions(nav)
     }
 }
 
@@ -242,7 +245,7 @@ private fun GroupChip(initial: String, color: androidx.compose.ui.graphics.Color
 }
 
 @Composable
-private fun GroupFeedCard(groupName: String, groupColor: androidx.compose.ui.graphics.Color, initials: String, name: String, time: String, text: String, liked: Boolean = false) {
+private fun GroupFeedCard(nav: NavHostController, groupName: String, groupColor: androidx.compose.ui.graphics.Color, initials: String, name: String, time: String, text: String, liked: Boolean = false) {
     CircleCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             GroupTile(groupName.first().toString(), groupColor, size = 22)
@@ -262,12 +265,8 @@ private fun GroupFeedCard(groupName: String, groupColor: androidx.compose.ui.gra
             }
         }
         // Group posts: comment + like only, no repost/quote
-        Row(modifier = Modifier.padding(start = 44.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = "Reply", tint = TextMuted, modifier = Modifier.size(16.dp))
-            Icon(
-                Icons.Outlined.FavoriteBorder, contentDescription = "Like",
-                tint = if (liked) AccentDefault else TextMuted, modifier = Modifier.size(16.dp)
-            )
+        Box(Modifier.padding(start = 44.dp)) {
+            PostActions(nav, showRepost = false, initiallyLiked = liked)
         }
     }
 }
