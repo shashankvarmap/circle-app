@@ -23,6 +23,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -70,24 +73,29 @@ fun UnderlineTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
         tabs.forEachIndexed { i, label ->
             val isActive = i == selected
-            Column(
-                modifier = Modifier.width(IntrinsicSize.Min).clickable { onSelect(i) },
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    label,
-                    color = if (isActive) Color(0xFFD8D6D0) else TextMuted,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.5.sp
-                )
-                Spacer(Modifier.height(6.dp))
-                Box(
-                    modifier = Modifier
-                        .height(1.5.dp)
-                        .fillMaxWidth()
-                        .background(if (isActive) AccentDefault else Color.Transparent)
-                )
-            }
+            // Underline is drawn behind the label rather than laid out as a sibling,
+            // so each tab is sized purely by its own text — no fillMaxWidth/intrinsics.
+            Text(
+                label,
+                color = if (isActive) TextPrimary else TextMuted,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.5.sp,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier
+                    .clickable { onSelect(i) }
+                    .drawBehind {
+                        if (isActive) {
+                            val stroke = 1.5.dp.toPx()
+                            drawRect(
+                                AccentDefault,
+                                topLeft = Offset(0f, size.height - stroke),
+                                size = Size(size.width, stroke)
+                            )
+                        }
+                    }
+                    .padding(bottom = 7.5.dp)
+            )
         }
     }
 }

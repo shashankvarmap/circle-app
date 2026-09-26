@@ -104,11 +104,11 @@ fun ProfileScreen(nav: NavHostController) {
                         columns = GridCells.Fixed(3),
                         modifier = Modifier.height(210.dp),
                         userScrollEnabled = false,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         gridItems(List(6) { it }) {
-                            Box(modifier = Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(8.dp)).background(SurfaceAlt))
+                            Box(modifier = Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(12.dp)).background(SurfaceAlt))
                         }
                     }
                 }
