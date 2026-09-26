@@ -150,7 +150,20 @@ private fun ThoughtCard(nav: NavHostController) {
             }
         }
         Box(Modifier.padding(start = 49.dp)) {
-            PostActions(nav, sampleReplies = listOf("Aww, that's so wholesome!"))
+            PostActions(
+                nav,
+                sampleReplies = listOf(
+                    Comment(
+                        "Priya", "Aww, that's so wholesome!",
+                        replies = listOf(
+                            Comment("Amara Osei", "It took us three months 😅"),
+                            Comment("Jonah Lee", "Frame it!")
+                        )
+                    ),
+                    Comment("Jonah Lee", "Which puzzle was it?", replies = listOf(Comment("Amara Osei", "The 2000-piece lighthouse one."))),
+                    Comment("Elena Voss", "Mom must be thrilled.")
+                )
+            )
         }
     }
 }

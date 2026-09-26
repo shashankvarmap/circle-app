@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -69,11 +70,12 @@ fun ProfileScreen(nav: NavHostController) {
                 }
             }
             item {
-                Column(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Surface).padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text("PINNED", color = TextMuted, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                CircleCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.PushPin, contentDescription = null, tint = TextMuted, modifier = Modifier.size(13.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text("PINNED", color = TextMuted, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
                     Text(
                         "Slowly rebuilding the workshop table. Say hi if you're nearby — always up for coffee and bad puns.",
                         color = TextBody, fontSize = 14.5.sp
@@ -114,10 +116,7 @@ fun ProfileScreen(nav: NavHostController) {
                 }
             }
             item {
-                Column(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Surface).border(1.dp, Border, RoundedCornerShape(12.dp)).padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
+                CircleCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.Lock, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))

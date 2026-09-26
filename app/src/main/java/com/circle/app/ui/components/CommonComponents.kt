@@ -14,6 +14,8 @@ import androidx.compose.material.icons.filled.SentimentVeryDissatisfied
 import androidx.compose.material.icons.filled.SentimentVerySatisfied
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -30,7 +32,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -82,6 +88,7 @@ fun UnderlineTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
                 fontSize = 12.5.sp,
                 maxLines = 1,
                 softWrap = false,
+                overflow = TextOverflow.Visible,
                 modifier = Modifier
                     .clickable { onSelect(i) }
                     .drawBehind {
@@ -100,6 +107,53 @@ fun UnderlineTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     }
 }
 
+/** A comment in a post's thread. Only top-level comments carry [replies]; one layer deep. */
+data class Comment(val author: String, val text: String, val replies: List<Comment> = emptyList())
+
+/** Top-level comment, always visible. Its own replies stay collapsed behind a
+ *  "View N replies" link that expands just this comment, in place. */
+@Composable
+private fun ThreadComment(comment: Comment) {
+    var showReplies by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        CommentText(comment)
+        if (comment.replies.isNotEmpty()) {
+            val n = comment.replies.size
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { showReplies = !showReplies }
+            ) {
+                Text(
+                    if (showReplies) "Hide replies" else "View $n ${if (n == 1) "reply" else "replies"}",
+                    color = TextMuted, fontWeight = FontWeight.SemiBold, fontSize = 11.5.sp
+                )
+                Icon(
+                    if (showReplies) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                    contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp)
+                )
+            }
+            if (showReplies) {
+                Column(
+                    modifier = Modifier.padding(start = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) { comment.replies.forEach { CommentText(it) } }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommentText(comment: Comment) {
+    Text(
+        buildAnnotatedString {
+            withStyle(SpanStyle(color = TextPrimary, fontWeight = FontWeight.Bold)) { append(comment.author) }
+            append("  ")
+            append(comment.text)
+        },
+        color = TextBody, fontSize = 12.5.sp
+    )
+}
+
 private enum class Reaction(val icon: ImageVector) {
     LIKE(Icons.Filled.Favorite),
     LAUGH(Icons.Filled.SentimentVerySatisfied),
@@ -116,7 +170,7 @@ fun PostActions(
     nav: NavHostController,
     showRepost: Boolean = true,
     initiallyLiked: Boolean = false,
-    sampleReplies: List<String> = emptyList()
+    sampleReplies: List<Comment> = emptyList()
 ) {
     var reaction by remember { mutableStateOf(if (initiallyLiked) Reaction.LIKE else null) }
     var showReactionPicker by remember { mutableStateOf(false) }
@@ -206,9 +260,7 @@ fun PostActions(
 
         if (commentExpanded) {
             Column(modifier = Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                replies.forEach { reply ->
-                    Text(reply, color = TextBody, fontSize = 12.5.sp)
-                }
+                replies.forEach { comment -> ThreadComment(comment) }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -233,7 +285,7 @@ fun PostActions(
                         "Send", color = AccentDefault, fontWeight = FontWeight.Bold, fontSize = 12.sp,
                         modifier = Modifier.clickable {
                             if (newReply.isNotBlank()) {
-                                replies = replies + newReply.trim()
+                                replies = replies + Comment("You", newReply.trim())
                                 newReply = ""
                             }
                         }
