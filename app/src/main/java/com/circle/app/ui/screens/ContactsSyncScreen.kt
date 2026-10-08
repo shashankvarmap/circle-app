@@ -24,20 +24,15 @@ import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.components.FriendRequestButton
 import com.circle.app.ui.components.PrimaryButton
 import com.circle.app.data.CircleStore
-import com.circle.app.data.FriendStatus
+import com.circle.app.data.Relationship
 import com.circle.app.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private enum class Stage { PROMPT, LOADING, RESULTS }
 
-private data class Contact(val name: String, val initials: String, val color: androidx.compose.ui.graphics.Color)
-
-private val contacts = listOf(
-    Contact("Priya Kapoor", "PK", AvatarSage),
-    Contact("Jonah Lee", "JL", AvatarBlue),
-    Contact("Amara Osei", "AO", AvatarOrange)
-)
+/** Phone contacts who are already on Circle (by person id). */
+private val contactIds = listOf("PK", "JL", "AO")
 
 @Composable
 fun ContactsSyncScreen(nav: NavHostController) {
@@ -102,8 +97,8 @@ fun ContactsSyncScreen(nav: NavHostController) {
                 )
                 Spacer(Modifier.height(14.dp))
 
-                contacts.forEach { c ->
-                    val s = CircleStore.statusOf(c.name)
+                contactIds.mapNotNull { CircleStore.person(it) }.forEach { c ->
+                    val s = CircleStore.relationshipTo(c.id)
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -113,13 +108,14 @@ fun ContactsSyncScreen(nav: NavHostController) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(c.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
                             val subtitle = when (s) {
-                                FriendStatus.NONE -> "In your phone contacts"
-                                FriendStatus.REQUESTED -> "Request sent"
-                                FriendStatus.ACCEPTED -> "Already in your circle"
+                                Relationship.REQUEST_SENT -> "Request sent"
+                                Relationship.REQUEST_RECEIVED -> "Wants to be friends"
+                                Relationship.FRIEND -> "Already in your circle"
+                                else -> "In your phone contacts"
                             }
                             Text(subtitle, color = CircleTheme.colors.muted, fontSize = 11.5.sp)
                         }
-                        FriendRequestButton(c.name, addLabel = "Add")
+                        FriendRequestButton(c.id, addLabel = "Add")
                     }
                 }
 

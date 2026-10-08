@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.circle.app.data.CircleStore
 import com.circle.app.data.Comment
-import com.circle.app.data.FriendStatus
+import com.circle.app.data.Relationship
 import com.circle.app.data.GroupInfo
 import com.circle.app.data.Post
 import com.circle.app.navigation.Routes
@@ -116,10 +116,10 @@ fun UnderlineTabs(tabs: List<String>, selected: Int, spacing: Dp = 22.dp, onSele
 /** One comment in a thread. Top-level comments are always visible; their own replies
  *  stay collapsed behind a "View N replies" link that expands just this comment, in place. */
 @Composable
-fun ThreadComment(comment: Comment) {
+fun ThreadComment(comment: Comment, onPerson: (String) -> Unit = {}) {
     var showReplies by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        CommentRow(comment, avatarSize = 32)
+        CommentRow(comment, avatarSize = 32, onPerson = onPerson)
         if (comment.replies.isNotEmpty()) {
             val n = comment.replies.size
             Row(
@@ -139,19 +139,27 @@ fun ThreadComment(comment: Comment) {
                 Column(
                     modifier = Modifier.padding(start = 42.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) { comment.replies.forEach { CommentRow(it, avatarSize = 26) } }
+                ) { comment.replies.forEach { CommentRow(it, avatarSize = 26, onPerson = onPerson) } }
             }
         }
     }
 }
 
+/** A comment. The commenter may not be your friend: avatar and name open their profile by relationship. */
 @Composable
-private fun CommentRow(comment: Comment, avatarSize: Int) {
+private fun CommentRow(comment: Comment, avatarSize: Int, onPerson: (String) -> Unit) {
     Row {
-        Avatar(comment.initials, comment.color, size = avatarSize)
-        Spacer(Modifier.width(10.dp))
+        Box(
+            Modifier.size(maxOf(avatarSize, 40).dp).clip(CircleShape)
+                .clickable(onClickLabel = "Open ${comment.author}'s profile") { onPerson(comment.authorId) },
+            contentAlignment = Alignment.TopCenter
+        ) { Avatar(comment.initials, comment.color, size = avatarSize) }
+        Spacer(Modifier.width(6.dp))
         Column {
-            Row {
+            Row(
+                Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClickLabel = "Open ${comment.author}'s profile") { onPerson(comment.authorId) },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(comment.author, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 Spacer(Modifier.width(6.dp))
                 Text("· ${comment.time}", color = CircleTheme.colors.muted, fontSize = 11.5.sp)
@@ -307,44 +315,33 @@ fun ReplyComposer(placeholder: String = "Add a reply…", onSend: (String) -> Un
     }
 }
 
-/** Outgoing friend request button: none → Requested → ✓ Friends. Shared by Contacts Sync
- *  and Explore → People; status lives in [CircleStore] so both screens stay in sync. */
+/**
+ * Add friend / Requested (tap to cancel) / Accept / ✓ Friends, by relationship. Requests are
+ * never instant. Shared by Contacts Sync, Explore search and profiles.
+ */
 @Composable
-fun FriendRequestButton(name: String, addLabel: String = "Add friend") {
-    val incoming = CircleStore.hasPendingRequestFrom(name)
-    if (incoming != null) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(999.dp))
-                .background(CircleTheme.colors.accent)
-                .clickable { CircleStore.acceptRequest(incoming.personId) }
+fun FriendRequestButton(personId: String, addLabel: String = "Add friend") {
+    val colors = CircleTheme.colors
+    val shape = RoundedCornerShape(999.dp)
+    when (CircleStore.relationshipTo(personId)) {
+        Relationship.NONE -> Box(
+            Modifier.clip(shape).background(colors.accent).clickable { CircleStore.sendFriendRequest(personId) }
                 .padding(horizontal = 14.dp, vertical = 7.dp)
-        ) { Text("Accept", color = CircleTheme.colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
-        return
-    }
-    when (CircleStore.statusOf(name)) {
-        FriendStatus.NONE -> Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(999.dp))
-                .background(CircleTheme.colors.accent)
-                .clickable { CircleStore.sendFriendRequest(name) }
-                .padding(horizontal = 14.dp, vertical = 7.dp)
-        ) { Text(addLabel, color = CircleTheme.colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
-
-        FriendStatus.REQUESTED -> Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(999.dp))
-                .border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp))
-                .clickable { CircleStore.cancelFriendRequest(name) }
+        ) { Text(addLabel, color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+        Relationship.REQUEST_SENT -> Box(
+            Modifier.clip(shape).border(1.dp, colors.border, shape)
+                .clickable { CircleStore.cancelFriendRequest(personId) }
                 .semantics { contentDescription = "Requested. Tap to cancel the request" }
                 .padding(horizontal = 14.dp, vertical = 7.dp)
-        ) {
-            Text("Requested", color = CircleTheme.colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+        ) { Text("Requested", color = colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
+        Relationship.REQUEST_RECEIVED -> Box(
+            Modifier.clip(shape).background(colors.accent).clickable { CircleStore.acceptRequest(personId) }
+                .padding(horizontal = 14.dp, vertical = 7.dp)
+        ) { Text("Accept", color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+        Relationship.FRIEND -> Box(Modifier.padding(horizontal = 14.dp, vertical = 7.dp)) {
+            Text("✓ Friends", color = colors.accent, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
         }
-
-        FriendStatus.ACCEPTED -> Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)) {
-            Text("✓ Friends", color = CircleTheme.colors.accent, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-        }
+        Relationship.SELF, Relationship.BLOCKED -> Unit
     }
 }
 

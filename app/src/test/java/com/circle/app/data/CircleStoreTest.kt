@@ -2,6 +2,7 @@ package com.circle.app.data
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -15,7 +16,9 @@ class CircleStoreTest {
     // ---- Friend graph ----
 
     @Test
-    fun seedHas128FriendsAnd5InInnerCircle() {
+    fun seedHas128FriendsAnd5InInnerCircleAndElenaIsNotAFriend() {
+        assertFalse(CircleStore.isFriend("EV"))
+        assertEquals(3, CircleStore.person("EV")!!.mutualFriends)
         assertEquals(128, CircleStore.friendCount)
         assertEquals(5, CircleStore.innerCount)
     }
@@ -45,12 +48,97 @@ class CircleStoreTest {
         assertFalse(CircleStore.isFriend("MD"))
     }
 
+    // ---- Relationship (NOT_FRIENDS_YET.md) ----
+
     @Test
-    fun outgoingRequestStaysRequestedUntilCancelled() {
-        CircleStore.sendFriendRequest("Lukas Brandt")
-        assertEquals(FriendStatus.REQUESTED, CircleStore.statusOf("Lukas Brandt"))
-        CircleStore.cancelFriendRequest("Lukas Brandt")
-        assertEquals(FriendStatus.NONE, CircleStore.statusOf("Lukas Brandt"))
+    fun relationshipCoversEveryCase() {
+        assertEquals(Relationship.SELF, CircleStore.relationshipTo(ME))
+        assertEquals(Relationship.FRIEND, CircleStore.relationshipTo("PK"))
+        assertEquals(Relationship.REQUEST_RECEIVED, CircleStore.relationshipTo("RS"))
+        assertEquals(Relationship.NONE, CircleStore.relationshipTo("EV"))
+        CircleStore.block("NK")
+        assertEquals(Relationship.BLOCKED, CircleStore.relationshipTo("NK"))
+    }
+
+    @Test
+    fun sendingARequestMovesNoneToRequestSentAndCancellingReturnsIt() {
+        assertTrue(CircleStore.sendFriendRequest("EV"))
+        assertEquals(Relationship.REQUEST_SENT, CircleStore.relationshipTo("EV"))
+        assertFalse(CircleStore.isFriend("EV")) // never instant
+        assertFalse(CircleStore.sendFriendRequest("EV")) // only once
+        CircleStore.cancelFriendRequest("EV")
+        assertEquals(Relationship.NONE, CircleStore.relationshipTo("EV"))
+    }
+
+    @Test
+    fun acceptanceMakesAFriendAndOpensPreviouslyGatedNotes() {
+        val note = CircleStore.post("elena-forum")!!
+        assertFalse(CircleStore.canOpenPost(note))
+        assertFalse(note in CircleStore.homeFeed)
+        CircleStore.sendFriendRequest("EV")
+        CircleStore.acceptedByThem("EV")
+        assertEquals(Relationship.FRIEND, CircleStore.relationshipTo("EV"))
+        assertTrue(CircleStore.canOpenPost(note))
+        assertTrue(note in CircleStore.homeFeed)
+    }
+
+    @Test
+    fun acceptingAReceivedRequestMakesAFriend() {
+        CircleStore.acceptRequest("MD")
+        assertEquals(Relationship.FRIEND, CircleStore.relationshipTo("MD"))
+    }
+
+    @Test
+    fun blockingRemovesThePersonFromGroupListsChatsAndSearch() {
+        val g = CircleStore.group("photo-walk")
+        val chat = CircleStore.chat("g-photo-walk")!!
+        assertTrue("EV" in CircleStore.visibleMembers(g))
+        assertTrue(CircleStore.visibleMessages(chat).any { it.senderId == "EV" })
+        CircleStore.block("EV")
+        assertFalse("EV" in CircleStore.visibleMembers(g))
+        assertFalse(CircleStore.visibleMessages(chat).any { it.senderId == "EV" })
+        assertFalse(CircleStore.searchPeople("Elena").any { it.id == "EV" })
+        CircleStore.block("LB")
+        assertFalse(CircleStore.visibleJoinRequests(g).any { it.first == "LB" })
+    }
+
+    @Test
+    fun onlyFriendsCanBeMessaged() {
+        assertNull(CircleStore.openDirectChat("EV"))
+        assertEquals("pk", CircleStore.openDirectChat("PK")!!.id)
+        val newChat = CircleStore.openDirectChat("EK")!!
+        assertEquals("EK", newChat.directPersonId)
+    }
+
+    @Test
+    fun innerCircleNotesCantBeSharedToNonInnerFriendsOrNonFriends() {
+        val inner = CircleStore.addPost("for the five of you", Audience.INNER_CIRCLE)!!
+        val toInnerFriend = CircleStore.chat("jl")!!                  // Jonah is in your inner circle
+        val toFriend = CircleStore.openDirectChat("EK")!!              // Elin is a friend, not inner
+        val withNonFriend = CircleStore.chat("g-photo-walk")!!         // Elena is in this chat
+        assertNull(CircleStore.shareBlockReason(inner.id, toInnerFriend))
+        assertNotNull(CircleStore.shareBlockReason(inner.id, toFriend))
+        assertNotNull(CircleStore.shareBlockReason(inner.id, withNonFriend))
+        assertNull(CircleStore.shareNote(toFriend, inner.id))
+    }
+
+    @Test
+    fun groupPostsCantBeSharedOutsideTheirGroup() {
+        assertNotNull(CircleStore.shareBlockReason("group-golden-hour", CircleStore.chat("pk")!!))
+        assertNull(CircleStore.shareBlockReason("group-golden-hour", CircleStore.chat("g-photo-walk")!!))
+    }
+
+    @Test
+    fun aFriendsNoteCanBeShared() {
+        val m = CircleStore.shareNote(CircleStore.chat("ao")!!, "tomas-tomatoes")!!
+        assertEquals(MessageKind.SHARED_NOTE, m.kind)
+    }
+
+    @Test
+    fun friendsOnlyEventsNeedTheHostAsAFriend() {
+        val e = EventInfo("x", "Dinner", "SEP", "1", "SOCIAL", null, "", "", "FRIENDS", "EV", "", capacity = 4, goingBase = 1, joined = false)
+        assertFalse(CircleStore.canSeeEvent(e))
+        assertTrue(CircleStore.canSeeEvent(CircleStore.event("board-game-night"))) // friends of friends
     }
 
     // ---- Inner circle ----

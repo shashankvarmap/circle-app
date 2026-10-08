@@ -110,11 +110,15 @@ fun OrbitScope.OrbitNode(
     fill: Color,
     description: String,
     selected: Boolean = false,
+    /** Draws the accent double ring without marking the node selected (hosts, your own seat). */
+    accentRing: Boolean = false,
     halo: Dp = 0.dp,
     selectedGap: Dp = 2.dp,
     selectedScale: Float = 1f,
     border: NodeBorder? = null,
     reduceMotion: Boolean = false,
+    /** Visual opacity (e.g. 0.6 for empty seats). */
+    alpha: Float = 1f,
     onClick: (() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit
 ) {
@@ -148,10 +152,11 @@ fun OrbitScope.OrbitNode(
         Box(
             modifier = Modifier
                 .size(size)
-                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .graphicsLayer { scaleX = scale; scaleY = scale; this.alpha = alpha }
                 .drawBehind {
-                    val accentOut = if (selected) (selectedGap + ring).toPx() else 0f
-                    val haloOut = if (selected) selectedGap.toPx() else halo.toPx()
+                    val ringed = selected || accentRing
+                    val accentOut = if (ringed) (selectedGap + ring).toPx() else 0f
+                    val haloOut = if (ringed) selectedGap.toPx() else halo.toPx()
                     if (accentOut > 0f) drawNodeShape(shape, colors.accent, accentOut)
                     if (haloOut > 0f) drawNodeShape(shape, colors.background, haloOut)
                 }

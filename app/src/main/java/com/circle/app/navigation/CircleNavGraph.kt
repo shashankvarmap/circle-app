@@ -30,6 +30,8 @@ object Routes {
     const val PEOPLE_LIST = "people/{kind}"
 
     const val CHAT = "chat/{chatId}"
+    const val PERSON = "person/{personId}"
+    fun person(personId: String) = "person/$personId"
     fun chat(chatId: String) = "chat/$chatId"
     fun info(page: String) = "info/$page"
     fun peopleList(kind: String) = "people/$kind"
@@ -77,6 +79,7 @@ fun CircleNavGraph(navController: NavHostController = rememberNavController()) {
         composable(Routes.YOUR_CIRCLE) { YourCircleScreen(navController) }
         composable(Routes.EXPLORE_SEARCH) { ExploreSearchScreen(navController) }
         composable(Routes.SETTINGS) { SettingsScreen(navController) }
+        composable(Routes.PERSON) { entry -> PersonProfileScreen(navController, entry.arguments?.getString("personId").orEmpty()) }
         composable(Routes.CHAT) { entry -> ChatScreen(navController, entry.arguments?.getString("chatId").orEmpty()) }
         composable(Routes.EDIT_PROFILE) { EditProfileScreen(navController) }
         composable(Routes.INFO) { entry -> InfoScreen(navController, entry.arguments?.getString("page").orEmpty()) }
@@ -84,5 +87,17 @@ fun CircleNavGraph(navController: NavHostController = rememberNavController()) {
         composable(Routes.THREAD) { entry ->
             ThreadScreen(navController, entry.arguments?.getString("postId").orEmpty())
         }
+    }
+}
+
+/**
+ * Opens someone's profile, rendered by your relationship to them. Yourself: your Profile tab.
+ * Someone you blocked: nothing (they don't appear anywhere, so there is no profile to open).
+ */
+fun NavHostController.openPerson(personId: String) {
+    when (com.circle.app.data.CircleStore.relationshipTo(personId)) {
+        com.circle.app.data.Relationship.SELF -> navigate(Routes.PROFILE)
+        com.circle.app.data.Relationship.BLOCKED -> Unit
+        else -> if (com.circle.app.data.CircleStore.person(personId) != null) navigate(Routes.person(personId))
     }
 }

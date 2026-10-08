@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.circle.app.data.CircleStore
+import com.circle.app.navigation.openPerson
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.circle.app.ui.components.*
 import com.circle.app.ui.theme.*
 
@@ -33,6 +35,9 @@ import com.circle.app.ui.theme.*
 fun GroupScreen(nav: NavHostController, groupId: String?) {
     val group = CircleStore.group(groupId)
     val isMember = group.isMember
+    var tab by rememberSaveable { mutableStateOf(0) } // 0 Posts, 1 People
+    val screenReader = com.circle.app.ui.a11y.rememberScreenReaderOn()
+    var showMap by rememberSaveable { mutableStateOf(!screenReader) }
 
     Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
         Row(modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -90,6 +95,16 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                 }
             }
             if (isMember) {
+                item {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) { UnderlineTabs(listOf("Posts", "People"), tab) { tab = it } }
+                        if (tab == 1) com.circle.app.ui.orbit.MapListToggle(showMap, { showMap = it })
+                    }
+                }
+            }
+            if (isMember && tab == 1) {
+                item { GroupPeople(group, showMap) { nav.openPerson(it) } }
+            } else if (isMember) {
                 item { ComposeToGroupRow(nav, group.id) }
                 val groupPosts = CircleStore.postsInGroup(group.id)
                 if (groupPosts.isEmpty()) {

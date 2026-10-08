@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.circle.app.data.CircleStore
+import com.circle.app.navigation.openPerson
 import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.components.ReplyComposer
 import com.circle.app.ui.components.ThreadComment
@@ -34,6 +35,8 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
     val event = CircleStore.event(eventId)
     val host = CircleStore.hostOf(event)
     val isJoined = CircleStore.hasSeat(event)
+    val screenReader = com.circle.app.ui.a11y.rememberScreenReaderOn()
+    var showMap by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!screenReader) }
 
     Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
         Row(modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -72,9 +75,21 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
             }
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) { com.circle.app.ui.components.SectionLabel("AT THE TABLE") }
+                    com.circle.app.ui.orbit.MapListToggle(showMap, { showMap = it })
+                }
+            }
+            item { EventTable(event, showMap) { nav.openPerson(it) } }
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clip(RoundedCornerShape(10.dp))
+                        .clickable(onClickLabel = "Open ${host.name}'s profile") { nav.openPerson(host.id) }
+                        .heightIn(min = 48.dp).padding(end = 8.dp)
+                ) {
                     Avatar(host.initials, host.color, size = 28)
                     Spacer(Modifier.width(9.dp))
-                    Text("Hosted by ${host.name}", color = CircleTheme.colors.body, fontSize = 12.5.sp)
+                    Text("Hosted by ${host.name} · ${event.seatsLeft} ${if (event.seatsLeft == 1) "seat" else "seats"} left", color = CircleTheme.colors.body, fontSize = 12.5.sp)
                 }
             }
             item {
@@ -111,7 +126,7 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         val n = event.comments.size
                         com.circle.app.ui.components.SectionLabel(if (n == 0) "THREAD · NO REPLIES YET" else "THREAD · $n ${if (n == 1) "REPLY" else "REPLIES"}")
-                        event.comments.forEach { ThreadComment(it) }
+                        event.comments.forEach { ThreadComment(it) { id -> nav.openPerson(id) } }
                         ReplyComposer { text -> CircleStore.addEventComment(event, text) }
                     }
                 } else {

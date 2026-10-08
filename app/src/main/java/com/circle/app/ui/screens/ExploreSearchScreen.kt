@@ -26,20 +26,14 @@ import androidx.navigation.NavHostController
 import com.circle.app.data.CircleStore
 import com.circle.app.data.EventInfo
 import com.circle.app.data.GroupInfo
+import com.circle.app.data.Person
+import com.circle.app.data.Relationship
+import com.circle.app.navigation.openPerson
 import com.circle.app.navigation.Routes
 import com.circle.app.ui.components.*
 import com.circle.app.ui.theme.*
 
 private enum class SearchTab(val label: String) { PEOPLE("People"), EVENTS("Events"), GROUPS("Groups"), POSTS("Posts") }
-
-private data class SearchPerson(val name: String, val subtitle: String, val initials: String, val color: Color)
-
-// People you could add. Real search results arrive with the friend-graph stage.
-private val searchPeople = listOf(
-    SearchPerson("Lukas Brandt", "2 mutual friends", "LB", AvatarRose),
-    SearchPerson("Marco Diaz", "Friends with Priya Kapoor", "MD", AvatarTeal),
-    SearchPerson("Nora Kim", "1 mutual friend", "NK", AvatarAmber)
-)
 
 private val explorePostCaptions = listOf(
     "Golden hour never disappoints.", "Grateful for days like this.",
@@ -78,9 +72,10 @@ fun ExploreSearchScreen(nav: NavHostController) {
         ) {
             when (tab) {
                 SearchTab.PEOPLE -> {
-                    val people = searchPeople.filter { matches(it.name) }
+                    // Anyone you haven't blocked; with no query, people you might know.
+                    val people = CircleStore.searchPeople(q)
                     if (people.isEmpty()) item { NoResults(q) { query = "" } }
-                    people.forEach { p -> item(key = p.name) { PersonRow(p) } }
+                    people.forEach { p -> item(key = p.id) { PersonRow(p) { nav.openPerson(p.id) } } }
                 }
                 SearchTab.EVENTS -> {
                     val events = CircleStore.events.filter { matches(it.title, it.venue, it.topic) }
@@ -181,15 +176,23 @@ private fun PostsGrid(captions: List<String>) {
 }
 
 @Composable
-private fun PersonRow(p: SearchPerson) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+private fun PersonRow(p: Person, onOpen: () -> Unit) {
+    val rel = CircleStore.relationshipTo(p.id)
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            .clickable(onClickLabel = "Open ${p.name}'s profile", onClick = onOpen).padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Avatar(p.initials, p.color, size = 40)
         Spacer(Modifier.width(11.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(p.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-            Text(p.subtitle, color = CircleTheme.colors.muted, fontSize = 11.5.sp)
+            Text(
+                if (rel == Relationship.FRIEND) "Friend" else if (p.mutualFriends == 1) "1 mutual friend" else "${p.mutualFriends} mutual friends",
+                color = CircleTheme.colors.muted, fontSize = 11.5.sp
+            )
         }
-        FriendRequestButton(p.name)
+        FriendRequestButton(p.id)
     }
 }
 

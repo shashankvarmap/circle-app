@@ -1,0 +1,162 @@
+package com.circle.app.ui.screens
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.circle.app.data.CircleStore
+import com.circle.app.data.GroupInfo
+import com.circle.app.data.Person
+import com.circle.app.ui.a11y.rememberReduceMotion
+import com.circle.app.ui.components.Avatar
+import com.circle.app.ui.components.GroupTile
+import com.circle.app.ui.components.SectionLabel
+import com.circle.app.ui.orbit.*
+import com.circle.app.ui.theme.*
+
+/** What sits in one of the 12 member-ring slots. */
+private sealed interface Slot {
+    data class Member(val p: Person) : Slot
+    data class Request(val p: Person) : Slot
+    data object More : Slot
+}
+
+/**
+ * The People tab of a group: hosts on the inner ring, members on the dashed outer ring, join
+ * requests as dashed accent circles (visible to every member, not just the hosts), and a "+N"
+ * chip. Every person opens their profile, rendered by your relationship to them.
+ */
+@Composable
+fun GroupPeople(group: GroupInfo, showMap: Boolean, onPerson: (String) -> Unit) {
+    val hosts = CircleStore.visibleHosts(group).mapNotNull { CircleStore.person(it) }
+    val members = CircleStore.visibleMembers(group).mapNotNull { CircleStore.person(it) }
+    val requests = CircleStore.visibleJoinRequests(group).mapNotNull { (id, ago) -> CircleStore.person(id)?.let { it to ago } }
+    val hidden = (group.memberCount - hosts.size - members.size).coerceAtLeast(0)
+
+    if (showMap) GroupOrbit(group, hosts, members, requests.map { it.first }, hidden, onPerson)
+    else GroupList(hosts, members, hidden, onPerson)
+    AskedToJoin(requests, onPerson)
+}
+
+@Composable
+private fun GroupOrbit(group: GroupInfo, hosts: List<Person>, members: List<Person>, requests: List<Person>, hidden: Int, onPerson: (String) -> Unit) {
+    val colors = CircleTheme.colors
+    val g = GroupPeopleGeometry
+    val reduceMotion = rememberReduceMotion()
+
+    // Slot order from the brief: five members, a request, three members, a request, a member, the "+N" chip.
+    val slots = buildList<Slot> {
+        val m = members.iterator()
+        val r = requests.iterator()
+        for (i in 0 until g.MEMBER_SLOTS) {
+            when {
+                i == g.MEMBER_SLOTS - 1 && hidden > 0 -> add(Slot.More)
+                (i == 5 || i == 9) && r.hasNext() -> add(Slot.Request(r.next()))
+                m.hasNext() -> add(Slot.Member(m.next()))
+                r.hasNext() -> add(Slot.Request(r.next()))
+            }
+        }
+    }
+    val shownMembers = slots.count { it is Slot.Member }
+    val more = (group.memberCount - hosts.size - shownMembers).coerceAtLeast(0)
+
+    OrbitMap(g.WIDTH, g.HEIGHT) {
+        Canvas(Modifier.fillMaxSize()) {
+            val c = px(Pt(g.CX, g.CY))
+            orbitRing(c, px(g.MEMBER_R), colors.border, dashed = true)
+            orbitRing(c, px(g.HOST_R), colors.border, dashed = false)
+        }
+        Box(Modifier.centeredAt(Pt(g.CX, g.CY), g.CENTER_TILE.dp)) { GroupTile(group.initial, group.color, size = g.CENTER_TILE.toInt()) }
+        OrbitLabel("HOSTS", 8.5f, Modifier.placedAt(g.CX - 40f, g.CY + 28f).width((80 * scale).dp))
+
+        hosts.take(2).forEachIndexed { i, p ->
+            OrbitNode(
+                center = compassPoint(g.CX, g.CY, g.HOST_R, if (i == 0) 0f else 180f),
+                size = 38.dp, shape = NodeShape.Circle, fill = p.color,
+                description = "${p.name}, host", accentRing = true, halo = 2.dp,
+                reduceMotion = reduceMotion, onClick = { onPerson(p.id) }
+            ) { Text(p.initials, color = avatarTextColor(p.color), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+        }
+        slots.forEachIndexed { i, slot ->
+            val pt = compassPoint(g.CX, g.CY, g.MEMBER_R, g.MEMBER_OFFSET_DEG + i * 30f)
+            when (slot) {
+                is Slot.Member -> OrbitNode(
+                    center = pt, size = 36.dp, shape = NodeShape.Circle, fill = slot.p.color,
+                    description = "${slot.p.name}, member", halo = 2.dp, reduceMotion = reduceMotion,
+                    onClick = { onPerson(slot.p.id) }
+                ) { Text(slot.p.initials, color = avatarTextColor(slot.p.color), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                is Slot.Request -> OrbitNode(
+                    center = pt, size = 36.dp, shape = NodeShape.Circle, fill = colors.background,
+                    border = NodeBorder(2.dp, colors.accent, dashed = true),
+                    description = "${slot.p.name}, asked to join", reduceMotion = reduceMotion,
+                    onClick = { onPerson(slot.p.id) }
+                ) { Text(slot.p.initials, color = colors.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                is Slot.More -> OrbitNode(
+                    center = pt, size = 36.dp, shape = NodeShape.Circle, fill = colors.track,
+                    description = "$more more members", reduceMotion = reduceMotion
+                ) { Text("+$more", color = colors.muted, fontSize = 10.5.sp, fontWeight = FontWeight.Bold) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GroupList(hosts: List<Person>, members: List<Person>, hidden: Int, onPerson: (String) -> Unit) {
+    Column {
+        ListHeading("HOSTS")
+        hosts.forEach { PersonListRow(it, "Host", onPerson) }
+        ListHeading("MEMBERS")
+        members.forEach { PersonListRow(it, "Member", onPerson) }
+        if (hidden > 0) {
+            Text("and $hidden more members", color = CircleTheme.colors.muted, fontSize = 12.5.sp, modifier = Modifier.padding(vertical = 8.dp))
+        }
+    }
+}
+
+@Composable
+private fun AskedToJoin(requests: List<Pair<Person, String>>, onPerson: (String) -> Unit) {
+    if (requests.isEmpty()) return
+    Column(Modifier.padding(top = 8.dp)) {
+        ListHeading("ASKED TO JOIN · ${requests.size}")
+        Text(
+            "Dashed circles are join requests. Every member can see them, not just the hosts.",
+            color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp)
+        )
+        requests.forEach { (p, ago) ->
+            val mutual = if (p.mutualFriends == 1) "1 mutual friend" else "${p.mutualFriends} mutual friends"
+            PersonListRow(p, "asked $ago ago · $mutual", onPerson)
+        }
+    }
+}
+
+@Composable
+private fun ListHeading(text: String) {
+    Box(Modifier.padding(top = 14.dp, bottom = 4.dp).semantics { heading() }) { SectionLabel(text) }
+}
+
+/** A person in a list: the whole row (at least 48dp) opens their profile. */
+@Composable
+fun PersonListRow(p: Person, subtitle: String, onPerson: (String) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(RoundedCornerShape(10.dp))
+            .clickable(onClickLabel = "Open ${p.name}'s profile") { onPerson(p.id) }.padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Avatar(p.initials, p.color, size = 36)
+        Spacer(Modifier.width(11.dp))
+        Column {
+            Text(p.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+            Text(subtitle, color = CircleTheme.colors.muted, fontSize = 11.5.sp)
+        }
+    }
+}

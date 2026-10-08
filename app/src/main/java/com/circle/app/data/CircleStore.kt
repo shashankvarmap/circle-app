@@ -28,8 +28,11 @@ object CircleStore {
     val incomingRequests = mutableStateListOf<FriendRequest>()
     val requestStatus = mutableStateMapOf<String, RequestStatus>()
 
-    /** Outgoing requests, keyed by name. Shared by Contacts Sync and Explore → People. */
-    val friendStatus = mutableStateMapOf<String, FriendStatus>()
+    /** People you sent a friend request to (by id). Their answer is theirs to give: never instant. */
+    val outgoingRequestIds = mutableStateListOf<String>()
+
+    /** Reports you filed: (kind, target id). Moderation comes with the backend. */
+    val reports = mutableStateListOf<Pair<String, String>>()
 
     // ---- Content ----
 
@@ -65,14 +68,14 @@ object CircleStore {
     /** Restores the seed data. Also used by unit tests. */
     fun reset() {
         people.clear()
-        (listOf(Seed.me) + Seed.namedFriends + Seed.generatedFriends + Seed.requesters).forEach { people[it.id] = it }
+        (listOf(Seed.me) + Seed.namedFriends + Seed.generatedFriends + Seed.requesters + Seed.others).forEach { people[it.id] = it }
 
         friendIds.clear(); friendIds.addAll((Seed.namedFriends + Seed.generatedFriends).map { it.id })
         innerCircle.clear(); innerCircle.addAll(Seed.initialInnerCircle)
 
         incomingRequests.clear(); incomingRequests.addAll(Seed.incomingRequests)
         requestStatus.clear(); Seed.incomingRequests.forEach { requestStatus[it.personId] = RequestStatus.PENDING }
-        friendStatus.clear()
+        outgoingRequestIds.clear(); reports.clear()
 
         posts.clear(); posts.addAll(Seed.posts())
         likedPostIds.clear(); likedPostIds.addAll(Seed.initialLikes)
@@ -102,7 +105,39 @@ object CircleStore {
     }
 
     /** What you see of a chat: everything except messages you deleted for yourself. */
-    fun visibleMessages(c: Chat): List<ChatMessage> = c.messages.filter { it.id !in hiddenMessageIds }
+    fun visibleMessages(c: Chat): List<ChatMessage> =
+        c.messages.filter { it.id !in hiddenMessageIds && it.senderId !in blockedIds }
+
+    /** Opens (or creates) your 1:1 chat with a friend. Only friends can message each other. */
+    fun openDirectChat(personId: String): Chat? {
+        if (relationshipTo(personId) != Relationship.FRIEND) return null
+        chats.firstOrNull { it.directPersonId == personId }?.let { return it }
+        return Chat("dm-$personId", listOf(personId), messages = emptyList()).also { chats.add(0, it) }
+    }
+
+    /**
+     * Why a note can't be shared into [c], or null when it can:
+     * inner-circle notes only go to your own inner circle (never to non-friends of the author),
+     * and group posts never leave their group.
+     */
+    fun shareBlockReason(postId: String, c: Chat): String? {
+        val p = post(postId)?.let { original(it) } ?: return "This note is no longer available"
+        if (p.groupId != null) return if (c.groupId == p.groupId) null else "Group posts stay in the group"
+        if (p.audience == Audience.INNER_CIRCLE) {
+            if (p.authorId != ME) return "Inner circle notes can't be shared"
+            if (c.memberIds.any { !isInner(it) }) return "Only your inner circle can see this note"
+        }
+        if (!canOpenPost(p)) return "You can only share notes you can see"
+        return null
+    }
+
+    /** Sends a note into a chat as a shared card, if the privacy rules allow it. */
+    fun shareNote(c: Chat, postId: String): ChatMessage? {
+        if (shareBlockReason(postId, c) != null) return null
+        val m = ChatMessage("m-${System.nanoTime()}", ME, "TODAY", "now", MessageKind.SHARED_NOTE, postId = original(post(postId)!!).id)
+        c.messages.add(m)
+        return m
+    }
 
     fun message(c: Chat, id: String): ChatMessage? = c.messages.firstOrNull { it.id == id }
 
@@ -165,6 +200,8 @@ object CircleStore {
         if (id == ME || id in blockedIds) return
         blockedIds.add(id)
         friendIds.remove(id); innerCircle.remove(id); mutedIds.remove(id)
+        outgoingRequestIds.remove(id)
+        if (requestStatus[id] == RequestStatus.PENDING) requestStatus[id] = RequestStatus.DECLINED
     }
 
     fun unblock(id: String) { blockedIds.remove(id) }
@@ -202,9 +239,6 @@ object CircleStore {
 
     fun statusOfRequest(personId: String): RequestStatus? = requestStatus[personId]
 
-    fun hasPendingRequestFrom(name: String): FriendRequest? =
-        incomingRequests.firstOrNull { people[it.personId]?.name == name && requestStatus[it.personId] == RequestStatus.PENDING }
-
     fun acceptRequest(personId: String) {
         if (requestStatus[personId] != RequestStatus.PENDING) return
         requestStatus[personId] = RequestStatus.ACCEPTED
@@ -216,31 +250,82 @@ object CircleStore {
         requestStatus[personId] = RequestStatus.DECLINED
     }
 
-    fun statusOf(name: String): FriendStatus {
-        if (friends.any { it.name == name }) return FriendStatus.ACCEPTED
-        return friendStatus[name] ?: FriendStatus.NONE
+    // ---- Relationship: the one place that decides what you may see of someone ----
+
+    /**
+     * How you relate to [personId]. Profiles, threads, chat members, shared cards and search all
+     * branch on this; nothing else should check friendship directly. (The backend must enforce
+     * the same rule server-side.)
+     */
+    fun relationshipTo(personId: String): Relationship = when {
+        personId == ME -> Relationship.SELF
+        personId in blockedIds -> Relationship.BLOCKED
+        isFriend(personId) -> Relationship.FRIEND
+        requestStatus[personId] == RequestStatus.PENDING -> Relationship.REQUEST_RECEIVED
+        personId in outgoingRequestIds -> Relationship.REQUEST_SENT
+        else -> Relationship.NONE
     }
 
-    /** none → Requested. Acceptance is the other person's decision, so it never happens on its own here. */
-    fun sendFriendRequest(name: String) {
-        if (statusOf(name) == FriendStatus.NONE) friendStatus[name] = FriendStatus.REQUESTED
+    /** Asks to be friends. Never instant: it stays Requested until they answer. */
+    fun sendFriendRequest(personId: String): Boolean {
+        if (relationshipTo(personId) != Relationship.NONE || person(personId) == null) return false
+        outgoingRequestIds.add(personId)
+        return true
     }
 
-    fun cancelFriendRequest(name: String) {
-        if (friendStatus[name] == FriendStatus.REQUESTED) friendStatus.remove(name)
+    fun cancelFriendRequest(personId: String) {
+        outgoingRequestIds.remove(personId)
+    }
+
+    /** They accepted your request. With a backend this arrives as an event; the demo has no trigger for it. */
+    internal fun acceptedByThem(personId: String) {
+        if (outgoingRequestIds.remove(personId) && !isFriend(personId)) friendIds.add(personId)
+    }
+
+    /** Ends a friendship on your side: out of your circle, your count and your mutes. */
+    fun unfriend(personId: String) {
+        friendIds.remove(personId); innerCircle.remove(personId); mutedIds.remove(personId)
+    }
+
+    fun report(kind: String, targetId: String) {
+        reports.add(kind to targetId)
+    }
+
+    /** People search: anyone you haven't blocked. With no query, people you might know (not friends yet). */
+    fun searchPeople(query: String): List<Person> {
+        val q = query.trim()
+        return people.values
+            .filter { it.id != ME && relationshipTo(it.id) != Relationship.BLOCKED }
+            .filter { if (q.isEmpty()) !isFriend(it.id) else it.name.contains(q, ignoreCase = true) }
+            .sortedBy { it.name }
     }
 
     // ---- Posts, likes & threads ----
 
     fun post(id: String): Post? = posts.firstOrNull { it.id == id }
 
-    /** Home -> Friends: everything outside groups, newest first. */
-    val homeFeed: List<Post> get() = posts.filter { it.groupId == null }
+    /** Home -> Friends: your notes and your friends' (not muted), outside groups, newest first. */
+    val homeFeed: List<Post> get() = posts.filter { p ->
+        p.groupId == null && p.authorId !in mutedIds && relationshipTo(p.authorId).let { it == Relationship.SELF || it == Relationship.FRIEND }
+    }
 
     /** Home -> Groups: posts from groups you are a member of. */
-    val groupFeed: List<Post> get() = posts.filter { p -> p.groupId?.let { groupOrNull(it)?.isMember } == true }
+    val groupFeed: List<Post> get() = posts.filter { p ->
+        p.groupId?.let { groupOrNull(it)?.isMember } == true && p.authorId !in blockedIds
+    }
 
-    fun postsInGroup(groupId: String): List<Post> = posts.filter { it.groupId == groupId }
+    fun postsInGroup(groupId: String): List<Post> = posts.filter { it.groupId == groupId && it.authorId !in blockedIds }
+
+    /** A friend's thread is open to you; anyone else's stays closed until they accept (group posts: members only). */
+    fun canOpenPost(p: Post): Boolean = when {
+        p.groupId != null -> groupOrNull(p.groupId)?.isMember == true && p.authorId !in blockedIds
+        else -> relationshipTo(p.authorId).let { it == Relationship.SELF || it == Relationship.FRIEND }
+    }
+
+    /** People shown in a group, without anyone you blocked. */
+    fun visibleHosts(g: GroupInfo) = g.hostIds.filter { it !in blockedIds }
+    fun visibleMembers(g: GroupInfo) = g.memberIds.filter { it !in blockedIds }
+    fun visibleJoinRequests(g: GroupInfo) = g.joinRequests.filter { it.first !in blockedIds }
 
     /** Your notes, reposts and quotes (not group posts), newest first. */
     val myPosts: List<Post> get() = posts.filter { it.authorId == ME && it.groupId == null }
@@ -348,6 +433,10 @@ object CircleStore {
     fun event(id: String?): EventInfo = events.firstOrNull { it.id == id } ?: events.first()
 
     fun hostOf(e: EventInfo): Person = people[e.hostId] ?: me
+
+    /** Friends-only events are for the host's friends; friends-of-friends and open-nearby events are visible to you. */
+    fun canSeeEvent(e: EventInfo): Boolean =
+        e.visibility != "FRIENDS" || relationshipTo(e.hostId).let { it == Relationship.SELF || it == Relationship.FRIEND }
 
     /** You have a seat: you took one, or you're the host. */
     fun hasSeat(e: EventInfo) = e.joined || e.hostId == ME

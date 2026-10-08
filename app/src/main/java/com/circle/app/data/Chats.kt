@@ -52,6 +52,8 @@ internal object ChatSeed {
             "pk", listOf("PK"), unread = true, messages = listOf(
                 ChatMessage("pk1", "PK", "YESTERDAY", "21:40", text = "Did you see? Amara finally finished the puzzle."),
                 ChatMessage("pk2", "PK", "YESTERDAY", "21:40", MessageKind.SHARED_NOTE, postId = "amara-puzzle"),
+                ChatMessage("pk2b", "PK", "YESTERDAY", "21:43", text = "And my friend Elena's museum tip. You two would get on."),
+                ChatMessage("pk2c", "PK", "YESTERDAY", "21:43", MessageKind.SHARED_NOTE, postId = "elena-forum"),
                 ChatMessage("pk3", ME, "YESTERDAY", "21:55", text = "Three months! Mom must be thrilled.", seenAt = "21:58"),
                 ChatMessage("pk4", "PK", "TODAY", "09:05", MessageKind.EVENT_INVITE, eventId = "board-game-night"),
                 ChatMessage("pk5", "PK", "TODAY", "09:06", text = "Friday? Bring the good snacks."),
@@ -78,9 +80,10 @@ internal object ChatSeed {
             )
         ),
         Chat(
-            "g-photo-walk", listOf("PK", "TN", "AO"), groupId = "photo-walk", unread = true, messages = listOf(
+            "g-photo-walk", listOf("PK", "TN", "AO", "EV"), groupId = "photo-walk", unread = true, messages = listOf(
                 ChatMessage("pw1", "PK", "TODAY", "10:10", text = "Meet at the cathedral steps, 6:30"),
                 ChatMessage("pw2", "PK", "TODAY", "10:10", text = "Golden hour is short this week"),
+                ChatMessage("pw2b", "EV", "TODAY", "10:18", text = "Could someone lend me a 50mm for Sunday? Mine is at the repair shop."),
                 ChatMessage("pw3", "TN", "TODAY", "10:24", text = "I'll bring a tripod to share"),
             )
         ),

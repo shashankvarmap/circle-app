@@ -68,6 +68,9 @@ import com.circle.app.navigation.Routes
 import com.circle.app.ui.a11y.rememberReduceMotion
 import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.components.GroupTile
+import com.circle.app.ui.components.NotFriendsSheet
+import com.circle.app.navigation.openPerson
+import androidx.compose.material.icons.outlined.Lock
 import com.circle.app.ui.theme.*
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -121,6 +124,7 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
     val listState = rememberLazyListState()
     var draft by rememberSaveable { mutableStateOf("") }
     var replyToId by rememberSaveable { mutableStateOf<String?>(null) }
+    var gate by remember { mutableStateOf<Gate?>(null) }
 
     val messages = CircleStore.visibleMessages(chat)
     val rows = entries(messages).asReversed() // reverse layout: index 0 is the newest
@@ -141,6 +145,13 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
         object : ViewConfiguration by baseConfig {
             override val longPressTimeoutMillis: Long get() = 400L
         }
+    }
+
+    gate?.let { g ->
+        NotFriendsSheet(
+            personId = g.personId, title = g.title, message = g.message, requestLabel = g.requestLabel,
+            onViewProfile = { nav.openPerson(g.personId) }, onDismiss = { gate = null }
+        )
     }
 
     Column(Modifier.fillMaxSize().background(colors.background)) {
@@ -165,6 +176,8 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
                                 firstOfRun = entry.firstOfRun,
                                 lastOfRun = entry.lastOfRun,
                                 senderLabel = if (isGroupLike && m.senderId != ME && entry.firstOfRun) senderName(m.senderId) else null,
+                                leadingPersonId = if (isGroupLike && m.senderId != ME) m.senderId else null,
+                                onPerson = { nav.openPerson(it) },
                                 quoted = quoted?.takeIf { it.id !in CircleStore.hiddenMessageIds },
                                 quotedName = quoted?.let { senderName(it.senderId) },
                                 onReply = { replyToId = m.id },
@@ -182,8 +195,27 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
                                 }) else null,
                                 onOpen = when (m.kind) {
                                     MessageKind.TEXT -> null
-                                    MessageKind.SHARED_NOTE -> m.postId?.let { id -> { nav.navigate(Routes.thread(id)) } }
-                                    MessageKind.EVENT_INVITE -> m.eventId?.let { id -> { nav.navigate(Routes.eventDetail(id)) } }
+                                    MessageKind.SHARED_NOTE -> m.postId?.let { CircleStore.post(it) }?.let { p ->
+                                        {
+                                            if (CircleStore.canOpenPost(p)) nav.navigate(Routes.thread(p.id))
+                                            else gate = Gate(
+                                                p.authorId,
+                                                "You're not friends with ${CircleStore.person(p.authorId)?.firstName ?: "them"} yet",
+                                                "Send a friend request to open this thread. You can still see who posted it."
+                                            )
+                                        }
+                                    }
+                                    MessageKind.EVENT_INVITE -> m.eventId?.let { id -> CircleStore.events.firstOrNull { it.id == id } }?.let { e ->
+                                        {
+                                            if (CircleStore.canSeeEvent(e)) nav.navigate(Routes.eventDetail(e.id))
+                                            else gate = Gate(
+                                                e.hostId,
+                                                "This event is for the host's friends",
+                                                "Send ${CircleStore.hostOf(e).firstName} a friend request to see it. You can still see who's hosting.",
+                                                requestLabel = "Send friend request to the host"
+                                            )
+                                        }
+                                    }
                                 }
                             )
                         }
@@ -199,7 +231,9 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
 
 private fun copyText(m: ChatMessage): String = when (m.kind) {
     MessageKind.TEXT -> m.text
-    MessageKind.SHARED_NOTE -> m.postId?.let { CircleStore.post(it) }?.let { "${it.author}: ${it.text}" } ?: "Shared a note"
+    MessageKind.SHARED_NOTE -> m.postId?.let { CircleStore.post(it) }?.let {
+        "${it.author}: " + if (CircleStore.canOpenPost(it)) it.text else sharedSnippet(it.text)
+    } ?: "Shared a note"
     MessageKind.EVENT_INVITE -> m.eventId?.let { id -> CircleStore.events.firstOrNull { it.id == id } }
         ?.let { "${it.title}, ${it.whenLabel}, ${it.venue}" } ?: "Event invite"
 }
@@ -267,6 +301,8 @@ private fun MessageRow(
     firstOfRun: Boolean,
     lastOfRun: Boolean,
     senderLabel: String?,
+    leadingPersonId: String?,
+    onPerson: (String) -> Unit,
     quoted: ChatMessage?,
     quotedName: String?,
     onReply: () -> Unit,
@@ -298,9 +334,28 @@ private fun MessageRow(
         horizontalAlignment = if (mine) Alignment.End else Alignment.Start
     ) {
         if (senderLabel != null) {
-            Text(senderLabel, color = colors.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 12.dp, bottom = 3.dp))
+            Text(
+                senderLabel, color = colors.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = if (leadingPersonId != null) 38.dp else 12.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .then(if (leadingPersonId != null) Modifier.clickable(onClickLabel = "Open profile") { onPerson(leadingPersonId) } else Modifier)
+                    .padding(horizontal = 2.dp, vertical = 3.dp)
+            )
         }
-        Box(Modifier.fillMaxWidth(), contentAlignment = if (mine) Alignment.CenterEnd else Alignment.CenterStart) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        // Group-like chats: the first message of a run shows the sender's avatar (opens their profile).
+        if (leadingPersonId != null) {
+            val p = CircleStore.person(leadingPersonId)
+            Box(Modifier.width(34.dp), contentAlignment = Alignment.TopStart) {
+                if (firstOfRun && p != null) {
+                    Box(
+                        Modifier.size(34.dp).clip(CircleShape).clickable(onClickLabel = "Open ${p.firstName}'s profile") { onPerson(p.id) },
+                        contentAlignment = Alignment.CenterStart
+                    ) { Avatar(p.initials, p.color, size = 26) }
+                }
+            }
+        }
+        Box(Modifier.weight(1f), contentAlignment = if (mine) Alignment.CenterEnd else Alignment.CenterStart) {
             // Reply icon revealed behind the message as it is dragged.
             val progress = (offset.value / triggerPx).coerceIn(0f, 1f)
             Box(
@@ -359,7 +414,7 @@ private fun MessageRow(
             ) {
                 when (m.kind) {
                     MessageKind.TEXT -> Bubble(m, mine, lastOfRun, quoted, quotedName)
-                    MessageKind.SHARED_NOTE -> SharedNoteCard(m.postId?.let { CircleStore.post(it) })
+                    MessageKind.SHARED_NOTE -> SharedNoteCard(m.postId?.let { CircleStore.post(it) }, onPerson)
                     MessageKind.EVENT_INVITE -> EventInviteCard(m.eventId?.let { id -> CircleStore.events.firstOrNull { it.id == id } })
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
@@ -380,13 +435,17 @@ private fun MessageRow(
                 }
             }
         }
+        }
         if (lastOfRun) {
             val status = when {
                 !mine -> m.time
                 m.seenAt != null -> "Seen ${m.seenAt}"
                 else -> "${m.time} · Sent"
             }
-            Text(status, color = colors.muted, fontSize = 10.5.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp))
+            Text(
+                status, color = colors.muted, fontSize = 10.5.sp,
+                modifier = Modifier.padding(start = if (leadingPersonId != null) 40.dp else 6.dp, end = 6.dp, top = 3.dp, bottom = 3.dp)
+            )
         }
     }
 }
@@ -426,10 +485,19 @@ private fun Bubble(m: ChatMessage, mine: Boolean, lastOfRun: Boolean, quoted: Ch
     }
 }
 
-/** A post shared into the chat. Tap opens its thread (Back returns here). */
+/** About 90 characters of a note, for people who can't open it. */
+private fun sharedSnippet(text: String): String =
+    if (text.length <= 90) text else text.take(90).trimEnd().trimEnd(',', '.', ';') + "\u2026"
+
+/**
+ * A post shared into the chat. If you can see its author's notes, tapping opens the thread.
+ * If not, it shows who posted it and a ~90 character snippet only (photos blurred), with
+ * "Not friends yet"; the tap opens the not-friends sheet instead. The author's name opens their profile.
+ */
 @Composable
-private fun SharedNoteCard(post: Post?) {
+private fun SharedNoteCard(post: Post?, onPerson: (String) -> Unit) {
     val colors = CircleTheme.colors
+    val open = post != null && CircleStore.canOpenPost(post)
     Column(
         Modifier.widthIn(max = BubbleMaxWidth).fillMaxWidth(0.82f)
             .clip(RoundedCornerShape(16.dp)).background(colors.surface)
@@ -443,13 +511,37 @@ private fun SharedNoteCard(post: Post?) {
             Text("This note is no longer available.", color = colors.muted, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
             return@Column
         }
-        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.padding(top = 4.dp).clip(RoundedCornerShape(8.dp))
+                .clickable(onClickLabel = "Open ${post.author}'s profile") { onPerson(post.authorId) }
+                .heightIn(min = 36.dp).padding(end = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Avatar(post.initials, post.color, size = 22)
             Spacer(Modifier.width(7.dp))
             Text(post.author, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
         }
-        Text(post.text, color = colors.body, fontSize = 13.5.sp, lineHeight = 19.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
-        Text("Open the thread", color = colors.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+        Text(
+            if (open) post.text else sharedSnippet(post.text),
+            color = colors.body, fontSize = 13.5.sp, lineHeight = 19.sp, maxLines = 3, overflow = TextOverflow.Ellipsis
+        )
+        if (post.hasMedia) {
+            // Never reveal photos to people who can't open the note: a blurred-looking placeholder.
+            Box(
+                Modifier.padding(top = 8.dp).fillMaxWidth().height(70.dp).clip(RoundedCornerShape(10.dp))
+                    .background(if (open) colors.track else colors.track.copy(alpha = 0.6f)),
+                contentAlignment = Alignment.Center
+            ) { if (!open) Icon(Icons.Outlined.Lock, contentDescription = "Photo hidden", tint = colors.muted, modifier = Modifier.size(16.dp)) }
+        }
+        if (open) {
+            Text("Open the thread", color = colors.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+        } else {
+            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(12.dp))
+                Spacer(Modifier.width(5.dp))
+                Text("Not friends yet", color = colors.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
     }
 }
 
@@ -537,3 +629,6 @@ private fun Composer(text: String, onChange: (String) -> Unit, onSend: () -> Uni
         }
     }
 }
+
+/** What the not-friends sheet should say. */
+private data class Gate(val personId: String, val title: String, val message: String, val requestLabel: String = "Send friend request")

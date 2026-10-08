@@ -25,6 +25,7 @@ import androidx.navigation.NavHostController
 import com.circle.app.data.CircleStore
 import com.circle.app.data.Post
 import com.circle.app.navigation.Routes
+import com.circle.app.navigation.openPerson
 import com.circle.app.ui.components.*
 import com.circle.app.ui.theme.*
 
@@ -50,6 +51,18 @@ fun ThreadScreen(nav: NavHostController, postId: String) {
             return@Column
         }
 
+        // A note from someone you aren't friends with stays closed, wherever the link came from.
+        if (!CircleStore.canOpenPost(post)) {
+            Column(Modifier.weight(1f).fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                LockedNotFriendsPanel()
+                Text(
+                    "View ${post.author}'s profile", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                    modifier = Modifier.padding(top = 12.dp).clickable { nav.openPerson(post.authorId) }.padding(12.dp)
+                )
+            }
+            return@Column
+        }
+
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -61,7 +74,7 @@ fun ThreadScreen(nav: NavHostController, postId: String) {
                 val n = post.comments.size
                 SectionLabel(if (n == 0) "NO REPLIES YET" else "$n ${if (n == 1) "REPLY" else "REPLIES"}")
             }
-            items(post.comments) { comment -> ThreadComment(comment) }
+            items(post.comments) { comment -> ThreadComment(comment) { nav.openPerson(it) } }
         }
 
         // New replies land as top-level comments at the end of this thread's list.

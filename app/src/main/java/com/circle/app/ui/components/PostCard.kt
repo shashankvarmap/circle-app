@@ -24,6 +24,7 @@ import com.circle.app.data.CircleStore
 import com.circle.app.data.ME
 import com.circle.app.data.Post
 import com.circle.app.navigation.Routes
+import com.circle.app.navigation.openPerson
 import com.circle.app.ui.theme.*
 
 private const val AVATAR = 34
@@ -70,10 +71,16 @@ fun FeedCard(nav: NavHostController, post: Post) {
 @Composable
 private fun NoteBody(nav: NavHostController, post: Post, embedQuote: Boolean) {
     Row {
-        Avatar(post.initials, post.color, size = AVATAR)
+        Box(
+            Modifier.clip(androidx.compose.foundation.shape.CircleShape)
+                .clickable(onClickLabel = "Open ${post.author}'s profile") { nav.openPerson(post.authorId) }
+        ) { Avatar(post.initials, post.color, size = AVATAR) }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            NoteHeader(post)
+            Box(
+                Modifier.clip(RoundedCornerShape(6.dp))
+                    .clickable(onClickLabel = "Open ${post.author}'s profile") { nav.openPerson(post.authorId) }
+            ) { NoteHeader(post) }
             if (post.text.isNotEmpty()) {
                 Text(post.text, color = CircleTheme.colors.body, style = CircleTheme.postText, modifier = Modifier.padding(top = 2.dp))
             }

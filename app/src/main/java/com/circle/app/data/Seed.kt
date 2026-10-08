@@ -7,8 +7,10 @@ import com.circle.app.ui.theme.*
  *
  * Deviations from the prototype, so the friend graph is consistent:
  * - Riya Sharma and Marco Diaz are pending friend requests (brief §4), so they are NOT friends
- *   yet. Their two places among the 12 people shown in Your circle go to Elena Voss (inner,
- *   already a commenter in the seed threads) and Ines Moreau (outer).
+ *   yet. Their two places among the 12 people shown in Your circle go to Mira Lange (inner)
+ *   and Ines Moreau (outer).
+ * - Elena Voss is not a friend (NOT_FRIENDS_YET.md §6): 3 mutual friends, a note Priya shares
+ *   in your chat, a message in the Aachen Photo Walk chat, and a comment on Amara's note.
  * - "128 friends" is real: 12 named friends plus 116 generated ones, so the count is derived.
  */
 internal object Seed {
@@ -16,26 +18,33 @@ internal object Seed {
 
     /** The 12 friends the prototype shows in Your circle, in its order. */
     val namedFriends = listOf(
-        Person("AO", "Amara Osei", AvatarOrange, 2023),
-        Person("PK", "Priya Kapoor", AvatarSage, 2023),
-        Person("JL", "Jonah Lee", AvatarBlue, 2023),
-        Person("TN", "Tomas Novak", AvatarSlate, 2024),
-        Person("EV", "Elena Voss", AvatarRose, 2024),
-        Person("EK", "Elin Kaur", AvatarSlate, 2024),
-        Person("IM", "Ines Moreau", AvatarTeal, 2024),
-        Person("SY", "Sana Yildiz", AvatarAmber, 2025),
-        Person("NB", "Nils Baum", AvatarSage, 2025),
-        Person("LF", "Lena Fuchs", AvatarBlue, 2025),
-        Person("OH", "Omar Haddad", AvatarOrange, 2025),
-        Person("CZ", "Clara Zeller", AvatarRose, 2026),
+        Person("AO", "Amara Osei", AvatarOrange, 2023, "Puzzles, long walks and too much tea.", 14),
+        Person("PK", "Priya Kapoor", AvatarSage, 2023, "Photographs the cathedral at every hour. Board games on Fridays.", 21),
+        Person("JL", "Jonah Lee", AvatarBlue, 2023, "Good coffee is the whole plan.", 17),
+        Person("TN", "Tomas Novak", AvatarSlate, 2024, "Gardening badly, photographing well.", 9),
+        Person("ML", "Mira Lange", AvatarRose, 2024, "Ceramics on Tuesdays, rowing on Sundays.", 11),
+        Person("EK", "Elin Kaur", AvatarSlate, 2024, "Reading my way through the library, A to Z.", 6),
+        Person("IM", "Ines Moreau", AvatarTeal, 2024, "Bread, bikes, and bad puns.", 5),
+        Person("SY", "Sana Yildiz", AvatarAmber, 2025, "New in Aachen. Say hi.", 4),
+        Person("NB", "Nils Baum", AvatarSage, 2025, "Trail runner, brunch enthusiast.", 7),
+        Person("LF", "Lena Fuchs", AvatarBlue, 2025, "Choir, cello, coffee.", 3),
+        Person("OH", "Omar Haddad", AvatarOrange, 2025, "Fixing bikes for friends since 2019.", 8),
+        Person("CZ", "Clara Zeller", AvatarRose, 2026, "Learning to cook one recipe a week.", 2),
     )
 
-    val initialInnerCircle = listOf("AO", "PK", "JL", "TN", "EV")
+    val initialInnerCircle = listOf("AO", "PK", "JL", "TN", "ML")
 
     /** People who sent you a friend request. */
     val requesters = listOf(
-        Person("RS", "Riya Sharma", AvatarRose, 2026),
-        Person("MD", "Marco Diaz", AvatarTeal, 2026),
+        Person("RS", "Riya Sharma", AvatarRose, 2026, "Sourdough, finally. Telling everyone.", 3),
+        Person("MD", "Marco Diaz", AvatarTeal, 2026, "Weekend hikes and weeknight pasta.", 1),
+    )
+
+    /** People who aren't your friends and haven't asked: you can find them and ask. */
+    val others = listOf(
+        Person("EV", "Elena Voss", AvatarRose, 0, "Museums on rainy days, the Lousberg on sunny ones.", 3),
+        Person("LB", "Lukas Brandt", AvatarRose, 0, "Architecture student. Always sketching.", 2),
+        Person("NK", "Nora Kim", AvatarAmber, 0, "Cyclist. Will talk about bread.", 1),
     )
     val incomingRequests = listOf(
         FriendRequest("RS", "3 mutual friends"),
@@ -62,7 +71,8 @@ internal object Seed {
             id = "f%03d".format(i),
             name = "$first $last",
             color = avatarCycle[(i * 3) % avatarCycle.size],
-            sinceYear = 2019 + (i % 8)
+            sinceYear = 2019 + (i % 8),
+            mutualFriends = 1 + (i % 9)
         )
     }
 
@@ -99,6 +109,11 @@ internal object Seed {
             comments = listOf(Comment("Amara Osei", "AO", AvatarOrange, "4h", "Save me a green one!"))
         ),
         Post("jonah-coffee", "JL", "Jonah Lee", "JL", AvatarBlue, "yesterday", "Some days the good coffee is the whole plan."),
+        // Elena isn't your friend: her note only reaches you when a friend shares it (as Priya does in chat).
+        Post(
+            "elena-forum", "EV", "Elena Voss", "EV", AvatarRose, "3h",
+            "Spent the whole afternoon at the Ludwig Forum. The new light installation upstairs is worth the trip on its own. Go early, before the school groups arrive."
+        ),
         Post("tomas-tomatoes", "TN", "Tomas Novak", "TN", AvatarSlate, "yesterday", "Officially declared the tomatoes a lost cause. Onward to garlic."),
         Post("you-plants", ME, "You", ME, AvatarSlate, "1d", "Repotted every plant on the balcony before the first frost. Overdue by a month."),
         Post("you-laptop", ME, "You", ME, AvatarSlate, "3d", "Finally cleared the laptop repair backlog sitting around since spring. Small victories."),
@@ -124,7 +139,11 @@ internal object Seed {
             "photo-walk", "Aachen Photo Walk", "Photography", "PHOTOGRAPHY",
             "Weekend photo walks around Aachen — the cathedral, the Elisenbrunnen, wherever the light looks good. All levels welcome.",
             AvatarOrange, isPublic = true, compassDeg = 322f, memberCount = 128, isMember = true
-        ),
+        ).apply {
+            hostIds.addAll(listOf("PK", "JL"))
+            memberIds.addAll(listOf("AO", "TN", "RS", "EK", "MD", "SY", "NB", "EV", "OH"))
+            joinRequests.addAll(listOf("LB" to "2h", "CZ" to "1d"))
+        },
         GroupInfo(
             "sunday-trail", "Sunday Trail Runners", "Fitness & Sports", "FITNESS & SPORTS",
             "Easy Sunday morning trail runs, followed by a very necessary brunch.",
