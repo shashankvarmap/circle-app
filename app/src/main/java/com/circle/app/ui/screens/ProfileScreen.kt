@@ -26,6 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.circle.app.data.CircleStore
+import com.circle.app.navigation.Routes
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.circle.app.ui.components.*
 import com.circle.app.ui.theme.*
 
@@ -83,19 +87,7 @@ fun ProfileScreen(nav: NavHostController) {
                     )
                 }
             }
-            item {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
-                        StatItem("${CircleStore.friendCount}", "friends")
-                        StatItem("${CircleStore.innerCount}", "inner circle")
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Lock, contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(12.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Only you see this", color = CircleTheme.colors.muted, fontSize = 10.5.sp)
-                    }
-                }
-            }
+            item { FriendsRow(onOpen = { nav.navigate(Routes.YOUR_CIRCLE) }) }
             item {
                 UnderlineTabs(listOf("All", "Thoughts", "Posts"), tab.ordinal) { tab = ProfileTab.entries[it] }
             }
@@ -134,12 +126,41 @@ fun ProfileScreen(nav: NavHostController) {
     }
 }
 
+/** The highlighted entry to Your circle. Counts come from the store and are private to you. */
 @Composable
-private fun StatItem(value: String, label: String) {
-    Row(verticalAlignment = Alignment.Bottom) {
-        Text(value, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-        Spacer(Modifier.width(5.dp))
-        Text(label, color = CircleTheme.colors.muted, fontSize = 13.sp)
+private fun FriendsRow(onOpen: () -> Unit) {
+    val colors = CircleTheme.colors
+    val friends = CircleStore.friendCount
+    val inner = CircleStore.innerCount
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(13.dp))
+                .background(colors.surface)
+                .border(1.5.dp, colors.accent, RoundedCornerShape(13.dp))
+                .clickable(onClickLabel = "Open your circle", onClick = onOpen)
+                .semantics(mergeDescendants = true) {
+                    contentDescription = "$friends friends, $inner inner circle. See your circle"
+                }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("$friends", color = colors.text, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+            Text("friends", color = colors.muted, fontSize = 13.sp)
+            Text("·", color = colors.muted, fontSize = 13.sp)
+            Text("$inner", color = colors.text, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+            Text("inner circle", color = colors.muted, fontSize = 13.sp)
+            Spacer(Modifier.weight(1f))
+            Text("See your circle", color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
+            Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.accent, modifier = Modifier.size(16.dp))
+        }
+        Row(Modifier.padding(start = 2.dp, top = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(12.dp))
+            Spacer(Modifier.width(5.dp))
+            Text("Only you see this. Tap it to open your circle.", color = colors.muted, fontSize = 11.sp)
+        }
     }
 }
 
