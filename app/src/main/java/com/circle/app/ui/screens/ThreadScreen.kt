@@ -67,7 +67,7 @@ fun ThreadScreen(nav: NavHostController, postId: String) {
             modifier = Modifier.fillMaxWidth().background(CircleTheme.colors.background).padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             ReplyComposer { text ->
-                post.comments.add(CircleStore.you("now", text))
+                CircleStore.addComment(post.id, text)
                 scope.launch { listState.animateScrollToItem(post.comments.size + 1) }
             }
         }

@@ -3,7 +3,6 @@ package com.circle.app.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,8 +12,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.SentimentVeryDissatisfied
-import androidx.compose.material.icons.filled.SentimentVerySatisfied
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
@@ -29,12 +26,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -50,8 +47,6 @@ import com.circle.app.data.FriendStatus
 import com.circle.app.data.GroupInfo
 import com.circle.app.navigation.Routes
 import com.circle.app.ui.theme.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /** Circular initials avatar — the same visual language used for people everywhere. */
 @Composable
@@ -164,30 +159,21 @@ private fun CommentRow(comment: Comment, avatarSize: Int) {
     }
 }
 
-private enum class Reaction(val icon: ImageVector) {
-    LIKE(Icons.Filled.Favorite),
-    LAUGH(Icons.Filled.SentimentVerySatisfied),
-    CRY(Icons.Filled.SentimentVeryDissatisfied)
-}
-
 /**
  * Reply / repost / like action row shared by Thought, Post, Repost, Quote and Group cards.
- * Tap the comment icon to open the post's Thread screen; tap-and-hold the like icon to
- * pick a reaction; tap Repost for a Repost/Quote menu.
+ * Tap the comment icon to open the post's Thread screen; tap Repost for a Repost/Quote menu.
+ * The heart is a private like stored in [CircleStore]: no count, no reactions.
  */
 @Composable
 fun PostActions(
     nav: NavHostController,
     postId: String,
-    showRepost: Boolean = true,
-    initiallyLiked: Boolean = false
+    showRepost: Boolean = true
 ) {
-    var reaction by remember { mutableStateOf(if (initiallyLiked) Reaction.LIKE else null) }
-    var showReactionPicker by remember { mutableStateOf(false) }
+    val liked = CircleStore.isLiked(postId)
     var reposted by remember { mutableStateOf(false) }
     var showRepostMenu by remember { mutableStateOf(false) }
     val commentCount = CircleStore.post(postId)?.comments?.sumOf { 1 + it.replies.size } ?: 0
-    val scope = rememberCoroutineScope()
 
     Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
         Row(
@@ -211,7 +197,7 @@ fun PostActions(
                     modifier = Modifier.size(18.dp).clickable { showRepostMenu = true }
                 )
                 DropdownMenu(expanded = showRepostMenu, onDismissRequest = { showRepostMenu = false }) {
-                    DropdownMenuItem(text = { Text("Repost") }, onClick = {
+                    DropdownMenuItem(text = { Text(if (reposted) "Undo repost" else "Repost") }, onClick = {
                         reposted = !reposted
                         showRepostMenu = false
                     })
@@ -223,53 +209,12 @@ fun PostActions(
             }
         }
 
-        Box {
-            Icon(
-                reaction?.icon ?: Icons.Outlined.FavoriteBorder,
-                contentDescription = "Like",
-                tint = if (reaction != null) CircleTheme.colors.accent else CircleTheme.colors.muted,
-                modifier = Modifier
-                    .size(18.dp)
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onPress = {
-                                var held = true
-                                val holdJob = scope.launch {
-                                    delay(450)
-                                    if (held) showReactionPicker = true
-                                }
-                                val released = tryAwaitRelease()
-                                held = false
-                                if (released) holdJob.cancel()
-                                if (!showReactionPicker) {
-                                    reaction = if (reaction == null) Reaction.LIKE else null
-                                }
-                            }
-                        )
-                    }
-            )
-            if (showReactionPicker) {
-                Row(
-                    modifier = Modifier
-                        .offset(y = (-38).dp)
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(CircleTheme.colors.track)
-                        .border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp))
-                        .padding(horizontal = 9.dp, vertical = 7.dp),
-                    horizontalArrangement = Arrangement.spacedBy(11.dp)
-                ) {
-                    Reaction.values().forEach { r ->
-                        Icon(
-                            r.icon, contentDescription = r.name, tint = CircleTheme.colors.accent,
-                            modifier = Modifier.size(18.dp).clickable {
-                                reaction = r
-                                showReactionPicker = false
-                            }
-                        )
-                    }
-                }
-            }
-        }
+        Icon(
+            if (liked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+            contentDescription = if (liked) "Liked. Only the author sees this" else "Like",
+            tint = if (liked) CircleTheme.colors.accent else CircleTheme.colors.muted,
+            modifier = Modifier.size(18.dp).clickable { CircleStore.toggleLike(postId) }
+        )
     }
 }
 
@@ -358,6 +303,17 @@ fun ReplyComposer(placeholder: String = "Add a reply…", onSend: (String) -> Un
  *  and Explore → People; status lives in [CircleStore] so both screens stay in sync. */
 @Composable
 fun FriendRequestButton(name: String, addLabel: String = "Add friend") {
+    val incoming = CircleStore.hasPendingRequestFrom(name)
+    if (incoming != null) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .background(CircleTheme.colors.accent)
+                .clickable { CircleStore.acceptRequest(incoming.personId) }
+                .padding(horizontal = 14.dp, vertical = 7.dp)
+        ) { Text("Accept", color = CircleTheme.colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+        return
+    }
     when (CircleStore.statusOf(name)) {
         FriendStatus.NONE -> Box(
             modifier = Modifier
@@ -367,7 +323,14 @@ fun FriendRequestButton(name: String, addLabel: String = "Add friend") {
                 .padding(horizontal = 14.dp, vertical = 7.dp)
         ) { Text(addLabel, color = CircleTheme.colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
 
-        FriendStatus.REQUESTED -> Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)) {
+        FriendStatus.REQUESTED -> Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp))
+                .clickable { CircleStore.cancelFriendRequest(name) }
+                .semantics { contentDescription = "Requested. Tap to cancel the request" }
+                .padding(horizontal = 14.dp, vertical = 7.dp)
+        ) {
             Text("Requested", color = CircleTheme.colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
         }
 

@@ -26,9 +26,7 @@ import com.circle.app.ui.components.*
 import com.circle.app.ui.theme.*
 
 /**
- * Group detail. The top strip is a demo-only toggle so you can preview both the
- * member view and the outsider (locked) view without needing a second account.
- * The real path for outsiders is "Request to join", which stays pending.
+ * Group detail. Outsiders see "Request to join", which stays pending — never instant.
  */
 @Composable
 fun GroupScreen(nav: NavHostController, groupId: String?) {
@@ -36,8 +34,6 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
     val isMember = group.isMember
 
     Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
-        PreviewAsStrip(listOf("Member" to true, "Not joined" to false), isMember) { group.isMember = it }
-
         Row(modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = CircleTheme.colors.body, modifier = Modifier.clickable { nav.popBackStack() })
             Spacer(Modifier.width(12.dp))
@@ -75,7 +71,7 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                             contentAlignment = Alignment.Center
                         ) { Text("✓ Member", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
                         Spacer(Modifier.width(10.dp))
-                        Text("Leave", color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.clickable { group.isMember = false })
+                        Text("Leave", color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.clickable { CircleStore.leaveGroup(group) })
                     }
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -95,32 +91,10 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
             if (isMember) {
                 item { ComposeToGroupRow(nav) }
                 item { GroupPost(nav, "group-golden-hour", "Priya Kapoor", AvatarSage, "PK", "40m", "Golden hour shoot this Sunday — meet at the cathedral steps, 6:30 sharp.") }
-                item { GroupPost(nav, "group-long-exposure", "Tomas Novak", AvatarBlue, "TN", "3h", "Finally got the long-exposure shot of the fountain right.", liked = true) }
+                item { GroupPost(nav, "group-long-exposure", "Tomas Novak", AvatarSlate, "TN", "3h", "Finally got the long-exposure shot of the fountain right.") }
             } else {
                 item { LockedPanel("Join to see what's being posted here.") }
             }
-        }
-    }
-}
-
-@Composable
-fun PreviewAsStrip(options: List<Pair<String, Boolean>>, current: Boolean, onSelect: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().background(CircleTheme.colors.track).padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Text("PREVIEW AS", color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 9.sp, modifier = Modifier.padding(end = 8.dp, top = 2.dp))
-        options.forEach { (label, value) ->
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(if (current == value) CircleTheme.colors.accent else androidx.compose.ui.graphics.Color.Transparent)
-                    .clickable { onSelect(value) }
-                    .padding(horizontal = 9.dp, vertical = 3.dp)
-            ) {
-                Text(label, color = if (current == value) CircleTheme.colors.onAccent else CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-            }
-            Spacer(Modifier.width(4.dp))
         }
     }
 }
@@ -160,7 +134,7 @@ private fun ComposeToGroupRow(nav: NavHostController) {
 }
 
 @Composable
-private fun GroupPost(nav: NavHostController, postId: String, name: String, color: androidx.compose.ui.graphics.Color, initials: String, time: String, text: String, liked: Boolean = false) {
+private fun GroupPost(nav: NavHostController, postId: String, name: String, color: androidx.compose.ui.graphics.Color, initials: String, time: String, text: String) {
     CircleCard {
         Row {
             Avatar(initials, color, size = 34)
@@ -176,7 +150,7 @@ private fun GroupPost(nav: NavHostController, postId: String, name: String, colo
         }
         // Group posts: comment + like only — no repost/quote, they never leave the group
         Box(Modifier.padding(start = 44.dp)) {
-            PostActions(nav, postId, showRepost = false, initiallyLiked = liked)
+            PostActions(nav, postId, showRepost = false)
         }
     }
 }

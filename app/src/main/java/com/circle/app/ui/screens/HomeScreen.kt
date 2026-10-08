@@ -97,7 +97,7 @@ fun HomeScreen(nav: NavHostController) {
                     )
                 }
                 item { GroupFeedCard(nav, "group-golden-hour", "Aachen Photo Walk", AvatarOrange, "PK", "Priya Kapoor", "40m", "Golden hour shoot this Sunday — meet at the cathedral steps, 6:30 sharp.") }
-                item { GroupFeedCard(nav, "group-catan", "RWTH Board Game Club", AvatarBlue, "JL", "Jonah Lee", "2h", "Anyone up for Catan tonight?", liked = true) }
+                item { GroupFeedCard(nav, "group-catan", "RWTH Board Game Club", AvatarBlue, "JL", "Jonah Lee", "2h", "Anyone up for Catan tonight?") }
             }
         }
 
@@ -208,7 +208,7 @@ private fun QuoteCard(nav: NavHostController) {
             }
         }
         Box(Modifier.padding(start = 49.dp)) {
-            PostActions(nav, "you-coffee", initiallyLiked = true)
+            PostActions(nav, "you-coffee")
         }
     }
 }
@@ -247,7 +247,7 @@ private fun GroupChip(initial: String, color: androidx.compose.ui.graphics.Color
 }
 
 @Composable
-private fun GroupFeedCard(nav: NavHostController, postId: String, groupName: String, groupColor: androidx.compose.ui.graphics.Color, initials: String, name: String, time: String, text: String, liked: Boolean = false) {
+private fun GroupFeedCard(nav: NavHostController, postId: String, groupName: String, groupColor: androidx.compose.ui.graphics.Color, initials: String, name: String, time: String, text: String) {
     CircleCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             GroupTile(groupName.first().toString(), groupColor, size = 22)
@@ -268,7 +268,7 @@ private fun GroupFeedCard(nav: NavHostController, postId: String, groupName: Str
         }
         // Group posts: comment + like only, no repost/quote
         Box(Modifier.padding(start = 44.dp)) {
-            PostActions(nav, postId, showRepost = false, initiallyLiked = liked)
+            PostActions(nav, postId, showRepost = false)
         }
     }
 }

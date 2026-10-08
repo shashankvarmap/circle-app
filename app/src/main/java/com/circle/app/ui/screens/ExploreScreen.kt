@@ -234,9 +234,9 @@ private fun PostsGrid() {
 @Composable
 private fun PeopleResults() {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        PersonRow("Elena Voss", "2 mutual friends", "EV", AvatarRose)
+        PersonRow("Lukas Brandt", "2 mutual friends", "LB", AvatarRose)
         PersonRow("Marco Diaz", "Friends with Priya Kapoor", "MD", AvatarTeal)
-        PersonRow("Sana Yildiz", "1 mutual friend", "SY", AvatarSlate)
+        PersonRow("Nora Kim", "1 mutual friend", "NK", AvatarAmber)
     }
 }
 

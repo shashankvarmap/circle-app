@@ -115,7 +115,7 @@ fun ContactsSyncScreen(nav: NavHostController) {
                             val subtitle = when (s) {
                                 FriendStatus.NONE -> "In your phone contacts"
                                 FriendStatus.REQUESTED -> "Request sent"
-                                FriendStatus.ACCEPTED -> "${c.name.substringBefore(" ")} accepted your request"
+                                FriendStatus.ACCEPTED -> "Already in your circle"
                             }
                             Text(subtitle, color = CircleTheme.colors.muted, fontSize = 11.5.sp)
                         }

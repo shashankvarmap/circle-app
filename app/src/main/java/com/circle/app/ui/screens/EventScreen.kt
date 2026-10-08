@@ -32,12 +32,10 @@ import com.circle.app.ui.theme.*
 @Composable
 fun EventScreen(nav: NavHostController, eventId: String?) {
     val event = CircleStore.event(eventId)
-    // Same state for the demo "Preview as" strip and the real Join / Unjoin actions.
-    val isJoined = event.joined
+    val host = CircleStore.hostOf(event)
+    val isJoined = CircleStore.hasSeat(event)
 
     Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
-        PreviewAsStrip(listOf("Joined" to true, "Not joined" to false), isJoined) { CircleStore.setJoined(event, it) }
-
         Row(modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = CircleTheme.colors.body, modifier = Modifier.clickable { nav.popBackStack() })
             Spacer(Modifier.width(12.dp))
@@ -68,15 +66,15 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                             color = CircleTheme.colors.accent, trackColor = CircleTheme.colors.border
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text("${event.going} of ${event.capacity} confirmed", color = CircleTheme.colors.muted, fontSize = 11.5.sp)
+                        Text("${event.going} of ${event.capacity} going", color = CircleTheme.colors.muted, fontSize = 11.5.sp)
                     }
                 }
             }
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Avatar(event.hostInitials, event.hostColor, size = 28)
+                    Avatar(host.initials, host.color, size = 28)
                     Spacer(Modifier.width(9.dp))
-                    Text("Hosted by ${event.hostName}", color = CircleTheme.colors.body, fontSize = 12.5.sp)
+                    Text("Hosted by ${host.name}", color = CircleTheme.colors.body, fontSize = 12.5.sp)
                 }
             }
             item {
@@ -91,12 +89,21 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                                 contentAlignment = Alignment.Center
                             ) { Text("✓ You're going", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
                             Spacer(Modifier.width(10.dp))
-                            Text("Unjoin", color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.clickable { CircleStore.setJoined(event, false) })
+                            if (event.hostId != com.circle.app.data.ME) {
+                                Text("Leave seat", color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.clickable { CircleStore.leaveEvent(event) })
+                            }
                         }
-                        Text("Unjoining locks the conversation back and quietly lets ${event.hostName.substringBefore(" ")} know.", color = CircleTheme.colors.muted, fontSize = 11.sp)
+                        Text(if (event.hostId == com.circle.app.data.ME) "You're hosting this one." else "Leaving your seat locks the conversation again and quietly lets ${host.firstName} know.", color = CircleTheme.colors.muted, fontSize = 11.sp)
                     }
                 } else {
-                    com.circle.app.ui.components.PrimaryButton("Join", modifier = Modifier.fillMaxWidth()) { CircleStore.setJoined(event, true) }
+                    if (event.isFull) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(999.dp)).border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp)).padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) { Text("Event full", color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+                    } else {
+                        com.circle.app.ui.components.PrimaryButton("Take a seat", modifier = Modifier.fillMaxWidth()) { CircleStore.joinEvent(event) }
+                    }
                 }
             }
             item {
@@ -105,11 +112,11 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                         val n = event.comments.size
                         com.circle.app.ui.components.SectionLabel(if (n == 0) "THREAD · NO REPLIES YET" else "THREAD · $n ${if (n == 1) "REPLY" else "REPLIES"}")
                         event.comments.forEach { ThreadComment(it) }
-                        ReplyComposer { text -> event.comments.add(CircleStore.you("now", text)) }
+                        ReplyComposer { text -> CircleStore.addEventComment(event, text) }
                     }
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        LockedPanel("The conversation unlocks once you join.", "${event.comments.size} replies so far")
+                        LockedPanel("The conversation opens when you take a seat.", "${event.comments.size} replies so far")
                         Text(
                             "Only the people actually coming can see or post here — not a public comment section.",
                             color = CircleTheme.colors.muted, fontSize = 11.sp

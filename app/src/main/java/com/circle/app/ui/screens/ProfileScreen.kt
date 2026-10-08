@@ -87,7 +87,7 @@ fun ProfileScreen(nav: NavHostController) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
                         StatItem("${CircleStore.friendCount}", "friends")
-                        StatItem("6", "inner circle")
+                        StatItem("${CircleStore.innerCount}", "inner circle")
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.Lock, contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(12.dp))

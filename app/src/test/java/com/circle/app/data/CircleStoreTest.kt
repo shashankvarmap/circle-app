@@ -1,0 +1,153 @@
+package com.circle.app.data
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+class CircleStoreTest {
+
+    @Before
+    fun setUp() = CircleStore.reset()
+
+    // ---- Friend graph ----
+
+    @Test
+    fun seedHas128FriendsAnd5InInnerCircle() {
+        assertEquals(128, CircleStore.friendCount)
+        assertEquals(5, CircleStore.innerCount)
+    }
+
+    @Test
+    fun acceptingARequestIncrementsFriendCountAndKeepsTheRow() {
+        CircleStore.acceptRequest("RS")
+        assertEquals(129, CircleStore.friendCount)
+        assertTrue(CircleStore.isFriend("RS"))
+        assertEquals(RequestStatus.ACCEPTED, CircleStore.statusOfRequest("RS"))
+        assertTrue(CircleStore.visibleRequests.any { it.personId == "RS" })
+    }
+
+    @Test
+    fun acceptingTwiceCountsOnce() {
+        CircleStore.acceptRequest("RS")
+        CircleStore.acceptRequest("RS")
+        assertEquals(129, CircleStore.friendCount)
+    }
+
+    @Test
+    fun decliningRemovesTheRowAndKeepsTheCount() {
+        CircleStore.declineRequest("MD")
+        assertEquals(128, CircleStore.friendCount)
+        assertFalse(CircleStore.visibleRequests.any { it.personId == "MD" })
+        CircleStore.acceptRequest("MD") // a declined request can't be accepted later
+        assertFalse(CircleStore.isFriend("MD"))
+    }
+
+    @Test
+    fun outgoingRequestStaysRequestedUntilCancelled() {
+        CircleStore.sendFriendRequest("Lukas Brandt")
+        assertEquals(FriendStatus.REQUESTED, CircleStore.statusOf("Lukas Brandt"))
+        CircleStore.cancelFriendRequest("Lukas Brandt")
+        assertEquals(FriendStatus.NONE, CircleStore.statusOf("Lukas Brandt"))
+    }
+
+    // ---- Inner circle ----
+
+    @Test
+    fun toggleInnerMovesAFriendBothWays() {
+        assertFalse(CircleStore.isInner("EK"))
+        CircleStore.toggleInner("EK")
+        assertTrue(CircleStore.isInner("EK"))
+        assertEquals(6, CircleStore.innerCount)
+        CircleStore.toggleInner("EK")
+        assertFalse(CircleStore.isInner("EK"))
+        assertEquals(5, CircleStore.innerCount)
+    }
+
+    @Test
+    fun nonFriendsCannotBeInTheInnerCircle() {
+        CircleStore.toggleInner("RS")
+        assertFalse(CircleStore.isInner("RS"))
+    }
+
+    // ---- Likes & posts ----
+
+    @Test
+    fun likeIsAPrivateToggle() {
+        assertFalse(CircleStore.isLiked("amara-puzzle"))
+        CircleStore.toggleLike("amara-puzzle")
+        assertTrue(CircleStore.isLiked("amara-puzzle"))
+        CircleStore.toggleLike("amara-puzzle")
+        assertFalse(CircleStore.isLiked("amara-puzzle"))
+    }
+
+    @Test
+    fun addPostGoesToTheTopWithItsAudience() {
+        val p = CircleStore.addPost("  Inner thoughts  ", Audience.INNER_CIRCLE)!!
+        assertEquals(p, CircleStore.posts.first())
+        assertEquals("Inner thoughts", p.text)
+        assertEquals(Audience.INNER_CIRCLE, p.audience)
+        assertTrue(p in CircleStore.myPosts)
+    }
+
+    @Test
+    fun blankPostIsIgnored() {
+        val before = CircleStore.posts.size
+        assertNull(CircleStore.addPost("   ", Audience.FRIENDS))
+        assertEquals(before, CircleStore.posts.size)
+    }
+
+    // ---- Events ----
+
+    @Test
+    fun takingASeatCountsYouAndLeavingUndoesIt() {
+        val e = CircleStore.event("trail-brunch")
+        assertEquals(4, e.going)
+        assertTrue(CircleStore.joinEvent(e))
+        assertEquals(5, e.going)
+        CircleStore.leaveEvent(e)
+        assertEquals(4, e.going)
+    }
+
+    @Test
+    fun cannotJoinPastCapacity() {
+        val full = CircleStore.createEvent("Tiny dinner", "", "Friends", "", capacity = 1) // the host fills it
+        assertTrue(full.isFull)
+        assertTrue(CircleStore.hasSeat(full)) // the host always has a seat
+        val e = EventInfo(
+            "full", "Full", "SEP", "1", "SOCIAL", 0f, "", "", "FRIENDS", "PK", "",
+            capacity = 3, goingBase = 3, joined = false
+        )
+        assertFalse(CircleStore.joinEvent(e))
+        assertFalse(e.joined)
+        assertEquals(3, e.going)
+    }
+
+    @Test
+    fun eventThreadIsLockedUntilYouTakeASeat() {
+        val e = CircleStore.event("board-game-night")
+        val before = e.comments.size
+        CircleStore.addEventComment(e, "hello")
+        assertEquals(before, e.comments.size)
+        CircleStore.joinEvent(e)
+        CircleStore.addEventComment(e, "hello")
+        assertEquals(before + 1, e.comments.size)
+    }
+
+    // ---- Groups ----
+
+    @Test
+    fun requestToJoinIsNeverInstant() {
+        val g = CircleStore.group("board-game-club")
+        CircleStore.requestToJoin(g)
+        assertTrue(g.joinRequested)
+        assertFalse(g.isMember)
+    }
+
+    @Test
+    fun onlyPhotoWalkStartsAsMember() {
+        assertEquals(listOf("photo-walk"), CircleStore.groups.filter { it.isMember }.map { it.id })
+    }
+}

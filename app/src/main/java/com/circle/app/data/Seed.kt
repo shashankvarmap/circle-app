@@ -1,0 +1,167 @@
+package com.circle.app.data
+
+import com.circle.app.ui.theme.*
+
+/**
+ * Demo seed data, taken from the design prototype (design-handoff/reference/prototype-logic.js).
+ *
+ * Deviations from the prototype, so the friend graph is consistent:
+ * - Riya Sharma and Marco Diaz are pending friend requests (brief §4), so they are NOT friends
+ *   yet. Their two places among the 12 people shown in Your circle go to Elena Voss (inner,
+ *   already a commenter in the seed threads) and Ines Moreau (outer).
+ * - "128 friends" is real: 12 named friends plus 116 generated ones, so the count is derived.
+ */
+internal object Seed {
+    val me = Person(ME, "You", AvatarSlate, 0)
+
+    /** The 12 friends the prototype shows in Your circle, in its order. */
+    val namedFriends = listOf(
+        Person("AO", "Amara Osei", AvatarOrange, 2023),
+        Person("PK", "Priya Kapoor", AvatarSage, 2023),
+        Person("JL", "Jonah Lee", AvatarBlue, 2023),
+        Person("TN", "Tomas Novak", AvatarSlate, 2024),
+        Person("EV", "Elena Voss", AvatarRose, 2024),
+        Person("EK", "Elin Kaur", AvatarSlate, 2024),
+        Person("IM", "Ines Moreau", AvatarTeal, 2024),
+        Person("SY", "Sana Yildiz", AvatarAmber, 2025),
+        Person("NB", "Nils Baum", AvatarSage, 2025),
+        Person("LF", "Lena Fuchs", AvatarBlue, 2025),
+        Person("OH", "Omar Haddad", AvatarOrange, 2025),
+        Person("CZ", "Clara Zeller", AvatarRose, 2026),
+    )
+
+    val initialInnerCircle = listOf("AO", "PK", "JL", "TN", "EV")
+
+    /** People who sent you a friend request. */
+    val requesters = listOf(
+        Person("RS", "Riya Sharma", AvatarRose, 2026),
+        Person("MD", "Marco Diaz", AvatarTeal, 2026),
+    )
+    val incomingRequests = listOf(
+        FriendRequest("RS", "3 mutual friends"),
+        FriendRequest("MD", "1 mutual friend"),
+    )
+
+    private val firstNames = listOf(
+        "Ada", "Ben", "Carla", "David", "Emil", "Fatima", "Georg", "Hanna", "Ivan", "Julia", "Karim",
+        "Lea", "Mats", "Nadia", "Oskar", "Paula", "Rafael", "Sofia", "Theo", "Ursula", "Vera", "Yusuf",
+        "Zoe", "Anton", "Bianca", "Cem", "Dana", "Felix", "Greta", "Jan"
+    )
+    private val lastNames = listOf(
+        "Albrecht", "Brandt", "Costa", "Dekker", "Engel", "Fischer", "Graf", "Hoffmann", "Janssen",
+        "Keller", "Lorenz", "Meyer", "Nowak", "Okafor", "Peters", "Quint", "Roth", "Schulz", "Tanaka",
+        "Vogel", "Weber", "Yilmaz", "Ziegler", "Moreno", "Laine", "Berg", "Arslan", "Hahn", "Kraus"
+    )
+    private val avatarCycle = listOf(AvatarOrange, AvatarSage, AvatarBlue, AvatarSlate, AvatarRose, AvatarTeal, AvatarAmber)
+
+    /** 116 more friends so the friend list really has 128 people. Deterministic. */
+    val generatedFriends: List<Person> = List(116) { i ->
+        val first = firstNames[i % firstNames.size]
+        val last = lastNames[(i * 7 + i / firstNames.size) % lastNames.size]
+        Person(
+            id = "f%03d".format(i),
+            name = "$first $last",
+            color = avatarCycle[(i * 3) % avatarCycle.size],
+            sinceYear = 2019 + (i % 8)
+        )
+    }
+
+    fun posts() = listOf(
+        Post(
+            "amara-puzzle", "AO", "Amara Osei", "AO", AvatarOrange, "2h",
+            "Finally finished the puzzle we started at Mom's over the summer.",
+            comments = listOf(
+                Comment(
+                    "Priya Kapoor", "PK", AvatarSage, "1h", "Aww, that's so wholesome!",
+                    replies = listOf(
+                        Comment("Amara Osei", "AO", AvatarOrange, "58m", "It took us three months 😅"),
+                        Comment("Jonah Lee", "JL", AvatarBlue, "40m", "Frame it!")
+                    )
+                ),
+                Comment(
+                    "Jonah Lee", "JL", AvatarBlue, "1h", "Which puzzle was it?",
+                    replies = listOf(Comment("Amara Osei", "AO", AvatarOrange, "50m", "The 2000-piece lighthouse one."))
+                ),
+                Comment("Elena Voss", "EV", AvatarRose, "30m", "Mom must be thrilled.")
+            )
+        ),
+        Post(
+            "priya-seaglass", "PK", "Priya Kapoor", "PK", AvatarSage, "5h",
+            "Sea glass hunting turned into a two hour walk. Worth it.",
+            comments = listOf(Comment("Amara Osei", "AO", AvatarOrange, "4h", "Save me a green one!"))
+        ),
+        Post(
+            "you-coffee", ME, "You", ME, AvatarSlate, "1h",
+            "This is exactly the energy I needed today.",
+            quoted = "Jonah Lee" to "Some days the good coffee is the whole plan."
+        ),
+        Post("you-media", ME, "You", ME, AvatarSlate, "40m", "", hasMedia = true),
+        Post(
+            "group-golden-hour", "PK", "Priya Kapoor", "PK", AvatarSage, "40m",
+            "Golden hour shoot this Sunday — meet at the cathedral steps, 6:30 sharp.",
+            comments = listOf(Comment("Tomas Novak", "TN", AvatarSlate, "20m", "I'll bring the spare tripod."))
+        ),
+        Post("group-catan", "JL", "Jonah Lee", "JL", AvatarBlue, "2h", "Anyone up for Catan tonight?"),
+        Post("group-long-exposure", "TN", "Tomas Novak", "TN", AvatarSlate, "3h", "Finally got the long-exposure shot of the fountain right.")
+    )
+
+    /** Posts the seed user had already liked (private: only the author would know). */
+    val initialLikes = listOf("you-coffee", "group-catan", "group-long-exposure")
+
+    fun groups() = listOf(
+        GroupInfo(
+            "photo-walk", "Aachen Photo Walk", "Photography", "PHOTOGRAPHY",
+            "Weekend photo walks around Aachen — the cathedral, the Elisenbrunnen, wherever the light looks good. All levels welcome.",
+            AvatarOrange, isPublic = true, compassDeg = 322f, memberCount = 128, isMember = true
+        ),
+        GroupInfo(
+            "sunday-trail", "Sunday Trail Runners", "Fitness & Sports", "FITNESS & SPORTS",
+            "Easy Sunday morning trail runs, followed by a very necessary brunch.",
+            AvatarSage, isPublic = true, compassDeg = 62f, memberCount = 128, isMember = false
+        ),
+        GroupInfo(
+            "board-game-club", "RWTH Board Game Club", "Gaming", "GAMING",
+            "Weekly game nights on campus. Newcomers and rules-lawyers equally welcome.",
+            AvatarBlue, isPublic = true, compassDeg = 138f, memberCount = 64, isMember = false
+        ),
+        GroupInfo(
+            "aachen-choir", "Aachen Choir", "Music", "MUSIC", "",
+            AvatarRose, isPublic = true, compassDeg = 248f, memberCount = 42, isMember = false
+        )
+    )
+
+    fun events() = listOf(
+        EventInfo(
+            "trail-brunch", "Trail Run + Brunch", "SEP", "19", "OUTDOORS", 40f,
+            "Sat 19 Sep, 9:00", "Forest Park Trailhead", "OPEN NEARBY", "PK",
+            "Easy 8k loop, then pancakes. Walkers welcome for the brunch half.",
+            capacity = 10, goingBase = 4, joined = false,
+            comments = listOf(Comment("Priya Kapoor", "PK", AvatarSage, "3h", "Is the trail muddy after the rain?"))
+        ),
+        EventInfo(
+            "board-game-night", "Board Game Night", "SEP", "18", "SOCIAL", 125f,
+            "Fri 18 Sep, 18:00", "Kaffeehaus Zeitlos", "FRIENDS OF FRIENDS", "PK",
+            "Monthly board game night — bringing Catan and Wingspan, but open to requests. Snacks provided, BYO drink.",
+            capacity = 12, goingBase = 6, joined = false,
+            comments = listOf(
+                Comment("Jonah Lee", "JL", AvatarBlue, "2h", "Bringing Wingspan too if anyone wants a break from Catan."),
+                Comment("Amara Osei", "AO", AvatarOrange, "1h", "Count me in, I'll bring the good snacks this time.")
+            )
+        ),
+        EventInfo(
+            "open-mic", "Studio Open Mic", "SEP", "21", "MUSIC", 215f,
+            "Mon 21 Sep, 20:30", "MTI Courtyard", "FRIENDS", "JL", "",
+            capacity = 20, goingBase = 3, joined = false
+        ),
+        EventInfo(
+            "market-walk", "Market Walk", "SEP", "20", "SOCIAL", 165f,
+            "Sun 20 Sep, 10:00", "Elisenbrunnen", "OPEN NEARBY", "AO", "",
+            capacity = 12, goingBase = 6, joined = false
+        ),
+        EventInfo(
+            "gallery-night", "Gallery Night", "SEP", "22", "MAKING", 305f,
+            "Tue 22 Sep, 19:00", "Ludwig Forum", "FRIENDS OF FRIENDS", "RS", "",
+            capacity = 15, goingBase = 5, joined = false
+        )
+    )
+}
