@@ -171,15 +171,22 @@ fun PostActions(nav: NavHostController, post: Post, showComment: Boolean = true)
     val target = CircleStore.original(post)
     val liked = CircleStore.isLiked(target.id)
     val reposted = CircleStore.isReposted(target.id)
-    val blockReason = CircleStore.repostBlockReason(target)
-    var showRepostMenu by remember { mutableStateOf(false) }
     val commentCount = target.comments.sumOf { 1 + it.replies.size }
 
-    Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
+    // Each action has a 40dp touch area; the row is pulled left so the first icon lines up with the text.
+    Row(
+        modifier = Modifier.offset(x = (-11).dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         if (showComment) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable(onClickLabel = "Open thread") { nav.navigate(Routes.thread(target.id)) }
+                modifier = Modifier
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .clickable(onClickLabel = "Open thread") { nav.navigate(Routes.thread(target.id)) }
+                    .padding(horizontal = 11.dp)
             ) {
                 Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = "Comments", tint = colors.muted, modifier = Modifier.size(18.dp))
                 if (commentCount > 0) {
@@ -188,38 +195,33 @@ fun PostActions(nav: NavHostController, post: Post, showComment: Boolean = true)
                 }
             }
         }
+        // Group posts stay in the group: no repost or quote at all.
         if (target.groupId == null) {
-            Box {
-                Icon(
-                    Icons.Outlined.Repeat,
-                    contentDescription = if (reposted) "Reposted. Repost menu" else "Repost or quote",
-                    tint = if (reposted) colors.accent else colors.muted,
-                    modifier = Modifier.size(18.dp).clickable { showRepostMenu = true }
+            RepostButton(
+                reposted = reposted,
+                items = repostMenuItems(
+                    blockReason = CircleStore.repostBlockReason(target),
+                    reposted = reposted,
+                    onRepost = { CircleStore.repost(target.id) },
+                    onUndo = { CircleStore.undoRepost(target.id) },
+                    onQuote = { nav.navigate(Routes.compose(quote = target.id)) }
                 )
-                DropdownMenu(expanded = showRepostMenu, onDismissRequest = { showRepostMenu = false }) {
-                    when {
-                        blockReason != null -> DropdownMenuItem(text = { Text(blockReason) }, enabled = false, onClick = {})
-                        reposted -> DropdownMenuItem(text = { Text("Undo repost") }, onClick = {
-                            CircleStore.undoRepost(target.id); showRepostMenu = false
-                        })
-                        else -> {
-                            DropdownMenuItem(text = { Text("Repost") }, onClick = {
-                                CircleStore.repost(target.id); showRepostMenu = false
-                            })
-                            DropdownMenuItem(text = { Text("Quote") }, onClick = {
-                                showRepostMenu = false; nav.navigate(Routes.compose(quote = target.id))
-                            })
-                        }
-                    }
-                }
-            }
+            )
         }
-        Icon(
-            if (liked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-            contentDescription = if (liked) "Liked. Only the author sees this" else "Like",
-            tint = if (liked) colors.accent else colors.muted,
-            modifier = Modifier.size(18.dp).clickable { CircleStore.toggleLike(target.id) }
-        )
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .clickable(onClickLabel = if (liked) "Remove like" else "Like") { CircleStore.toggleLike(target.id) },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                if (liked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                contentDescription = if (liked) "Liked. Only the author sees this" else "Like",
+                tint = if (liked) colors.accent else colors.muted,
+                modifier = Modifier.size(18.dp)
+            )
+        }
     }
 }
 
