@@ -29,6 +29,8 @@ object Routes {
     const val INFO = "info/{page}"
     const val PEOPLE_LIST = "people/{kind}"
 
+    const val CHAT = "chat/{chatId}"
+    fun chat(chatId: String) = "chat/$chatId"
     fun info(page: String) = "info/$page"
     fun peopleList(kind: String) = "people/$kind"
 
@@ -75,6 +77,7 @@ fun CircleNavGraph(navController: NavHostController = rememberNavController()) {
         composable(Routes.YOUR_CIRCLE) { YourCircleScreen(navController) }
         composable(Routes.EXPLORE_SEARCH) { ExploreSearchScreen(navController) }
         composable(Routes.SETTINGS) { SettingsScreen(navController) }
+        composable(Routes.CHAT) { entry -> ChatScreen(navController, entry.arguments?.getString("chatId").orEmpty()) }
         composable(Routes.EDIT_PROFILE) { EditProfileScreen(navController) }
         composable(Routes.INFO) { entry -> InfoScreen(navController, entry.arguments?.getString("page").orEmpty()) }
         composable(Routes.PEOPLE_LIST) { entry -> PeopleListScreen(navController, entry.arguments?.getString("kind").orEmpty()) }

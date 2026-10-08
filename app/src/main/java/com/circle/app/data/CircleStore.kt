@@ -48,6 +48,11 @@ object CircleStore {
     var privacy by mutableStateOf(PrivacyPrefs())
     var notifications by mutableStateOf(NotificationPrefs())
 
+    val chats = mutableStateListOf<Chat>()
+
+    /** Messages you deleted for yourself only: the other people still have them. */
+    val hiddenMessageIds = mutableStateListOf<String>()
+
     /** People you blocked: hidden everywhere on your side. */
     val blockedIds = mutableStateListOf<String>()
     /** Friends you muted: their notes are hidden from your Home, nobody is told. */
@@ -77,6 +82,71 @@ object CircleStore {
         profile = MyProfile(); theme = ThemeMode.SYSTEM
         privacy = PrivacyPrefs(); notifications = NotificationPrefs()
         blockedIds.clear(); mutedIds.clear()
+        chats.clear(); chats.addAll(ChatSeed.chats()); hiddenMessageIds.clear()
+    }
+
+    // ---- Chats ----
+
+    fun chat(id: String): Chat? = chats.firstOrNull { it.id == id }
+
+    /** Messages tab: 1:1 chats and chats you started with friends. */
+    val directChats: List<Chat> get() = chats.filter { !it.isGroupChat }
+
+    /** Group Messages tab: chats of groups you are a member of (not ones you only asked to join). */
+    val groupChats: List<Chat> get() = chats.filter { c -> c.groupId?.let { groupOrNull(it)?.isMember } == true }
+
+    fun chatTitle(c: Chat): String = when {
+        c.groupId != null -> groupOrNull(c.groupId)?.name ?: "Group"
+        c.name != null -> c.name
+        else -> c.directPersonId?.let { person(it)?.name } ?: "Chat"
+    }
+
+    /** What you see of a chat: everything except messages you deleted for yourself. */
+    fun visibleMessages(c: Chat): List<ChatMessage> = c.messages.filter { it.id !in hiddenMessageIds }
+
+    fun message(c: Chat, id: String): ChatMessage? = c.messages.firstOrNull { it.id == id }
+
+    /** One-line summary of a message, for list previews and reply snippets. */
+    fun messageSummary(m: ChatMessage): String = when (m.kind) {
+        MessageKind.TEXT -> m.text
+        MessageKind.SHARED_NOTE -> "Shared a note"
+        MessageKind.EVENT_INVITE -> "Event invite"
+    }
+
+    /** List preview: "You: ..." for your own last message, "Tomas: ..." in group chats. */
+    fun chatPreview(c: Chat): String {
+        val last = visibleMessages(c).lastOrNull() ?: return "No messages yet"
+        val prefix = when {
+            last.senderId == ME -> "You: "
+            c.directPersonId == null -> (person(last.senderId)?.firstName ?: "") + ": "
+            else -> ""
+        }
+        return prefix + messageSummary(last)
+    }
+
+    fun markRead(c: Chat) { c.unread = false }
+
+    /** Sends a text message at once (no fake replies). Blank text is ignored. */
+    fun sendMessage(c: Chat, text: String, replyToId: String? = null): ChatMessage? {
+        val t = text.trim()
+        if (t.isEmpty()) return null
+        val reply = replyToId?.takeIf { id -> visibleMessages(c).any { it.id == id } }
+        val m = ChatMessage("m-${System.nanoTime()}", ME, "TODAY", "now", text = t, replyToId = reply)
+        c.messages.add(m)
+        return m
+    }
+
+    /** Removes a message from your chat only; the other person still has it. */
+    fun deleteForMe(messageId: String) {
+        if (messageId !in hiddenMessageIds) hiddenMessageIds.add(messageId)
+    }
+
+    /** Removes your own message for everyone in the chat. Refused for other people's messages. */
+    fun unsend(c: Chat, messageId: String): Boolean {
+        val m = message(c, messageId) ?: return false
+        if (m.senderId != ME) return false
+        c.messages.remove(m)
+        return true
     }
 
     // ---- Profile & settings ----

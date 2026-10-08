@@ -259,4 +259,47 @@ class CircleStoreTest {
         assertEquals(ThemeMode.SYSTEM, CircleStore.theme)
         assertEquals("shashank", CircleStore.profile.handle)
     }
+
+    // ---- Chats ----
+
+    @Test
+    fun deleteForMeHidesTheMessageOnlyOnYourSide() {
+        val c = CircleStore.chat("pk")!!
+        CircleStore.deleteForMe("pk5")
+        assertFalse(CircleStore.visibleMessages(c).any { it.id == "pk5" })
+        assertTrue(c.messages.any { it.id == "pk5" }) // the other person still has it
+    }
+
+    @Test
+    fun unsendOnlyWorksOnYourOwnMessagesAndRemovesItForEveryone() {
+        val c = CircleStore.chat("pk")!!
+        assertFalse(CircleStore.unsend(c, "pk5")) // Priya's message
+        assertTrue(c.messages.any { it.id == "pk5" })
+        assertTrue(CircleStore.unsend(c, "pk6")) // yours
+        assertFalse(c.messages.any { it.id == "pk6" })
+    }
+
+    @Test
+    fun sendingAReplyKeepsTheQuotedMessageAndIsAddedAtOnce() {
+        val c = CircleStore.chat("jl")!!
+        val m = CircleStore.sendMessage(c, " See you there ", replyToId = "jl2")!!
+        assertEquals(m, c.messages.last())
+        assertEquals("See you there", m.text)
+        assertEquals("jl2", m.replyToId)
+        assertNull(CircleStore.sendMessage(c, "   "))
+    }
+
+    @Test
+    fun previewsPrefixYouAndGroupSenders() {
+        CircleStore.sendMessage(CircleStore.chat("jl")!!, "On my way")
+        assertEquals("You: On my way", CircleStore.chatPreview(CircleStore.chat("jl")!!))
+        assertEquals("Tomas: I'll bring a tripod to share", CircleStore.chatPreview(CircleStore.chat("g-photo-walk")!!))
+        assertEquals("Sounds good, see you then", CircleStore.chatPreview(CircleStore.chat("pk")!!))
+    }
+
+    @Test
+    fun groupChatsOnlyForGroupsYouAreIn() {
+        assertEquals(listOf("g-photo-walk"), CircleStore.groupChats.map { it.id })
+        assertFalse(CircleStore.directChats.any { it.isGroupChat })
+    }
 }
