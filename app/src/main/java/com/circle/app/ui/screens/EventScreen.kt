@@ -23,15 +23,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.circle.app.data.CircleStore
 import com.circle.app.ui.components.Avatar
+import com.circle.app.ui.components.ReplyComposer
+import com.circle.app.ui.components.ThreadComment
 import com.circle.app.ui.theme.*
 
 @Composable
-fun EventScreen(nav: NavHostController) {
-    var isJoined by remember { mutableStateOf(true) }
+fun EventScreen(nav: NavHostController, eventId: String?) {
+    val event = CircleStore.event(eventId)
+    // Same state for the demo "Preview as" strip and the real Join / Unjoin actions.
+    val isJoined = event.joined
 
     Column(modifier = Modifier.fillMaxSize().background(Background)) {
-        PreviewAsStrip(listOf("Joined" to true, "Not joined" to false), isJoined) { isJoined = it }
+        PreviewAsStrip(listOf("Joined" to true, "Not joined" to false), isJoined) { CircleStore.setJoined(event, it) }
 
         Row(modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = TextBody, modifier = Modifier.clickable { nav.popBackStack() })
@@ -43,42 +48,39 @@ fun EventScreen(nav: NavHostController) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Board Game Night", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text("FRIENDS OF FRIENDS", color = AvatarRose, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                        Text(event.title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
+                        Text(event.visibility, color = AvatarRose, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.CalendarToday, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Sep 18, 6:00 PM", color = TextBody, fontSize = 12.5.sp)
+                        Text(event.whenLabel, color = TextBody, fontSize = 12.5.sp)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Kaffeehaus Zeitlos, Aachen", color = TextBody, fontSize = 12.5.sp)
+                        Text(event.venue, color = TextBody, fontSize = 12.5.sp)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         androidx.compose.material3.LinearProgressIndicator(
-                            progress = { 0.5f },
+                            progress = { event.going.toFloat() / event.capacity },
                             modifier = Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(999.dp)),
                             color = AccentDefault, trackColor = Border
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text("6 of 12 confirmed", color = TextMuted, fontSize = 11.5.sp)
+                        Text("${event.going} of ${event.capacity} confirmed", color = TextMuted, fontSize = 11.5.sp)
                     }
                 }
             }
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Avatar("PK", AvatarSage, size = 28)
+                    Avatar(event.hostInitials, event.hostColor, size = 28)
                     Spacer(Modifier.width(9.dp))
-                    Text("Hosted by Priya Kapoor", color = TextBody, fontSize = 12.5.sp)
+                    Text("Hosted by ${event.hostName}", color = TextBody, fontSize = 12.5.sp)
                 }
             }
             item {
-                Text(
-                    "Monthly board game night — bringing Catan and Wingspan, but open to requests. Snacks provided, BYO drink.",
-                    color = TextBody, fontSize = 13.sp
-                )
+                if (event.description.isNotEmpty()) Text(event.description, color = TextBody, fontSize = 13.sp)
             }
             item {
                 if (isJoined) {
@@ -89,38 +91,25 @@ fun EventScreen(nav: NavHostController) {
                                 contentAlignment = Alignment.Center
                             ) { Text("✓ You're going", color = Success, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
                             Spacer(Modifier.width(10.dp))
-                            Text("Unjoin", color = TextMuted, fontSize = 12.sp)
+                            Text("Unjoin", color = TextMuted, fontSize = 12.sp, modifier = Modifier.clickable { CircleStore.setJoined(event, false) })
                         }
-                        Text("Unjoining locks the conversation back and quietly lets Priya know.", color = TextDim, fontSize = 11.sp)
+                        Text("Unjoining locks the conversation back and quietly lets ${event.hostName.substringBefore(" ")} know.", color = TextDim, fontSize = 11.sp)
                     }
                 } else {
-                    com.circle.app.ui.components.PrimaryButton("Join", modifier = Modifier.fillMaxWidth()) {}
+                    com.circle.app.ui.components.PrimaryButton("Join", modifier = Modifier.fillMaxWidth()) { CircleStore.setJoined(event, true) }
                 }
             }
             item {
                 if (isJoined) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        com.circle.app.ui.components.SectionLabel("THREAD · 8 REPLIES")
-                        ThreadReply("Jonah Lee", AvatarBlue, "JL", "2h", "Bringing Wingspan too if anyone wants a break from Catan.")
-                        ThreadReply("Amara Osei", AvatarOrange, "AO", "1h", "Count me in, I'll bring the good snacks this time.")
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Avatar("S", AvatarSlate, size = 28)
-                            Spacer(Modifier.width(9.dp))
-                            OutlinedTextField(
-                                value = "", onValueChange = {}, placeholder = { Text("Add a reply…", fontSize = 12.5.sp) },
-                                modifier = Modifier.weight(1f).height(48.dp), shape = RoundedCornerShape(999.dp),
-                                trailingIcon = { Icon(Icons.Outlined.Send, contentDescription = "Send", tint = AccentDefault) },
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Surface, unfocusedContainerColor = Surface,
-                                    focusedIndicatorColor = Border, unfocusedIndicatorColor = Border,
-                                    focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
-                                )
-                            )
-                        }
+                        val n = event.comments.size
+                        com.circle.app.ui.components.SectionLabel(if (n == 0) "THREAD · NO REPLIES YET" else "THREAD · $n ${if (n == 1) "REPLY" else "REPLIES"}")
+                        event.comments.forEach { ThreadComment(it) }
+                        ReplyComposer { text -> event.comments.add(CircleStore.you("now", text)) }
                     }
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        LockedPanel("The conversation unlocks once you join.", "8 replies so far")
+                        LockedPanel("The conversation unlocks once you join.", "${event.comments.size} replies so far")
                         Text(
                             "Only the people actually coming can see or post here — not a public comment section.",
                             color = TextDim, fontSize = 11.sp
@@ -128,22 +117,6 @@ fun EventScreen(nav: NavHostController) {
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun ThreadReply(name: String, color: androidx.compose.ui.graphics.Color, initials: String, time: String, text: String) {
-    Row {
-        Avatar(initials, color, size = 30)
-        Spacer(Modifier.width(10.dp))
-        Column {
-            Row {
-                Text(name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Spacer(Modifier.width(6.dp))
-                Text("· $time", color = TextMuted, fontSize = 11.5.sp)
-            }
-            Text(text, color = TextBody, fontSize = 13.sp)
         }
     }
 }

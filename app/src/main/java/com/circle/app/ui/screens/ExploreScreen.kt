@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items as rowItems
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -26,6 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.circle.app.navigation.Routes
+import com.circle.app.data.CircleStore
+import com.circle.app.data.EventInfo
+import com.circle.app.data.GroupInfo
 import com.circle.app.ui.components.*
 import com.circle.app.ui.theme.*
 
@@ -68,7 +72,7 @@ fun ExploreScreen(nav: NavHostController) {
                     when (tab) {
                         SearchTab.PEOPLE -> PeopleResults()
                         SearchTab.EVENTS -> EventsRail(nav, vertical = true)
-                        SearchTab.GROUPS -> GroupsList()
+                        SearchTab.GROUPS -> GroupsList(nav)
                         SearchTab.POSTS -> PostsGrid()
                     }
                 }
@@ -126,9 +130,10 @@ private fun SectionHeaderRow(label: String) {
 private fun GroupsRail(nav: NavHostController) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         item { CreateTile(icon = true, wide = false) { nav.navigate(Routes.CREATE_GROUP) } }
-        item { GroupRailItem("Aachen Photo Walk", "Photography", "A", AvatarOrange) { nav.navigate(Routes.GROUP_DETAIL) } }
-        item { GroupRailItem("Sunday Trail Runners", "Fitness & Sports", "S", AvatarSage) { nav.navigate(Routes.GROUP_DETAIL) } }
-        item { GroupRailItem("RWTH Board Game Club", "Gaming · Aachen", "R", AvatarBlue) { nav.navigate(Routes.GROUP_DETAIL) } }
+        // Your groups plus public ones you can discover; newly created groups appear first.
+        rowItems(CircleStore.groups.filter { it.isMember || it.isPublic }, key = { it.id }) { g ->
+            GroupRailItem(g.name, g.category, g.initial, g.color) { nav.navigate(Routes.groupDetail(g.id)) }
+        }
     }
 }
 
@@ -146,20 +151,20 @@ private fun GroupRailItem(name: String, category: String, initial: String, color
 private fun EventsRail(nav: NavHostController, vertical: Boolean = false) {
     if (vertical) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            EventRailCard("Board Game Night", "SEP", "18", "6/12", "Kaffeehaus Zeitlos") { nav.navigate(Routes.EVENT_DETAIL) }
-            EventRailCard("Trail Run + Brunch", "SEP", "19", "4/10", "Forest Park Trailhead") { nav.navigate(Routes.EVENT_DETAIL) }
+            CircleStore.events.forEach { e -> EventRailCard(e) { nav.navigate(Routes.eventDetail(e.id)) } }
         }
     } else {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             item { CreateTile(icon = true, wide = true) { nav.navigate(Routes.CREATE_EVENT) } }
-            item { EventRailCard("Board Game Night", "SEP", "18", "6/12", "Kaffeehaus Zeitlos") { nav.navigate(Routes.EVENT_DETAIL) } }
-            item { EventRailCard("Trail Run + Brunch", "SEP", "19", "4/10", "Forest Park Trailhead") { nav.navigate(Routes.EVENT_DETAIL) } }
+            rowItems(CircleStore.events, key = { it.id }) { e ->
+                EventRailCard(e) { nav.navigate(Routes.eventDetail(e.id)) }
+            }
         }
     }
 }
 
 @Composable
-private fun EventRailCard(title: String, month: String, day: String, ratio: String, venue: String, onClick: () -> Unit) {
+private fun EventRailCard(event: EventInfo, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .width(180.dp)
@@ -175,13 +180,13 @@ private fun EventRailCard(title: String, month: String, day: String, ratio: Stri
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(month, color = AccentDefault, fontWeight = FontWeight.Bold, fontSize = 9.sp)
-                Text(day, color = AccentDefault, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(event.month, color = AccentDefault, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                Text(event.day, color = AccentDefault, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
-            Text(ratio, color = TextMuted, fontSize = 11.sp)
+            Text("${event.going}/${event.capacity}", color = TextMuted, fontSize = 11.sp)
         }
-        Text(title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-        Text(venue, color = TextBody, fontSize = 11.5.sp)
+        Text(event.title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+        Text(event.venue, color = TextBody, fontSize = 11.5.sp, maxLines = 1)
     }
 }
 
@@ -229,14 +234,14 @@ private fun PostsGrid() {
 @Composable
 private fun PeopleResults() {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        PersonRow("Elena Voss", "2 mutual friends", "EV", AvatarRose, "Add friend")
-        PersonRow("Marco Diaz", "Friends with Priya Kapoor", "MD", AvatarTeal, "Requested")
-        PersonRow("Sana Yildiz", "1 mutual friend", "SY", AvatarSlate, "Add friend")
+        PersonRow("Elena Voss", "2 mutual friends", "EV", AvatarRose)
+        PersonRow("Marco Diaz", "Friends with Priya Kapoor", "MD", AvatarTeal)
+        PersonRow("Sana Yildiz", "1 mutual friend", "SY", AvatarSlate)
     }
 }
 
 @Composable
-private fun PersonRow(name: String, subtitle: String, initials: String, color: Color, action: String) {
+private fun PersonRow(name: String, subtitle: String, initials: String, color: Color) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
         Avatar(initials, color, size = 40)
         Spacer(Modifier.width(11.dp))
@@ -244,40 +249,33 @@ private fun PersonRow(name: String, subtitle: String, initials: String, color: C
             Text(name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
             Text(subtitle, color = TextMuted, fontSize = 11.5.sp)
         }
-        if (action == "Add friend") {
-            Box(modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(AccentDefault).padding(horizontal = 14.dp, vertical = 7.dp)) {
-                Text(action, color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            }
-        } else {
-            Text(action, color = TextMuted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp))
+        FriendRequestButton(name)
+    }
+}
+
+@Composable
+private fun GroupsList(nav: NavHostController) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        CircleStore.groups.filter { it.isPublic }.forEach { g ->
+            GroupListRow(g) { nav.navigate(Routes.groupDetail(g.id)) }
         }
     }
 }
 
 @Composable
-private fun GroupsList() {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        GroupListRow("Aachen Trail Runners", "Weekend runs around the Dreiländerreck. All paces welcome.", "128 members")
-        GroupListRow("RWTH Photography Club", "Campus shoots, darkroom nights, the occasional exhibit.", "212 members")
-    }
-}
-
-@Composable
-private fun GroupListRow(name: String, description: String, members: String) {
+private fun GroupListRow(group: GroupInfo, onClick: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp)).background(Surface).padding(13.dp),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp)).background(Surface).clickable(onClick = onClick).padding(13.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(group.name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Text("PUBLIC", color = Success, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
         }
-        Text(description, color = TextBody, fontSize = 12.5.sp)
+        if (group.description.isNotEmpty()) Text(group.description, color = TextBody, fontSize = 12.5.sp)
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(members, color = TextMuted, fontSize = 11.5.sp)
-            Box(modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(AccentDefault).padding(horizontal = 14.dp, vertical = 7.dp)) {
-                Text("Request to join", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            }
+            Text("${group.memberCount} members", color = TextMuted, fontSize = 11.5.sp)
+            JoinRequestButton(group)
         }
     }
 }

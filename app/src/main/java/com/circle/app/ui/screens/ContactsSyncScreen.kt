@@ -21,13 +21,15 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.circle.app.navigation.Routes
 import com.circle.app.ui.components.Avatar
+import com.circle.app.ui.components.FriendRequestButton
 import com.circle.app.ui.components.PrimaryButton
+import com.circle.app.data.CircleStore
+import com.circle.app.data.FriendStatus
 import com.circle.app.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private enum class Stage { PROMPT, LOADING, RESULTS }
-private enum class ReqStatus { NONE, REQUESTED, ACCEPTED }
 
 private data class Contact(val name: String, val initials: String, val color: androidx.compose.ui.graphics.Color)
 
@@ -40,7 +42,6 @@ private val contacts = listOf(
 @Composable
 fun ContactsSyncScreen(nav: NavHostController) {
     var stage by remember { mutableStateOf(Stage.PROMPT) }
-    val status = remember { mutableStateMapOf<String, ReqStatus>() }
     val scope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize().background(Background)) {
@@ -102,7 +103,7 @@ fun ContactsSyncScreen(nav: NavHostController) {
                 Spacer(Modifier.height(14.dp))
 
                 contacts.forEach { c ->
-                    val s = status[c.name] ?: ReqStatus.NONE
+                    val s = CircleStore.statusOf(c.name)
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -112,40 +113,13 @@ fun ContactsSyncScreen(nav: NavHostController) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(c.name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
                             val subtitle = when (s) {
-                                ReqStatus.NONE -> "In your phone contacts"
-                                ReqStatus.REQUESTED -> "Request sent"
-                                ReqStatus.ACCEPTED -> "${c.name.substringBefore(" ")} accepted your request"
+                                FriendStatus.NONE -> "In your phone contacts"
+                                FriendStatus.REQUESTED -> "Request sent"
+                                FriendStatus.ACCEPTED -> "${c.name.substringBefore(" ")} accepted your request"
                             }
                             Text(subtitle, color = TextMuted, fontSize = 11.5.sp)
                         }
-                        when (s) {
-                            ReqStatus.NONE -> Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(999.dp))
-                                    .background(AccentDefault)
-                                    .clickable {
-                                        status[c.name] = ReqStatus.REQUESTED
-                                        scope.launch {
-                                            delay(1800)
-                                            status[c.name] = ReqStatus.ACCEPTED
-                                        }
-                                    }
-                                    .padding(horizontal = 15.dp, vertical = 7.dp)
-                            ) { Text("Add", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
-
-                            ReqStatus.REQUESTED -> Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(999.dp))
-                                    .background(Color.Transparent)
-                                    .padding(horizontal = 15.dp, vertical = 7.dp)
-                            ) { Text("Requested", color = TextMuted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
-
-                            ReqStatus.ACCEPTED -> Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(999.dp))
-                                    .padding(horizontal = 15.dp, vertical = 7.dp)
-                            ) { Text("✓ Friends", color = Success, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
-                        }
+                        FriendRequestButton(c.name, addLabel = "Add")
                     }
                 }
 

@@ -8,7 +8,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.SentimentVeryDissatisfied
 import androidx.compose.material.icons.filled.SentimentVerySatisfied
@@ -35,11 +38,16 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.circle.app.data.CircleStore
+import com.circle.app.data.Comment
+import com.circle.app.data.FriendStatus
+import com.circle.app.data.GroupInfo
 import com.circle.app.navigation.Routes
 import com.circle.app.ui.theme.*
 import kotlinx.coroutines.delay
@@ -107,21 +115,18 @@ fun UnderlineTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     }
 }
 
-/** A comment in a post's thread. Only top-level comments carry [replies]; one layer deep. */
-data class Comment(val author: String, val text: String, val replies: List<Comment> = emptyList())
-
-/** Top-level comment, always visible. Its own replies stay collapsed behind a
- *  "View N replies" link that expands just this comment, in place. */
+/** One comment in a thread. Top-level comments are always visible; their own replies
+ *  stay collapsed behind a "View N replies" link that expands just this comment, in place. */
 @Composable
-private fun ThreadComment(comment: Comment) {
+fun ThreadComment(comment: Comment) {
     var showReplies by remember { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        CommentText(comment)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        CommentRow(comment, avatarSize = 32)
         if (comment.replies.isNotEmpty()) {
             val n = comment.replies.size
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { showReplies = !showReplies }
+                modifier = Modifier.padding(start = 42.dp).clickable { showReplies = !showReplies }
             ) {
                 Text(
                     if (showReplies) "Hide replies" else "View $n ${if (n == 1) "reply" else "replies"}",
@@ -134,24 +139,28 @@ private fun ThreadComment(comment: Comment) {
             }
             if (showReplies) {
                 Column(
-                    modifier = Modifier.padding(start = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) { comment.replies.forEach { CommentText(it) } }
+                    modifier = Modifier.padding(start = 42.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) { comment.replies.forEach { CommentRow(it, avatarSize = 26) } }
             }
         }
     }
 }
 
 @Composable
-private fun CommentText(comment: Comment) {
-    Text(
-        buildAnnotatedString {
-            withStyle(SpanStyle(color = TextPrimary, fontWeight = FontWeight.Bold)) { append(comment.author) }
-            append("  ")
-            append(comment.text)
-        },
-        color = TextBody, fontSize = 12.5.sp
-    )
+private fun CommentRow(comment: Comment, avatarSize: Int) {
+    Row {
+        Avatar(comment.initials, comment.color, size = avatarSize)
+        Spacer(Modifier.width(10.dp))
+        Column {
+            Row {
+                Text(comment.author, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Spacer(Modifier.width(6.dp))
+                Text("· ${comment.time}", color = TextMuted, fontSize = 11.5.sp)
+            }
+            Text(comment.text, color = TextBody, fontSize = 13.sp)
+        }
+    }
 }
 
 private enum class Reaction(val icon: ImageVector) {
@@ -162,134 +171,101 @@ private enum class Reaction(val icon: ImageVector) {
 
 /**
  * Reply / repost / like action row shared by Thought, Post, Repost, Quote and Group cards.
- * Fully interactive: tap-and-hold the like icon to pick a reaction, tap Repost for a
- * Repost/Quote menu, tap the comment icon to expand an inline reply thread.
+ * Tap the comment icon to open the post's Thread screen; tap-and-hold the like icon to
+ * pick a reaction; tap Repost for a Repost/Quote menu.
  */
 @Composable
 fun PostActions(
     nav: NavHostController,
+    postId: String,
     showRepost: Boolean = true,
-    initiallyLiked: Boolean = false,
-    sampleReplies: List<Comment> = emptyList()
+    initiallyLiked: Boolean = false
 ) {
     var reaction by remember { mutableStateOf(if (initiallyLiked) Reaction.LIKE else null) }
     var showReactionPicker by remember { mutableStateOf(false) }
     var reposted by remember { mutableStateOf(false) }
     var showRepostMenu by remember { mutableStateOf(false) }
-    var commentExpanded by remember { mutableStateOf(false) }
-    var replies by remember { mutableStateOf(sampleReplies) }
-    var newReply by remember { mutableStateOf("") }
+    val commentCount = CircleStore.post(postId)?.comments?.sumOf { 1 + it.replies.size } ?: 0
     val scope = rememberCoroutineScope()
 
-    Column {
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable { nav.navigate(Routes.thread(postId)) }
+        ) {
             Icon(
                 Icons.Outlined.ChatBubbleOutline, contentDescription = "Reply",
-                tint = if (commentExpanded) AccentDefault else TextMuted,
-                modifier = Modifier.size(18.dp).clickable { commentExpanded = !commentExpanded }
+                tint = TextMuted, modifier = Modifier.size(18.dp)
             )
-
-            if (showRepost) {
-                Box {
-                    Icon(
-                        Icons.Outlined.Repeat, contentDescription = "Repost / Quote",
-                        tint = if (reposted) AccentDefault else TextMuted,
-                        modifier = Modifier.size(18.dp).clickable { showRepostMenu = true }
-                    )
-                    DropdownMenu(expanded = showRepostMenu, onDismissRequest = { showRepostMenu = false }) {
-                        DropdownMenuItem(text = { Text("Repost") }, onClick = {
-                            reposted = !reposted
-                            showRepostMenu = false
-                        })
-                        DropdownMenuItem(text = { Text("Quote") }, onClick = {
-                            showRepostMenu = false
-                            nav.navigate(Routes.COMPOSE_POST)
-                        })
-                    }
-                }
+            if (commentCount > 0) {
+                Spacer(Modifier.width(5.dp))
+                Text("$commentCount", color = TextMuted, fontSize = 12.sp)
             }
-
+        }
+        if (showRepost) {
             Box {
                 Icon(
-                    reaction?.icon ?: Icons.Outlined.FavoriteBorder,
-                    contentDescription = "Like",
-                    tint = if (reaction != null) AccentDefault else TextMuted,
-                    modifier = Modifier
-                        .size(18.dp)
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onPress = {
-                                    var held = true
-                                    val holdJob = scope.launch {
-                                        delay(450)
-                                        if (held) showReactionPicker = true
-                                    }
-                                    val released = tryAwaitRelease()
-                                    held = false
-                                    if (released) holdJob.cancel()
-                                    if (!showReactionPicker) {
-                                        reaction = if (reaction == null) Reaction.LIKE else null
-                                    }
-                                }
-                            )
-                        }
+                    Icons.Outlined.Repeat, contentDescription = "Repost / Quote",
+                    tint = if (reposted) AccentDefault else TextMuted,
+                    modifier = Modifier.size(18.dp).clickable { showRepostMenu = true }
                 )
-                if (showReactionPicker) {
-                    Row(
-                        modifier = Modifier
-                            .offset(y = (-38).dp)
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(SurfaceAlt)
-                            .border(1.dp, Border, RoundedCornerShape(999.dp))
-                            .padding(horizontal = 9.dp, vertical = 7.dp),
-                        horizontalArrangement = Arrangement.spacedBy(11.dp)
-                    ) {
-                        Reaction.values().forEach { r ->
-                            Icon(
-                                r.icon, contentDescription = r.name, tint = AccentDefault,
-                                modifier = Modifier.size(18.dp).clickable {
-                                    reaction = r
-                                    showReactionPicker = false
-                                }
-                            )
-                        }
-                    }
+                DropdownMenu(expanded = showRepostMenu, onDismissRequest = { showRepostMenu = false }) {
+                    DropdownMenuItem(text = { Text("Repost") }, onClick = {
+                        reposted = !reposted
+                        showRepostMenu = false
+                    })
+                    DropdownMenuItem(text = { Text("Quote") }, onClick = {
+                        showRepostMenu = false
+                        nav.navigate(Routes.COMPOSE_POST)
+                    })
                 }
             }
         }
 
-        if (commentExpanded) {
-            Column(modifier = Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                replies.forEach { comment -> ThreadComment(comment) }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(Background)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        if (newReply.isEmpty()) {
-                            Text("Write a reply…", color = TextDim, fontSize = 12.5.sp)
-                        }
-                        BasicTextField(
-                            value = newReply,
-                            onValueChange = { newReply = it },
-                            textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 12.5.sp),
-                            cursorBrush = SolidColor(AccentDefault),
-                            modifier = Modifier.fillMaxWidth()
+        Box {
+            Icon(
+                reaction?.icon ?: Icons.Outlined.FavoriteBorder,
+                contentDescription = "Like",
+                tint = if (reaction != null) AccentDefault else TextMuted,
+                modifier = Modifier
+                    .size(18.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onPress = {
+                                var held = true
+                                val holdJob = scope.launch {
+                                    delay(450)
+                                    if (held) showReactionPicker = true
+                                }
+                                val released = tryAwaitRelease()
+                                held = false
+                                if (released) holdJob.cancel()
+                                if (!showReactionPicker) {
+                                    reaction = if (reaction == null) Reaction.LIKE else null
+                                }
+                            }
                         )
                     }
-                    Text(
-                        "Send", color = AccentDefault, fontWeight = FontWeight.Bold, fontSize = 12.sp,
-                        modifier = Modifier.clickable {
-                            if (newReply.isNotBlank()) {
-                                replies = replies + Comment("You", newReply.trim())
-                                newReply = ""
+            )
+            if (showReactionPicker) {
+                Row(
+                    modifier = Modifier
+                        .offset(y = (-38).dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(SurfaceAlt)
+                        .border(1.dp, Border, RoundedCornerShape(999.dp))
+                        .padding(horizontal = 9.dp, vertical = 7.dp),
+                    horizontalArrangement = Arrangement.spacedBy(11.dp)
+                ) {
+                    Reaction.values().forEach { r ->
+                        Icon(
+                            r.icon, contentDescription = r.name, tint = AccentDefault,
+                            modifier = Modifier.size(18.dp).clickable {
+                                reaction = r
+                                showReactionPicker = false
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -320,5 +296,107 @@ fun PrimaryButton(text: String, modifier: Modifier = Modifier, onClick: () -> Un
         contentAlignment = Alignment.Center
     ) {
         Text(text, color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+    }
+}
+
+/** Pill-shaped reply input with a send action. Calls [onSend] with trimmed text, then clears. */
+@Composable
+fun ReplyComposer(placeholder: String = "Add a reply…", onSend: (String) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    val canSend = text.isNotBlank()
+    fun send() {
+        if (canSend) {
+            onSend(text.trim())
+            text = ""
+        }
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Avatar("S", AvatarSlate, size = 28)
+        Spacer(Modifier.width(9.dp))
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(999.dp))
+                .background(Surface)
+                .border(1.dp, Border, RoundedCornerShape(999.dp))
+                .padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                if (text.isEmpty()) Text(placeholder, color = TextDim, fontSize = 13.sp)
+                BasicTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 13.sp),
+                    cursorBrush = SolidColor(AccentDefault),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = { send() }),
+                    maxLines = 4,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(if (canSend) AccentDefault else SurfaceAlt)
+                    .clickable(enabled = canSend) { send() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Outlined.Send, contentDescription = "Send",
+                    tint = if (canSend) OnAccent else TextDim, modifier = Modifier.size(15.dp)
+                )
+            }
+        }
+    }
+}
+
+/** Outgoing friend request button: none → Requested → ✓ Friends. Shared by Contacts Sync
+ *  and Explore → People; status lives in [CircleStore] so both screens stay in sync. */
+@Composable
+fun FriendRequestButton(name: String, addLabel: String = "Add friend") {
+    when (CircleStore.statusOf(name)) {
+        FriendStatus.NONE -> Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .background(AccentDefault)
+                .clickable { CircleStore.sendFriendRequest(name) }
+                .padding(horizontal = 14.dp, vertical = 7.dp)
+        ) { Text(addLabel, color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+
+        FriendStatus.REQUESTED -> Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)) {
+            Text("Requested", color = TextMuted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+        }
+
+        FriendStatus.ACCEPTED -> Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)) {
+            Text("✓ Friends", color = Success, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+        }
+    }
+}
+
+/** Join button for a public group. Tapping sends a pending request (visible to every
+ *  member) — it never makes you a member instantly. */
+@Composable
+fun JoinRequestButton(group: GroupInfo, modifier: Modifier = Modifier) {
+    when {
+        group.isMember -> Box(
+            modifier = modifier.clip(RoundedCornerShape(999.dp)).border(1.dp, Border, RoundedCornerShape(999.dp))
+                .padding(horizontal = 14.dp, vertical = 7.dp),
+            contentAlignment = Alignment.Center
+        ) { Text("✓ Member", color = Success, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+
+        group.joinRequested -> Box(
+            modifier = modifier.clip(RoundedCornerShape(999.dp)).border(1.dp, BorderStrong, RoundedCornerShape(999.dp))
+                .padding(horizontal = 14.dp, vertical = 7.dp),
+            contentAlignment = Alignment.Center
+        ) { Text("Requested", color = TextMuted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
+
+        else -> Box(
+            modifier = modifier.clip(RoundedCornerShape(999.dp)).background(AccentDefault)
+                .clickable { CircleStore.requestToJoin(group) }
+                .padding(horizontal = 14.dp, vertical = 7.dp),
+            contentAlignment = Alignment.Center
+        ) { Text("Request to join", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
     }
 }

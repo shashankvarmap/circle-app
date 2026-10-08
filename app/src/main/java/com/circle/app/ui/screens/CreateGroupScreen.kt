@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.circle.app.data.CircleStore
 import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.theme.*
 
@@ -41,10 +42,15 @@ fun CreateGroupScreen(nav: NavHostController) {
         ) {
             Text("Cancel", color = TextBody, fontSize = 14.5.sp, modifier = Modifier.clickable { nav.popBackStack() })
             Text("New group", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            val canCreate = name.isNotBlank()
             androidx.compose.foundation.layout.Box(
-                modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(AccentDefault)
-                    .clickable { nav.popBackStack() }.padding(horizontal = 16.dp, vertical = 7.dp)
-            ) { Text("Create", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+                modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(if (canCreate) AccentDefault else SurfaceAlt)
+                    .clickable(enabled = canCreate) {
+                        CircleStore.createGroup(name, category, description, isPublic = !isPrivate)
+                        nav.popBackStack()
+                    }
+                    .padding(horizontal = 16.dp, vertical = 7.dp)
+            ) { Text("Create", color = if (canCreate) OnAccent else TextDim, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
         }
 
         Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {

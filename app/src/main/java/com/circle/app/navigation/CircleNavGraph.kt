@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.circle.app.ui.screens.*
 
 object Routes {
@@ -20,6 +21,11 @@ object Routes {
     const val EVENT_DETAIL = "event_detail"
     const val CREATE_GROUP = "create_group"
     const val CREATE_EVENT = "create_event"
+    const val THREAD = "thread/{postId}"
+
+    fun thread(postId: String) = "thread/$postId"
+    fun groupDetail(groupId: String) = "$GROUP_DETAIL?groupId=$groupId"
+    fun eventDetail(eventId: String) = "$EVENT_DETAIL?eventId=$eventId"
 }
 
 @Composable
@@ -33,9 +39,18 @@ fun CircleNavGraph(navController: NavHostController = rememberNavController()) {
         composable(Routes.MESSAGES) { MessagesScreen(navController) }
         composable(Routes.PROFILE) { ProfileScreen(navController) }
         composable(Routes.COMPOSE_POST) { ComposePostScreen(navController) }
-        composable(Routes.GROUP_DETAIL) { GroupScreen(navController) }
-        composable(Routes.EVENT_DETAIL) { EventScreen(navController) }
+        composable(
+            "${Routes.GROUP_DETAIL}?groupId={groupId}",
+            arguments = listOf(navArgument("groupId") { nullable = true; defaultValue = null })
+        ) { entry -> GroupScreen(navController, entry.arguments?.getString("groupId")) }
+        composable(
+            "${Routes.EVENT_DETAIL}?eventId={eventId}",
+            arguments = listOf(navArgument("eventId") { nullable = true; defaultValue = null })
+        ) { entry -> EventScreen(navController, entry.arguments?.getString("eventId")) }
         composable(Routes.CREATE_GROUP) { CreateGroupScreen(navController) }
         composable(Routes.CREATE_EVENT) { CreateEventScreen(navController) }
+        composable(Routes.THREAD) { entry ->
+            ThreadScreen(navController, entry.arguments?.getString("postId").orEmpty())
+        }
     }
 }

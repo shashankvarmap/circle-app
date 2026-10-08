@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.circle.app.data.CircleStore
 import com.circle.app.ui.components.*
 import com.circle.app.ui.theme.*
 
@@ -85,7 +86,7 @@ fun ProfileScreen(nav: NavHostController) {
             item {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
-                        StatItem("128", "friends")
+                        StatItem("${CircleStore.friendCount}", "friends")
                         StatItem("6", "inner circle")
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {

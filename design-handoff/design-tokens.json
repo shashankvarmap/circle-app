@@ -1,0 +1,20 @@
+{
+  "note": "1 px in the prototype = 1 dp in Compose. Night = the 'Orbit' palette. Day = the 'Edition' palette. Follow the system setting by default.",
+  "night": {
+    "background": "#12151A", "surface": "#171B22", "border": "#21252E", "text": "#F1F0EC", "body": "#E7E5DF",
+    "muted": "#7C828E", "accent": "#E8A87C", "onAccent": "#181310", "track": "#262B35",
+    "navLine": "#21252E", "navIdle": "#7C828E", "navAvatar": "#3B4351", "navAvatarText": "#F1F0EC", "alertDot": "#E5484D",
+    "cardShadow": "0dp 8dp 20dp black@28%", "postFont": "Public Sans 14sp / 1.5"
+  },
+  "day": {
+    "background": "#F3EDE2", "surface": "#FAF6EE", "border": "#D9CFBD", "text": "#1F1B16", "body": "#2B2620",
+    "muted": "#6B6256", "accent": "#B5482A", "onAccent": "#FFF8F0", "track": "#E2D8C5",
+    "navLine": "#1F1B16@14%", "navIdle": "#8A7F6E", "navAvatar": "#1F1B16", "navAvatarText": "#F3EDE2", "alertDot": "#B5482A",
+    "cardShadow": "0dp 6dp 16dp rgb(60,40,20)@10%", "postFont": "Fraunces 16.5sp / 1.42"
+  },
+  "avatarColors": { "orange": "#D98C4A", "sage": "#7FA88C", "blue": "#8DA6D9", "slate": "#3B4351", "rose": "#C77B8F", "teal": "#6FA8B5", "amber": "#E9C46A" },
+  "avatarTextRule": "Use #181310 on avatar colors, except slate (#3B4351) which uses #F1F0EC. In general: luminance < 110 -> light text.",
+  "fonts": { "display": "Fraunces (wordmark, headings, event/explore titles, day-mode post text)", "ui": "Public Sans (everything else, night-mode post text)", "license": "Both are SIL OFL, free to bundle in res/font." },
+  "shapes": { "person": "circle", "group": "rounded square, corner radius 30% of size", "card": "13dp radius", "bigCard": "14-16dp", "pill": "999dp" },
+  "sizes": { "feedAvatar": 34, "threadRootAvatar": 44, "orbitCircleNode": 38, "orbitFriendNode": 36, "eventNode": 40, "groupNode": 36, "seatLarge": 38, "seatSmall": 30, "bottomBarHeight": 64, "exploreRing": 46 }
+}

@@ -5,6 +5,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.circle.app.navigation.Routes
+import com.circle.app.data.CircleStore
 import com.circle.app.ui.components.*
 import com.circle.app.ui.theme.*
 import kotlinx.coroutines.delay
@@ -94,8 +96,8 @@ fun HomeScreen(nav: NavHostController) {
                         color = TextDim, fontSize = 11.sp
                     )
                 }
-                item { GroupFeedCard(nav, "Aachen Photo Walk", AvatarOrange, "PK", "Priya Kapoor", "40m", "Golden hour shoot this Sunday — meet at the cathedral steps, 6:30 sharp.") }
-                item { GroupFeedCard(nav, "RWTH Board Game Club", AvatarBlue, "JL", "Jonah Lee", "2h", "Anyone up for Catan tonight?", liked = true) }
+                item { GroupFeedCard(nav, "group-golden-hour", "Aachen Photo Walk", AvatarOrange, "PK", "Priya Kapoor", "40m", "Golden hour shoot this Sunday — meet at the cathedral steps, 6:30 sharp.") }
+                item { GroupFeedCard(nav, "group-catan", "RWTH Board Game Club", AvatarBlue, "JL", "Jonah Lee", "2h", "Anyone up for Catan tonight?", liked = true) }
             }
         }
 
@@ -150,20 +152,7 @@ private fun ThoughtCard(nav: NavHostController) {
             }
         }
         Box(Modifier.padding(start = 49.dp)) {
-            PostActions(
-                nav,
-                sampleReplies = listOf(
-                    Comment(
-                        "Priya", "Aww, that's so wholesome!",
-                        replies = listOf(
-                            Comment("Amara Osei", "It took us three months 😅"),
-                            Comment("Jonah Lee", "Frame it!")
-                        )
-                    ),
-                    Comment("Jonah Lee", "Which puzzle was it?", replies = listOf(Comment("Amara Osei", "The 2000-piece lighthouse one."))),
-                    Comment("Elena Voss", "Mom must be thrilled.")
-                )
-            )
+            PostActions(nav, "amara-puzzle")
         }
     }
 }
@@ -189,7 +178,7 @@ private fun RepostCard(nav: NavHostController) {
                 Text("Sea glass hunting turned into a two hour walk. Worth it.", color = TextBody, fontSize = 14.sp)
             }
         }
-        Box(Modifier.padding(start = 43.dp)) { PostActions(nav) }
+        Box(Modifier.padding(start = 43.dp)) { PostActions(nav, "priya-seaglass") }
     }
 }
 
@@ -219,7 +208,7 @@ private fun QuoteCard(nav: NavHostController) {
             }
         }
         Box(Modifier.padding(start = 49.dp)) {
-            PostActions(nav, initiallyLiked = true)
+            PostActions(nav, "you-coffee", initiallyLiked = true)
         }
     }
 }
@@ -239,16 +228,16 @@ private fun MediaPostCard(nav: NavHostController) {
             modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(11.dp)).background(SurfaceAlt),
             contentAlignment = Alignment.Center
         ) { Icon(Icons.Outlined.Image, contentDescription = null, tint = TextDim) }
-        PostActions(nav)
+        PostActions(nav, "you-media")
     }
 }
 
 @Composable
 private fun GroupsChipRow(nav: NavHostController) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        GroupChip("A", AvatarOrange) { nav.navigate(Routes.GROUP_DETAIL) }
-        GroupChip("S", AvatarSage) { nav.navigate(Routes.GROUP_DETAIL) }
-        GroupChip("R", AvatarBlue) { nav.navigate(Routes.GROUP_DETAIL) }
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        items(CircleStore.groups.filter { it.isMember }, key = { it.id }) { g ->
+            GroupChip(g.initial, g.color) { nav.navigate(Routes.groupDetail(g.id)) }
+        }
     }
 }
 
@@ -258,7 +247,7 @@ private fun GroupChip(initial: String, color: androidx.compose.ui.graphics.Color
 }
 
 @Composable
-private fun GroupFeedCard(nav: NavHostController, groupName: String, groupColor: androidx.compose.ui.graphics.Color, initials: String, name: String, time: String, text: String, liked: Boolean = false) {
+private fun GroupFeedCard(nav: NavHostController, postId: String, groupName: String, groupColor: androidx.compose.ui.graphics.Color, initials: String, name: String, time: String, text: String, liked: Boolean = false) {
     CircleCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             GroupTile(groupName.first().toString(), groupColor, size = 22)
@@ -279,7 +268,7 @@ private fun GroupFeedCard(nav: NavHostController, groupName: String, groupColor:
         }
         // Group posts: comment + like only, no repost/quote
         Box(Modifier.padding(start = 44.dp)) {
-            PostActions(nav, showRepost = false, initiallyLiked = liked)
+            PostActions(nav, postId, showRepost = false, initiallyLiked = liked)
         }
     }
 }
