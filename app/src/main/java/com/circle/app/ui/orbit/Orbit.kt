@@ -46,7 +46,7 @@ object ExploreGeometry {
     const val CENTER_PIN = 44f
     const val SELECTED_SCALE = 1.18f
     /** Sector labels sit just outside the outer ring, on the diagonals. */
-    const val LABEL_R = 154f
+    const val LABEL_R = 172f // brief says 154; moved out so no group tile covers a label (owner, 2026-10-08)
     /** Faint spokes between sectors, from SPOKE_FROM to SPOKE_TO. */
     val SPOKE_DEG = listOf(0f, 90f, 180f, 270f)
     const val SPOKE_FROM = 40f; const val SPOKE_TO = 146f
