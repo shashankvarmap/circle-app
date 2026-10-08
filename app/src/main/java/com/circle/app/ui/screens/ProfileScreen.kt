@@ -35,22 +35,15 @@ import com.circle.app.ui.theme.*
 
 private enum class ProfileTab { ALL, THOUGHTS, POSTS }
 
-private data class ProfilePost(val time: String, val text: String, val isMedia: Boolean)
-
-private val profilePosts = listOf(
-    ProfilePost("1d", "Repotted every plant on the balcony before the first frost. Overdue by a month.", isMedia = false),
-    ProfilePost("3d", "Finally cleared the laptop repair backlog sitting around since spring. Small victories.", isMedia = false),
-    ProfilePost("5d", "Sunset over the river walk — worth the detour.", isMedia = true),
-    ProfilePost("9d", "Workshop table is finally starting to look like a table.", isMedia = true)
-)
-
 @Composable
 fun ProfileScreen(nav: NavHostController) {
     var tab by remember { mutableStateOf(ProfileTab.ALL) }
+    // All: everything of yours, reposts and quotes included. Thoughts: text notes. Posts: photo posts.
+    val mine = CircleStore.myPosts
     val visiblePosts = when (tab) {
-        ProfileTab.ALL -> profilePosts
-        ProfileTab.THOUGHTS -> profilePosts.filter { !it.isMedia }
-        ProfileTab.POSTS -> profilePosts.filter { it.isMedia }
+        ProfileTab.ALL -> mine
+        ProfileTab.THOUGHTS -> mine.filter { !it.isRepost && it.quotedPostId == null && !it.hasMedia }
+        ProfileTab.POSTS -> mine.filter { !it.isRepost && it.hasMedia }
     }
 
     Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
@@ -91,7 +84,18 @@ fun ProfileScreen(nav: NavHostController) {
             item {
                 UnderlineTabs(listOf("All", "Thoughts", "Posts"), tab.ordinal) { tab = ProfileTab.entries[it] }
             }
-            items(visiblePosts) { post -> ProfilePostCard(post) }
+            if (visiblePosts.isEmpty()) {
+                item {
+                    Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Nothing here yet.", color = CircleTheme.colors.muted, fontSize = 13.sp)
+                        Text(
+                            "Write a note", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                            modifier = Modifier.clickable { nav.navigate(Routes.COMPOSE_POST) }.padding(8.dp)
+                        )
+                    }
+                }
+            }
+            items(visiblePosts, key = { it.id }) { post -> FeedCard(nav, post) }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SectionLabel("PHOTOS")
@@ -164,23 +168,3 @@ private fun FriendsRow(onOpen: () -> Unit) {
     }
 }
 
-@Composable
-private fun ProfilePostCard(post: ProfilePost) {
-    Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(CircleTheme.colors.surface).padding(13.dp),
-        verticalArrangement = Arrangement.spacedBy(7.dp)
-    ) {
-        Row {
-            Text("Shashank", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            Spacer(Modifier.width(6.dp))
-            Text("· ${post.time}", color = CircleTheme.colors.muted, fontSize = 11.5.sp)
-        }
-        Text(post.text, color = CircleTheme.colors.body, fontSize = 13.5.sp)
-        if (post.isMedia) {
-            Box(
-                modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(10.dp)).background(CircleTheme.colors.track),
-                contentAlignment = Alignment.Center
-            ) { Icon(Icons.Outlined.Image, contentDescription = null, tint = CircleTheme.colors.muted) }
-        }
-    }
-}

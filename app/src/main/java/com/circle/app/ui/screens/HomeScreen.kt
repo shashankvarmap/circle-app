@@ -82,22 +82,39 @@ fun HomeScreen(nav: NavHostController) {
                         Refresh.IDLE -> {}
                     }
                 }
-                item { ComposeRow(nav) }
-                item { ThoughtCard(nav) }
-                item { RepostCard(nav) }
-                item { QuoteCard(nav) }
-                item { MediaPostCard(nav) }
-                item { Text("You're all caught up", color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
-            } else {
-                item { GroupsChipRow(nav) }
-                item {
+                item(key = "compose") { ComposeRow(nav) }
+                items(CircleStore.homeFeed, key = { it.id }) { post -> FeedCard(nav, post) }
+                item(key = "caught-up") {
                     Text(
-                        "Group posts stay in the group — no repost, no quote, no share out to Home.",
+                        "You're all caught up", color = CircleTheme.colors.muted, fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            } else {
+                val memberGroups = CircleStore.groups.filter { it.isMember }
+                if (memberGroups.isNotEmpty()) item(key = "chips") { GroupsChipRow(nav) }
+                item(key = "note") {
+                    Text(
+                        "Group posts stay in the group. No repost, no quote.",
                         color = CircleTheme.colors.muted, fontSize = 11.sp
                     )
                 }
-                item { GroupFeedCard(nav, "group-golden-hour", "Aachen Photo Walk", AvatarOrange, "PK", "Priya Kapoor", "40m", "Golden hour shoot this Sunday — meet at the cathedral steps, 6:30 sharp.") }
-                item { GroupFeedCard(nav, "group-catan", "RWTH Board Game Club", AvatarBlue, "JL", "Jonah Lee", "2h", "Anyone up for Catan tonight?") }
+                val groupPosts = CircleStore.groupFeed
+                if (groupPosts.isEmpty()) {
+                    item(key = "empty") {
+                        Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                if (memberGroups.isEmpty()) "You're not in any groups yet." else "Nothing new in your groups.",
+                                color = CircleTheme.colors.muted, fontSize = 13.sp
+                            )
+                            Text(
+                                "Find a group in Explore", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                                modifier = Modifier.clickable { nav.navigate(Routes.EXPLORE) }.padding(8.dp)
+                            )
+                        }
+                    }
+                }
+                items(groupPosts, key = { it.id }) { post -> GroupPostCard(nav, post, showGroup = true) }
             }
         }
 
@@ -137,102 +154,6 @@ private fun ComposeRow(nav: NavHostController) {
 }
 
 @Composable
-private fun ThoughtCard(nav: NavHostController) {
-    CircleCard {
-        Row {
-            Avatar("AO", AvatarOrange, size = 38)
-            Spacer(Modifier.width(11.dp))
-            Column {
-                Row {
-                    Text("Amara Osei", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
-                    Spacer(Modifier.width(6.dp))
-                    Text("· 2h", color = CircleTheme.colors.muted, fontSize = 13.sp)
-                }
-                Text("Finally finished the puzzle we started at Mom's over the summer.", color = CircleTheme.colors.body, style = CircleTheme.postText)
-            }
-        }
-        Box(Modifier.padding(start = 49.dp)) {
-            PostActions(nav, "amara-puzzle")
-        }
-    }
-}
-
-@Composable
-private fun RepostCard(nav: NavHostController) {
-    CircleCard {
-        Text("↻  You reposted", color = CircleTheme.colors.muted, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(11.dp))
-                .background(CircleTheme.colors.background)
-                .padding(13.dp)
-        ) {
-            Avatar("PK", AvatarSage, size = 34)
-            Spacer(Modifier.width(9.dp))
-            Column {
-                Row {
-                    Text("Priya Kapoor", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Spacer(Modifier.width(6.dp))
-                    Text("· 5h", color = CircleTheme.colors.muted, fontSize = 12.5.sp)
-                }
-                Text("Sea glass hunting turned into a two hour walk. Worth it.", color = CircleTheme.colors.body, style = CircleTheme.postText)
-            }
-        }
-        Box(Modifier.padding(start = 43.dp)) { PostActions(nav, "priya-seaglass") }
-    }
-}
-
-@Composable
-private fun QuoteCard(nav: NavHostController) {
-    CircleCard {
-        Row {
-            Avatar("S", AvatarSlate, size = 38)
-            Spacer(Modifier.width(11.dp))
-            Column {
-                Row {
-                    Text("You", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
-                    Spacer(Modifier.width(6.dp))
-                    Text("· 1h", color = CircleTheme.colors.muted, fontSize = 13.sp)
-                }
-                Text("This is exactly the energy I needed today.", color = CircleTheme.colors.body, style = CircleTheme.postText)
-            }
-        }
-        Row(
-            modifier = Modifier.padding(start = 49.dp).clip(RoundedCornerShape(11.dp)).background(CircleTheme.colors.background).padding(12.dp)
-        ) {
-            Avatar("JL", AvatarBlue, size = 28)
-            Spacer(Modifier.width(8.dp))
-            Column {
-                Text("Jonah Lee", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Text("Some days the good coffee is the whole plan.", color = CircleTheme.colors.body, fontSize = 13.sp)
-            }
-        }
-        Box(Modifier.padding(start = 49.dp)) {
-            PostActions(nav, "you-coffee")
-        }
-    }
-}
-
-@Composable
-private fun MediaPostCard(nav: NavHostController) {
-    CircleCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Avatar("S", AvatarSlate, size = 32)
-            Spacer(Modifier.width(9.dp))
-            Column {
-                Text("You", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
-                Text("40m", color = CircleTheme.colors.muted, fontSize = 11.5.sp)
-            }
-        }
-        Box(
-            modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(11.dp)).background(CircleTheme.colors.track),
-            contentAlignment = Alignment.Center
-        ) { Icon(Icons.Outlined.Image, contentDescription = null, tint = CircleTheme.colors.muted) }
-        PostActions(nav, "you-media")
-    }
-}
-
-@Composable
 private fun GroupsChipRow(nav: NavHostController) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         items(CircleStore.groups.filter { it.isMember }, key = { it.id }) { g ->
@@ -246,29 +167,3 @@ private fun GroupChip(initial: String, color: androidx.compose.ui.graphics.Color
     Box(modifier = Modifier.clickable(onClick = onClick)) { GroupTile(initial, color, size = 52) }
 }
 
-@Composable
-private fun GroupFeedCard(nav: NavHostController, postId: String, groupName: String, groupColor: androidx.compose.ui.graphics.Color, initials: String, name: String, time: String, text: String) {
-    CircleCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            GroupTile(groupName.first().toString(), groupColor, size = 22)
-            Spacer(Modifier.width(8.dp))
-            Text(groupName, color = CircleTheme.colors.body, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
-        }
-        Row {
-            Avatar(initials, AvatarBlue, size = 34)
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Row {
-                    Text(name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-                    Spacer(Modifier.width(6.dp))
-                    Text("· $time", color = CircleTheme.colors.muted, fontSize = 12.sp)
-                }
-                Text(text, color = CircleTheme.colors.body, style = CircleTheme.postText)
-            }
-        }
-        // Group posts: comment + like only, no repost/quote
-        Box(Modifier.padding(start = 44.dp)) {
-            PostActions(nav, postId, showRepost = false)
-        }
-    }
-}

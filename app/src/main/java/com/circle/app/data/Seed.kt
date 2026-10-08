@@ -66,7 +66,14 @@ internal object Seed {
         )
     }
 
+    /** Newest first, as Home shows them (chronological, never ranked). */
     fun posts() = listOf(
+        Post("you-media", ME, "You", ME, AvatarSlate, "40m", "", hasMedia = true),
+        Post(
+            "you-coffee", ME, "You", ME, AvatarSlate, "1h",
+            "This is exactly the energy I needed today.",
+            quotedPostId = "jonah-coffee"
+        ),
         Post(
             "amara-puzzle", "AO", "Amara Osei", "AO", AvatarOrange, "2h",
             "Finally finished the puzzle we started at Mom's over the summer.",
@@ -74,7 +81,7 @@ internal object Seed {
                 Comment(
                     "Priya Kapoor", "PK", AvatarSage, "1h", "Aww, that's so wholesome!",
                     replies = listOf(
-                        Comment("Amara Osei", "AO", AvatarOrange, "58m", "It took us three months 😅"),
+                        Comment("Amara Osei", "AO", AvatarOrange, "58m", "It took us three months \uD83D\uDE05"),
                         Comment("Jonah Lee", "JL", AvatarBlue, "40m", "Frame it!")
                     )
                 ),
@@ -85,24 +92,28 @@ internal object Seed {
                 Comment("Elena Voss", "EV", AvatarRose, "30m", "Mom must be thrilled.")
             )
         ),
+        Post("you-repost-seaglass", ME, "You", ME, AvatarSlate, "3h", "", repostOfId = "priya-seaglass"),
         Post(
             "priya-seaglass", "PK", "Priya Kapoor", "PK", AvatarSage, "5h",
-            "Sea glass hunting turned into a two hour walk. Worth it.",
+            "Sea glass hunting turned into a two hour walk. Worth it.", hasMedia = true,
             comments = listOf(Comment("Amara Osei", "AO", AvatarOrange, "4h", "Save me a green one!"))
         ),
-        Post(
-            "you-coffee", ME, "You", ME, AvatarSlate, "1h",
-            "This is exactly the energy I needed today.",
-            quoted = "Jonah Lee" to "Some days the good coffee is the whole plan."
-        ),
-        Post("you-media", ME, "You", ME, AvatarSlate, "40m", "", hasMedia = true),
+        Post("jonah-coffee", "JL", "Jonah Lee", "JL", AvatarBlue, "yesterday", "Some days the good coffee is the whole plan."),
+        Post("tomas-tomatoes", "TN", "Tomas Novak", "TN", AvatarSlate, "yesterday", "Officially declared the tomatoes a lost cause. Onward to garlic."),
+        Post("you-plants", ME, "You", ME, AvatarSlate, "1d", "Repotted every plant on the balcony before the first frost. Overdue by a month."),
+        Post("you-laptop", ME, "You", ME, AvatarSlate, "3d", "Finally cleared the laptop repair backlog sitting around since spring. Small victories."),
+        Post("you-sunset", ME, "You", ME, AvatarSlate, "5d", "Sunset over the river walk \u2014 worth the detour.", hasMedia = true),
+        Post("you-workshop", ME, "You", ME, AvatarSlate, "9d", "Workshop table is finally starting to look like a table.", hasMedia = true),
+
+        // Group posts stay in their group.
         Post(
             "group-golden-hour", "PK", "Priya Kapoor", "PK", AvatarSage, "40m",
-            "Golden hour shoot this Sunday — meet at the cathedral steps, 6:30 sharp.",
+            "Golden hour shoot this Sunday \u2014 meet at the cathedral steps, 6:30 sharp.", groupId = "photo-walk",
             comments = listOf(Comment("Tomas Novak", "TN", AvatarSlate, "20m", "I'll bring the spare tripod."))
         ),
-        Post("group-catan", "JL", "Jonah Lee", "JL", AvatarBlue, "2h", "Anyone up for Catan tonight?"),
-        Post("group-long-exposure", "TN", "Tomas Novak", "TN", AvatarSlate, "3h", "Finally got the long-exposure shot of the fountain right.")
+        Post("group-catan", "JL", "Jonah Lee", "JL", AvatarBlue, "2h", "Anyone up for Catan tonight? Need a fourth.", groupId = "board-game-club"),
+        Post("group-long-exposure", "TN", "Tomas Novak", "TN", AvatarSlate, "3h", "Finally got the long-exposure shot of the fountain right.", groupId = "photo-walk"),
+        Post("group-trail-route", "AO", "Amara Osei", "AO", AvatarOrange, "5h", "Route for this week is up. Easy pace, brunch after.", groupId = "sunday-trail")
     )
 
     /** Posts the seed user had already liked (private: only the author would know). */

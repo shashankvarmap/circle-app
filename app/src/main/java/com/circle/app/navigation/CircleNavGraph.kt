@@ -26,6 +26,12 @@ object Routes {
     const val EXPLORE_SEARCH = "explore_search"
 
     fun thread(postId: String) = "thread/$postId"
+    /** Compose; [quote] embeds that note as a quote, [group] posts into that group. */
+    fun compose(quote: String? = null, group: String? = null) = buildString {
+        append(COMPOSE_POST)
+        val args = listOfNotNull(quote?.let { "quote=$it" }, group?.let { "group=$it" })
+        if (args.isNotEmpty()) append("?").append(args.joinToString("&"))
+    }
     fun groupDetail(groupId: String) = "$GROUP_DETAIL?groupId=$groupId"
     fun eventDetail(eventId: String) = "$EVENT_DETAIL?eventId=$eventId"
 }
@@ -40,7 +46,15 @@ fun CircleNavGraph(navController: NavHostController = rememberNavController()) {
         composable(Routes.NOTIFICATIONS) { NotificationsScreen(navController) }
         composable(Routes.MESSAGES) { MessagesScreen(navController) }
         composable(Routes.PROFILE) { ProfileScreen(navController) }
-        composable(Routes.COMPOSE_POST) { ComposePostScreen(navController) }
+        composable(
+            "${Routes.COMPOSE_POST}?quote={quote}&group={group}",
+            arguments = listOf(
+                navArgument("quote") { nullable = true; defaultValue = null },
+                navArgument("group") { nullable = true; defaultValue = null }
+            )
+        ) { entry ->
+            ComposePostScreen(navController, entry.arguments?.getString("quote"), entry.arguments?.getString("group"))
+        }
         composable(
             "${Routes.GROUP_DETAIL}?groupId={groupId}",
             arguments = listOf(navArgument("groupId") { nullable = true; defaultValue = null })

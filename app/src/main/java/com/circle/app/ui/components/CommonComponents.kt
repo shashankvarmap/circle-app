@@ -45,6 +45,7 @@ import com.circle.app.data.CircleStore
 import com.circle.app.data.Comment
 import com.circle.app.data.FriendStatus
 import com.circle.app.data.GroupInfo
+import com.circle.app.data.Post
 import com.circle.app.navigation.Routes
 import com.circle.app.ui.theme.*
 
@@ -160,60 +161,64 @@ private fun CommentRow(comment: Comment, avatarSize: Int) {
 }
 
 /**
- * Reply / repost / like action row shared by Thought, Post, Repost, Quote and Group cards.
- * Tap the comment icon to open the post's Thread screen; tap Repost for a Repost/Quote menu.
- * The heart is a private like stored in [CircleStore]: no count, no reactions.
+ * Comment / repost / like row on every note. All three act on the original note (so a
+ * "You reposted" card likes and opens the original). The heart is a private like: no count.
+ * Repost is not offered on group posts; on inner-circle notes the menu says why it can't be.
  */
 @Composable
-fun PostActions(
-    nav: NavHostController,
-    postId: String,
-    showRepost: Boolean = true
-) {
-    val liked = CircleStore.isLiked(postId)
-    var reposted by remember { mutableStateOf(false) }
+fun PostActions(nav: NavHostController, post: Post, showComment: Boolean = true) {
+    val colors = CircleTheme.colors
+    val target = CircleStore.original(post)
+    val liked = CircleStore.isLiked(target.id)
+    val reposted = CircleStore.isReposted(target.id)
+    val blockReason = CircleStore.repostBlockReason(target)
     var showRepostMenu by remember { mutableStateOf(false) }
-    val commentCount = CircleStore.post(postId)?.comments?.sumOf { 1 + it.replies.size } ?: 0
+    val commentCount = target.comments.sumOf { 1 + it.replies.size }
 
     Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.clickable { nav.navigate(Routes.thread(postId)) }
-        ) {
-            Icon(
-                Icons.Outlined.ChatBubbleOutline, contentDescription = "Reply",
-                tint = CircleTheme.colors.muted, modifier = Modifier.size(18.dp)
-            )
-            if (commentCount > 0) {
-                Spacer(Modifier.width(5.dp))
-                Text("$commentCount", color = CircleTheme.colors.muted, fontSize = 12.sp)
-            }
-        }
-        if (showRepost) {
-            Box {
-                Icon(
-                    Icons.Outlined.Repeat, contentDescription = "Repost / Quote",
-                    tint = if (reposted) CircleTheme.colors.accent else CircleTheme.colors.muted,
-                    modifier = Modifier.size(18.dp).clickable { showRepostMenu = true }
-                )
-                DropdownMenu(expanded = showRepostMenu, onDismissRequest = { showRepostMenu = false }) {
-                    DropdownMenuItem(text = { Text(if (reposted) "Undo repost" else "Repost") }, onClick = {
-                        reposted = !reposted
-                        showRepostMenu = false
-                    })
-                    DropdownMenuItem(text = { Text("Quote") }, onClick = {
-                        showRepostMenu = false
-                        nav.navigate(Routes.COMPOSE_POST)
-                    })
+        if (showComment) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable(onClickLabel = "Open thread") { nav.navigate(Routes.thread(target.id)) }
+            ) {
+                Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = "Comments", tint = colors.muted, modifier = Modifier.size(18.dp))
+                if (commentCount > 0) {
+                    Spacer(Modifier.width(5.dp))
+                    Text("$commentCount", color = colors.muted, fontSize = 12.sp)
                 }
             }
         }
-
+        if (target.groupId == null) {
+            Box {
+                Icon(
+                    Icons.Outlined.Repeat,
+                    contentDescription = if (reposted) "Reposted. Repost menu" else "Repost or quote",
+                    tint = if (reposted) colors.accent else colors.muted,
+                    modifier = Modifier.size(18.dp).clickable { showRepostMenu = true }
+                )
+                DropdownMenu(expanded = showRepostMenu, onDismissRequest = { showRepostMenu = false }) {
+                    when {
+                        blockReason != null -> DropdownMenuItem(text = { Text(blockReason) }, enabled = false, onClick = {})
+                        reposted -> DropdownMenuItem(text = { Text("Undo repost") }, onClick = {
+                            CircleStore.undoRepost(target.id); showRepostMenu = false
+                        })
+                        else -> {
+                            DropdownMenuItem(text = { Text("Repost") }, onClick = {
+                                CircleStore.repost(target.id); showRepostMenu = false
+                            })
+                            DropdownMenuItem(text = { Text("Quote") }, onClick = {
+                                showRepostMenu = false; nav.navigate(Routes.compose(quote = target.id))
+                            })
+                        }
+                    }
+                }
+            }
+        }
         Icon(
             if (liked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
             contentDescription = if (liked) "Liked. Only the author sees this" else "Like",
-            tint = if (liked) CircleTheme.colors.accent else CircleTheme.colors.muted,
-            modifier = Modifier.size(18.dp).clickable { CircleStore.toggleLike(postId) }
+            tint = if (liked) colors.accent else colors.muted,
+            modifier = Modifier.size(18.dp).clickable { CircleStore.toggleLike(target.id) }
         )
     }
 }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
@@ -89,9 +90,12 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                 }
             }
             if (isMember) {
-                item { ComposeToGroupRow(nav) }
-                item { GroupPost(nav, "group-golden-hour", "Priya Kapoor", AvatarSage, "PK", "40m", "Golden hour shoot this Sunday — meet at the cathedral steps, 6:30 sharp.") }
-                item { GroupPost(nav, "group-long-exposure", "Tomas Novak", AvatarSlate, "TN", "3h", "Finally got the long-exposure shot of the fountain right.") }
+                item { ComposeToGroupRow(nav, group.id) }
+                val groupPosts = CircleStore.postsInGroup(group.id)
+                if (groupPosts.isEmpty()) {
+                    item { Text("Nothing posted here yet. Be the first.", color = CircleTheme.colors.muted, fontSize = 13.sp) }
+                }
+                items(groupPosts, key = { it.id }) { post -> GroupPostCard(nav, post, showGroup = false) }
             } else {
                 item { LockedPanel("Join to see what's being posted here.") }
             }
@@ -121,10 +125,10 @@ fun LockedPanel(text: String, footnote: String? = null) {
 }
 
 @Composable
-private fun ComposeToGroupRow(nav: NavHostController) {
+private fun ComposeToGroupRow(nav: NavHostController, groupId: String) {
     Row(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(CircleTheme.colors.surface)
-            .clickable { nav.navigate(com.circle.app.navigation.Routes.COMPOSE_POST) }.padding(11.dp),
+            .clickable { nav.navigate(com.circle.app.navigation.Routes.compose(group = groupId)) }.padding(11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Avatar("S", AvatarSlate, size = 28)
@@ -133,24 +137,3 @@ private fun ComposeToGroupRow(nav: NavHostController) {
     }
 }
 
-@Composable
-private fun GroupPost(nav: NavHostController, postId: String, name: String, color: androidx.compose.ui.graphics.Color, initials: String, time: String, text: String) {
-    CircleCard {
-        Row {
-            Avatar(initials, color, size = 34)
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Row {
-                    Text(name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-                    Spacer(Modifier.width(6.dp))
-                    Text("· $time", color = CircleTheme.colors.muted, fontSize = 12.sp)
-                }
-                Text(text, color = CircleTheme.colors.body, style = CircleTheme.postText)
-            }
-        }
-        // Group posts: comment + like only — no repost/quote, they never leave the group
-        Box(Modifier.padding(start = 44.dp)) {
-            PostActions(nav, postId, showRepost = false)
-        }
-    }
-}

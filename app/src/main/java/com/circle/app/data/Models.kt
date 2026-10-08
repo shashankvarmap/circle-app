@@ -46,11 +46,17 @@ class Post(
     val time: String,
     val text: String,
     val hasMedia: Boolean = false,
-    val quoted: Pair<String, String>? = null, // author to text
     val audience: Audience = Audience.FRIENDS,
+    /** A quote: your text, then this original note embedded under it. */
+    val quotedPostId: String? = null,
+    /** A repost: a "You reposted" card that shows this original note. */
+    val repostOfId: String? = null,
+    /** Posted in a group: stays in the group (comment and like only). */
+    val groupId: String? = null,
     comments: List<Comment> = emptyList()
 ) {
     val comments: SnapshotStateList<Comment> = mutableStateListOf<Comment>().apply { addAll(comments) }
+    val isRepost: Boolean get() = repostOfId != null
 }
 
 class GroupInfo(

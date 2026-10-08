@@ -150,4 +150,71 @@ class CircleStoreTest {
     fun onlyPhotoWalkStartsAsMember() {
         assertEquals(listOf("photo-walk"), CircleStore.groups.filter { it.isMember }.map { it.id })
     }
+
+    // ---- Repost & quote ----
+
+    @Test
+    fun repostAddsAYouRepostedCardAtTheTopAndUndoRemovesIt() {
+        assertTrue(CircleStore.repost("amara-puzzle"))
+        val top = CircleStore.homeFeed.first()
+        assertEquals("amara-puzzle", top.repostOfId)
+        assertTrue(top in CircleStore.myPosts)
+        assertTrue(CircleStore.isReposted("amara-puzzle"))
+        assertFalse(CircleStore.repost("amara-puzzle")) // only once
+        CircleStore.undoRepost("amara-puzzle")
+        assertFalse(CircleStore.isReposted("amara-puzzle"))
+        assertFalse(CircleStore.posts.any { it.repostOfId == "amara-puzzle" })
+    }
+
+    @Test
+    fun repostingARepostCardRepostsTheOriginal() {
+        CircleStore.undoRepost("priya-seaglass")
+        CircleStore.repost("amara-puzzle")
+        val card = CircleStore.homeFeed.first()
+        assertEquals("amara-puzzle", CircleStore.original(card).id)
+    }
+
+    @Test
+    fun innerCircleNotesCannotBeRepostedOrQuoted() {
+        val inner = CircleStore.addPost("just for you five", Audience.INNER_CIRCLE)!!
+        assertEquals("Inner circle notes can't be reposted", CircleStore.repostBlockReason(inner))
+        assertFalse(CircleStore.repost(inner.id))
+        assertNull(CircleStore.addPost("look", Audience.FRIENDS, quotedPostId = inner.id))
+    }
+
+    @Test
+    fun groupPostsCannotBeRepostedOrQuoted() {
+        assertEquals("Group posts stay in the group", CircleStore.repostBlockReason(CircleStore.post("group-golden-hour")!!))
+        assertFalse(CircleStore.repost("group-golden-hour"))
+        assertNull(CircleStore.addPost("look", Audience.FRIENDS, quotedPostId = "group-golden-hour"))
+    }
+
+    @Test
+    fun quoteCreatesAQuoteCardAtTheTopOfHomeAndProfile() {
+        val q = CircleStore.addPost("So true", Audience.FRIENDS, quotedPostId = "tomas-tomatoes")!!
+        assertEquals(q, CircleStore.homeFeed.first())
+        assertEquals("tomas-tomatoes", q.quotedPostId)
+        assertTrue(q in CircleStore.myPosts)
+    }
+
+    @Test
+    fun quotingARepostCardQuotesTheOriginal() {
+        val q = CircleStore.addPost("Agreed", Audience.FRIENDS, quotedPostId = "you-repost-seaglass")!!
+        assertEquals("priya-seaglass", q.quotedPostId)
+    }
+
+    @Test
+    fun homeGroupsTabOnlyShowsGroupsYouAreIn() {
+        assertTrue(CircleStore.groupFeed.all { it.groupId == "photo-walk" })
+        assertFalse(CircleStore.groupFeed.any { it.id == "group-catan" })
+        assertFalse(CircleStore.homeFeed.any { it.groupId != null })
+    }
+
+    @Test
+    fun youCanOnlyPostToGroupsYouAreIn() {
+        assertNull(CircleStore.addPost("hi", Audience.FRIENDS, groupId = "board-game-club"))
+        val p = CircleStore.addPost("hi", Audience.FRIENDS, groupId = "photo-walk")!!
+        assertEquals(p, CircleStore.postsInGroup("photo-walk").first())
+        assertFalse(p in CircleStore.homeFeed)
+    }
 }

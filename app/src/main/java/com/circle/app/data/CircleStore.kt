@@ -121,7 +121,43 @@ object CircleStore {
 
     fun post(id: String): Post? = posts.firstOrNull { it.id == id }
 
-    val myPosts: List<Post> get() = posts.filter { it.authorId == ME }
+    /** Home -> Friends: everything outside groups, newest first. */
+    val homeFeed: List<Post> get() = posts.filter { it.groupId == null }
+
+    /** Home -> Groups: posts from groups you are a member of. */
+    val groupFeed: List<Post> get() = posts.filter { p -> p.groupId?.let { groupOrNull(it)?.isMember } == true }
+
+    fun postsInGroup(groupId: String): List<Post> = posts.filter { it.groupId == groupId }
+
+    /** Your notes, reposts and quotes (not group posts), newest first. */
+    val myPosts: List<Post> get() = posts.filter { it.authorId == ME && it.groupId == null }
+
+    /** What a card's like / comment / repost act on: the original for a repost card, else the post itself. */
+    fun original(p: Post): Post = p.repostOfId?.let { post(it) } ?: p
+
+    /** Why a note can't be reposted or quoted, or null when it can. */
+    fun repostBlockReason(p: Post): String? {
+        val o = original(p)
+        return when {
+            o.groupId != null -> "Group posts stay in the group"
+            o.audience == Audience.INNER_CIRCLE -> "Inner circle notes can't be reposted"
+            else -> null
+        }
+    }
+
+    fun isReposted(postId: String) = posts.any { it.authorId == ME && it.repostOfId == postId }
+
+    /** Adds a "You reposted" card at the top of Home and Profile. Refused for inner-circle and group notes. */
+    fun repost(postId: String): Boolean {
+        val o = post(postId)?.let { original(it) } ?: return false
+        if (repostBlockReason(o) != null || isReposted(o.id)) return false
+        posts.add(0, Post("rp-${System.nanoTime()}", ME, "You", ME, me.color, "now", "", repostOfId = o.id))
+        return true
+    }
+
+    fun undoRepost(postId: String) {
+        posts.removeAll { it.authorId == ME && it.repostOfId == postId }
+    }
 
     fun isLiked(postId: String) = postId in likedPostIds
 
@@ -129,11 +165,23 @@ object CircleStore {
         if (!likedPostIds.remove(postId)) likedPostIds.add(postId)
     }
 
-    /** Adds your note to the top of Home and Profile. Blank text is ignored. */
-    fun addPost(text: String, audience: Audience): Post? {
+    /**
+     * Adds your note to the top of Home and Profile (or to a group, when [groupId] is set).
+     * With [quotedPostId] it becomes a quote card. Blank text, quoting a note that can't be
+     * reposted, or posting to a group you aren't in, is refused (returns null).
+     */
+    fun addPost(text: String, audience: Audience, quotedPostId: String? = null, groupId: String? = null): Post? {
         val t = text.trim()
         if (t.isEmpty()) return null
-        val p = Post("me-${System.nanoTime()}", ME, "You", ME, me.color, "now", t, audience = audience)
+        val quoted = quotedPostId?.let { id -> post(id)?.let { original(it) } ?: return null }
+        if (quoted != null && (repostBlockReason(quoted) != null || groupId != null)) return null
+        if (groupId != null && groupOrNull(groupId)?.isMember != true) return null
+        val p = Post(
+            "me-${System.nanoTime()}", ME, "You", ME, me.color, "now", t,
+            audience = if (groupId != null) Audience.FRIENDS else audience,
+            quotedPostId = quoted?.id,
+            groupId = groupId
+        )
         posts.add(0, p)
         return p
     }
@@ -148,6 +196,8 @@ object CircleStore {
     // ---- Groups ----
 
     fun group(id: String?): GroupInfo = groups.firstOrNull { it.id == id } ?: groups.first()
+
+    fun groupOrNull(id: String): GroupInfo? = groups.firstOrNull { it.id == id }
 
     /** Public group: you ask, and every member can see that you asked. Never instant. */
     fun requestToJoin(g: GroupInfo) {

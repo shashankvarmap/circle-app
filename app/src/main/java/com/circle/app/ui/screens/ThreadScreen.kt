@@ -24,13 +24,15 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.circle.app.data.CircleStore
 import com.circle.app.data.Post
+import com.circle.app.navigation.Routes
 import com.circle.app.ui.components.*
 import com.circle.app.ui.theme.*
 
 /** A post's thread: the root post, then its top-level comments (always visible). */
 @Composable
 fun ThreadScreen(nav: NavHostController, postId: String) {
-    val post = CircleStore.post(postId)
+    // A "You reposted" card opens the original note's thread.
+    val post = CircleStore.post(postId)?.let { CircleStore.original(it) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
@@ -54,7 +56,7 @@ fun ThreadScreen(nav: NavHostController, postId: String) {
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { RootPost(post) }
+            item { RootPost(nav, post) }
             item {
                 val n = post.comments.size
                 SectionLabel(if (n == 0) "NO REPLIES YET" else "$n ${if (n == 1) "REPLY" else "REPLIES"}")
@@ -75,33 +77,40 @@ fun ThreadScreen(nav: NavHostController, postId: String) {
 }
 
 @Composable
-private fun RootPost(post: Post) {
-    CircleCard {
-        Row {
-            Avatar(post.initials, post.color, size = 38)
+private fun RootPost(nav: NavHostController, post: Post) {
+    val colors = CircleTheme.colors
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .cardShadow(colors, 16.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(colors.surface)
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Avatar(post.initials, post.color, size = 44)
             Spacer(Modifier.width(11.dp))
             Column {
-                Row {
-                    Text(post.author, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
-                    Spacer(Modifier.width(6.dp))
-                    Text("· ${post.time}", color = CircleTheme.colors.muted, fontSize = 13.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(post.author, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
+                    if (post.authorId == com.circle.app.data.ME && post.audience == com.circle.app.data.Audience.INNER_CIRCLE) {
+                        Spacer(Modifier.width(8.dp)); InnerCircleTag()
+                    }
                 }
-                if (post.text.isNotEmpty()) Text(post.text, color = CircleTheme.colors.body, style = CircleTheme.postText)
+                Text(post.time, color = colors.muted, fontSize = 12.sp)
             }
         }
-        post.quoted?.let { (author, text) ->
-            Column(
-                modifier = Modifier.padding(start = 49.dp).fillMaxWidth().clip(RoundedCornerShape(11.dp)).background(CircleTheme.colors.background).padding(12.dp)
-            ) {
-                Text(author, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Text(text, color = CircleTheme.colors.body, fontSize = 13.sp)
-            }
+        if (post.text.isNotEmpty()) {
+            Text(
+                post.text, color = colors.text,
+                style = CircleTheme.postText.copy(fontSize = 17.sp, lineHeight = 24.6.sp),
+                modifier = Modifier.padding(top = 12.dp)
+            )
         }
-        if (post.hasMedia) {
-            Box(
-                modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(11.dp)).background(CircleTheme.colors.track),
-                contentAlignment = Alignment.Center
-            ) { Icon(Icons.Outlined.Image, contentDescription = null, tint = CircleTheme.colors.muted) }
+        if (post.hasMedia) MediaBlock(Modifier.padding(top = 12.dp), height = 200)
+        post.quotedPostId?.let { id ->
+            EmbeddedPost(CircleStore.post(id), Modifier.padding(top = 12.dp)) { nav.navigate(Routes.thread(id)) }
         }
+        Box(Modifier.padding(top = 14.dp)) { PostActions(nav, post, showComment = false) }
     }
 }
