@@ -23,6 +23,7 @@ object Routes {
     const val CREATE_EVENT = "create_event"
     const val THREAD = "thread/{postId}"
     const val YOUR_CIRCLE = "your_circle"
+    const val EXPLORE_SEARCH = "explore_search"
 
     fun thread(postId: String) = "thread/$postId"
     fun groupDetail(groupId: String) = "$GROUP_DETAIL?groupId=$groupId"
@@ -51,6 +52,7 @@ fun CircleNavGraph(navController: NavHostController = rememberNavController()) {
         composable(Routes.CREATE_GROUP) { CreateGroupScreen(navController) }
         composable(Routes.CREATE_EVENT) { CreateEventScreen(navController) }
         composable(Routes.YOUR_CIRCLE) { YourCircleScreen(navController) }
+        composable(Routes.EXPLORE_SEARCH) { ExploreSearchScreen(navController) }
         composable(Routes.THREAD) { entry ->
             ThreadScreen(navController, entry.arguments?.getString("postId").orEmpty())
         }
