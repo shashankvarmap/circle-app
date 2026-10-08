@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -33,13 +34,16 @@ private enum class Refresh { IDLE, CHECKING, DONE }
 
 @Composable
 fun HomeScreen(nav: NavHostController) {
-    var feed by remember { mutableStateOf(Feed.FRIENDS) }
+    var feed by rememberSaveable { mutableStateOf(Feed.FRIENDS) }
     var refresh by remember { mutableStateOf(Refresh.IDLE) }
     val listState = rememberLazyListState()
+    val header = rememberCollapsingHeaderState { listState.canScrollForward || listState.canScrollBackward }
     val scope = rememberCoroutineScope()
 
+    // Tapping the wordmark scrolls to the top, brings the header back and checks for new notes.
     fun doRefresh() {
         scope.launch {
+            launch { header.reveal() }
             listState.animateScrollToItem(0)
             refresh = Refresh.CHECKING
             delay(700)
@@ -50,77 +54,108 @@ fun HomeScreen(nav: NavHostController) {
     }
 
     Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
-        Box(
-            modifier = Modifier.fillMaxWidth().height(52.dp).clickable { doRefresh() },
-            contentAlignment = Alignment.Center
-        ) {
-            Text("Circle.", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 19.sp, color = CircleTheme.colors.text)
-        }
-
-        Box(modifier = Modifier.fillMaxWidth().padding(top = 9.dp), contentAlignment = Alignment.Center) {
-            UnderlineTabs(listOf("Friends", "Groups"), if (feed == Feed.FRIENDS) 0 else 1) {
-                feed = if (it == 0) Feed.FRIENDS else Feed.GROUPS
-            }
-        }
-        Text(
-            "Tip: press & hold the Home icon below to flip feeds too",
-            color = CircleTheme.colors.muted, fontSize = 9.5.sp,
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
-
-        LazyColumn(
-            state = listState,
+        CollapsingHeaderLayout(
+            state = header,
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            header = {
+                HomeHeader(
+                    feed = feed,
+                    onWordmark = ::doRefresh,
+                    onFeed = { feed = it }
+                )
+            }
         ) {
-            if (feed == Feed.FRIENDS) {
-                item {
-                    when (refresh) {
-                        Refresh.CHECKING -> RefreshRow("Checking for new posts…", CircleTheme.colors.muted)
-                        Refresh.DONE -> RefreshRow("Nothing to refresh — you're caught up", CircleTheme.colors.accent, showCheck = true)
-                        Refresh.IDLE -> {}
-                    }
-                }
-                item(key = "compose") { ComposeRow(nav) }
-                items(CircleStore.homeFeed, key = { it.id }) { post -> FeedCard(nav, post) }
-                item(key = "caught-up") {
-                    Text(
-                        "You're all caught up", color = CircleTheme.colors.muted, fontSize = 12.sp,
-                        modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-            } else {
-                val memberGroups = CircleStore.groups.filter { it.isMember }
-                if (memberGroups.isNotEmpty()) item(key = "chips") { GroupsChipRow(nav) }
-                item(key = "note") {
-                    Text(
-                        "Group posts stay in the group. No repost, no quote.",
-                        color = CircleTheme.colors.muted, fontSize = 11.sp
-                    )
-                }
-                val groupPosts = CircleStore.groupFeed
-                if (groupPosts.isEmpty()) {
-                    item(key = "empty") {
-                        Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                if (memberGroups.isEmpty()) "You're not in any groups yet." else "Nothing new in your groups.",
-                                color = CircleTheme.colors.muted, fontSize = 13.sp
-                            )
-                            Text(
-                                "Find a group in Explore", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                                modifier = Modifier.clickable { nav.navigate(Routes.EXPLORE) }.padding(8.dp)
-                            )
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (feed == Feed.FRIENDS) {
+                    item {
+                        when (refresh) {
+                            Refresh.CHECKING -> RefreshRow("Checking for new posts…", CircleTheme.colors.muted)
+                            Refresh.DONE -> RefreshRow("Nothing to refresh — you're caught up", CircleTheme.colors.accent, showCheck = true)
+                            Refresh.IDLE -> {}
                         }
                     }
+                    item(key = "compose") { ComposeRow(nav) }
+                    items(CircleStore.homeFeed, key = { it.id }) { post -> FeedCard(nav, post) }
+                    item(key = "caught-up") {
+                        Text(
+                            "You're all caught up", color = CircleTheme.colors.muted, fontSize = 12.sp,
+                            modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                } else {
+                    val memberGroups = CircleStore.groups.filter { it.isMember }
+                    if (memberGroups.isNotEmpty()) item(key = "chips") { GroupsChipRow(nav) }
+                    item(key = "note") {
+                        Text(
+                            "Group posts stay in the group. No repost, no quote.",
+                            color = CircleTheme.colors.muted, fontSize = 11.sp
+                        )
+                    }
+                    val groupPosts = CircleStore.groupFeed
+                    if (groupPosts.isEmpty()) {
+                        item(key = "empty") {
+                            Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    if (memberGroups.isEmpty()) "You're not in any groups yet." else "Nothing new in your groups.",
+                                    color = CircleTheme.colors.muted, fontSize = 13.sp
+                                )
+                                Text(
+                                    "Find a group in Explore", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                                    modifier = Modifier.clickable { nav.navigate(Routes.EXPLORE) }.padding(8.dp)
+                                )
+                            }
+                        }
+                    }
+                    items(groupPosts, key = { it.id }) { post -> GroupPostCard(nav, post, showGroup = true) }
                 }
-                items(groupPosts, key = { it.id }) { post -> GroupPostCard(nav, post, showGroup = true) }
             }
         }
 
         CircleBottomNav(nav, NavTab.HOME, onHomeIconHold = {
             feed = if (feed == Feed.FRIENDS) Feed.GROUPS else Feed.FRIENDS
         })
+    }
+}
+
+/** Date line, "Circle." wordmark and the Friends | Groups tabs. Hides as the feed scrolls. */
+@Composable
+private fun HomeHeader(feed: Feed, onWordmark: () -> Unit, onFeed: (Feed) -> Unit) {
+    val colors = CircleTheme.colors
+    val today = remember {
+        java.time.LocalDate.now().let { d ->
+            val fmt = java.time.format.DateTimeFormatter.ofPattern("EEEE '\u00b7' d MMMM", java.util.Locale.ENGLISH)
+            d.format(fmt).uppercase(java.util.Locale.ENGLISH)
+        }
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth().background(colors.background).padding(top = 12.dp, bottom = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(today, color = colors.muted, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.9.sp)
+        Text(
+            "Circle.", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 24.sp,
+            letterSpacing = (-0.48).sp, color = colors.text,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClickLabel = "Scroll to top and refresh", onClick = onWordmark)
+                .padding(horizontal = 8.dp)
+        )
+        Box(Modifier.padding(top = 4.dp)) {
+            UnderlineTabs(listOf("Friends", "Groups"), if (feed == Feed.FRIENDS) 0 else 1, spacing = 28.dp) {
+                onFeed(if (it == 0) Feed.FRIENDS else Feed.GROUPS)
+            }
+        }
+        Text(
+            "Tip: press & hold the Home icon below to flip feeds too",
+            color = colors.muted, fontSize = 9.5.sp,
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
     }
 }
 

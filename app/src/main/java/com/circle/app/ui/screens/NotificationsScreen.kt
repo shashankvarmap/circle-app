@@ -7,12 +7,15 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,43 +30,51 @@ private enum class NTab { NOTIFICATIONS, ACTIVITY }
 
 @Composable
 fun NotificationsScreen(nav: NavHostController) {
-    var tab by remember { mutableStateOf(NTab.NOTIFICATIONS) }
+    var tab by rememberSaveable { mutableStateOf(NTab.NOTIFICATIONS) }
+    val listState = rememberLazyListState()
+    val header = rememberCollapsingHeaderState { listState.canScrollForward || listState.canScrollBackward }
 
     Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
-        Box(modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 16.dp), contentAlignment = Alignment.CenterStart) {
-            Text("Notifications", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-        }
-        Box(modifier = Modifier.padding(top = 12.dp, start = 16.dp)) {
-            UnderlineTabs(listOf("Notifications", "Activity"), tab.ordinal) { tab = NTab.entries[it] }
-        }
-
-        LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            if (tab == NTab.NOTIFICATIONS) {
-                item { SectionLabel("FRIEND REQUESTS") }
-                val requests = CircleStore.visibleRequests
-                if (requests.isEmpty()) {
-                    item { Text("No friend requests right now.", color = CircleTheme.colors.muted, fontSize = 12.5.sp, modifier = Modifier.padding(vertical = 8.dp)) }
+        CollapsingHeaderLayout(
+            state = header,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            header = {
+                TabbedScreenHeader(
+                    title = "Alerts",
+                    tabs = listOf("Notifications", "Activity"),
+                    selected = tab.ordinal,
+                    onSelect = { tab = NTab.entries[it] }
+                )
+            }
+        ) {
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                if (tab == NTab.NOTIFICATIONS) {
+                    item { SectionLabel("FRIEND REQUESTS") }
+                    val requests = CircleStore.visibleRequests
+                    if (requests.isEmpty()) {
+                        item { Text("No friend requests right now.", color = CircleTheme.colors.muted, fontSize = 12.5.sp, modifier = Modifier.padding(vertical = 8.dp)) }
+                    }
+                    items(requests, key = { it.personId }) { request ->
+                        val person = CircleStore.person(request.personId) ?: return@items
+                        RequestRow(
+                            person = person,
+                            mutualText = request.mutualText,
+                            accepted = CircleStore.statusOfRequest(request.personId) == RequestStatus.ACCEPTED,
+                            onAccept = { CircleStore.acceptRequest(request.personId) },
+                            onDecline = { CircleStore.declineRequest(request.personId) }
+                        )
+                    }
+                    item { Spacer(Modifier.height(4.dp)); SectionLabel("RECENT") }
+                    item { ActivityRow("Priya Kapoor", "liked your post", "PK", AvatarSage, "10m") }
+                    item { ActivityRow("Jonah Lee", "commented: \"Where was this?\"", "JL", AvatarBlue, "25m") }
+                    item { ActivityRow("Amara Osei", "reposted your thought", "AO", AvatarOrange, "1h") }
+                    item { ActivityRow("Tomas Novak", "quoted your post: \"so real\"", "TN", AvatarSlate, "3h") }
+                } else {
+                    item { ActivityRow("Priya", "liked Jonah's post", "PK", AvatarSage, "20m") }
+                    item { ActivityRow("Amara", "commented on Tomas's thought: \"ha, same\"", "AO", AvatarOrange, "45m") }
+                    item { ActivityRow("Jonah", "reposted a thought from Riya Sharma", "JL", AvatarBlue, "2h") }
+                    item { ActivityRow("Marco and Priya", "are now friends", "MD", AvatarTeal, "5h") }
                 }
-                items(requests, key = { it.personId }) { request ->
-                    val person = CircleStore.person(request.personId) ?: return@items
-                    RequestRow(
-                        person = person,
-                        mutualText = request.mutualText,
-                        accepted = CircleStore.statusOfRequest(request.personId) == RequestStatus.ACCEPTED,
-                        onAccept = { CircleStore.acceptRequest(request.personId) },
-                        onDecline = { CircleStore.declineRequest(request.personId) }
-                    )
-                }
-                item { Spacer(Modifier.height(4.dp)); SectionLabel("RECENT") }
-                item { ActivityRow("Priya Kapoor", "liked your post", "PK", AvatarSage, "10m") }
-                item { ActivityRow("Jonah Lee", "commented: \"Where was this?\"", "JL", AvatarBlue, "25m") }
-                item { ActivityRow("Amara Osei", "reposted your thought", "AO", AvatarOrange, "1h") }
-                item { ActivityRow("Tomas Novak", "quoted your post: \"so real\"", "TN", AvatarSlate, "3h") }
-            } else {
-                item { ActivityRow("Priya", "liked Jonah's post", "PK", AvatarSage, "20m") }
-                item { ActivityRow("Amara", "commented on Tomas's thought: \"ha, same\"", "AO", AvatarOrange, "45m") }
-                item { ActivityRow("Jonah", "reposted a thought from Riya Sharma", "JL", AvatarBlue, "2h") }
-                item { ActivityRow("Marco and Priya", "are now friends", "MD", AvatarTeal, "5h") }
             }
         }
         CircleBottomNav(nav, NavTab.NOTIFICATIONS)

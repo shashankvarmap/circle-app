@@ -4,13 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,56 +27,69 @@ private enum class MTab { DIRECT, GROUP }
 
 @Composable
 fun MessagesScreen(nav: NavHostController) {
-    var tab by remember { mutableStateOf(MTab.DIRECT) }
+    var tab by rememberSaveable { mutableStateOf(MTab.DIRECT) }
+    val listState = rememberLazyListState()
+    val header = rememberCollapsingHeaderState { listState.canScrollForward || listState.canScrollBackward }
 
     Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Messages", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-            Icon(Icons.Outlined.Add, contentDescription = "New chat", tint = CircleTheme.colors.accent)
-        }
-        Box(modifier = Modifier.padding(top = 12.dp, start = 16.dp)) {
-            UnderlineTabs(listOf("Messages", "Group Messages"), tab.ordinal) { tab = MTab.entries[it] }
-        }
-
-        LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp)) {
-            if (tab == MTab.DIRECT) {
-                item { DmRow("Priya Kapoor", "Sounds good, see you then", "PK", AvatarSage, "10m", unread = true) }
-                item { DmRow("Jonah Lee", "Bringing the tripod", "JL", AvatarBlue, "2h") }
-                item { GroupChatRow("Weekend Trip", "Priya: I'll book the cabin", "5h") }
-                item { DmRow("Amara Osei", "Thanks for the recipe", "AO", AvatarOrange, "1d") }
-            } else {
-                item {
-                    Text(
-                        "Only chats tied to a group you've joined show up here. Chats you start with friends live under Messages instead.",
-                        color = CircleTheme.colors.muted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 10.dp)
-                    )
-                }
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable { nav.navigate(Routes.GROUP_DETAIL) }.padding(vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        GroupTile("A", AvatarOrange, size = 44)
-                        Spacer(Modifier.width(11.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Aachen Photo Walk", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-                            Text("Tomas: I'll bring a tripod to share", color = CircleTheme.colors.body, fontSize = 12.5.sp, maxLines = 1)
+        CollapsingHeaderLayout(
+            state = header,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            header = {
+                TabbedScreenHeader(
+                    title = "Messages",
+                    tabs = listOf("Messages", "Group Messages"),
+                    selected = tab.ordinal,
+                    onSelect = { tab = MTab.entries[it] },
+                    action = {
+                        // New chat arrives with the messages stage; shown dimmed until then.
+                        Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Outlined.Add, contentDescription = "New chat: coming with the messages update",
+                                tint = CircleTheme.colors.muted, modifier = Modifier.alpha(0.5f)
+                            )
                         }
-                        Text("12m", color = CircleTheme.colors.muted, fontSize = 11.sp)
                     }
-                }
-                item {
-                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        GroupTile("R", AvatarBlue, size = 44)
-                        Spacer(Modifier.width(11.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("RWTH Board Game Club", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-                            Text("Jonah: Anyone up for Catan tonight?", color = CircleTheme.colors.body, fontSize = 12.5.sp, maxLines = 1)
+                )
+            }
+        ) {
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
+                if (tab == MTab.DIRECT) {
+                    item { DmRow("Priya Kapoor", "Sounds good, see you then", "PK", AvatarSage, "10m", unread = true) }
+                    item { DmRow("Jonah Lee", "Bringing the tripod", "JL", AvatarBlue, "2h") }
+                    item { GroupChatRow("Weekend Trip", "Priya: I'll book the cabin", "5h") }
+                    item { DmRow("Amara Osei", "Thanks for the recipe", "AO", AvatarOrange, "1d") }
+                } else {
+                    item {
+                        Text(
+                            "Only chats tied to a group you've joined show up here. Chats you start with friends live under Messages instead.",
+                            color = CircleTheme.colors.muted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 10.dp)
+                        )
+                    }
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { nav.navigate(Routes.GROUP_DETAIL) }.padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            GroupTile("A", AvatarOrange, size = 44)
+                            Spacer(Modifier.width(11.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Aachen Photo Walk", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                                Text("Tomas: I'll bring a tripod to share", color = CircleTheme.colors.body, fontSize = 12.5.sp, maxLines = 1)
+                            }
+                            Text("12m", color = CircleTheme.colors.muted, fontSize = 11.sp)
                         }
-                        Text("2h", color = CircleTheme.colors.muted, fontSize = 11.sp)
+                    }
+                    item {
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            GroupTile("R", AvatarBlue, size = 44)
+                            Spacer(Modifier.width(11.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("RWTH Board Game Club", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                                Text("Jonah: Anyone up for Catan tonight?", color = CircleTheme.colors.body, fontSize = 12.5.sp, maxLines = 1)
+                            }
+                            Text("2h", color = CircleTheme.colors.muted, fontSize = 11.sp)
+                        }
                     }
                 }
             }

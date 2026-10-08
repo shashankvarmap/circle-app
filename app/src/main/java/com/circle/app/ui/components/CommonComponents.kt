@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -79,9 +80,9 @@ fun SectionLabel(text: String) {
 /** Small underline text tabs — the "Twitter For You / Following" style used
  *  across Home (Friends/Groups), Notifications, Explore search, and Group. */
 @Composable
-fun UnderlineTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+fun UnderlineTabs(tabs: List<String>, selected: Int, spacing: Dp = 22.dp, onSelect: (Int) -> Unit) {
     val accent = CircleTheme.colors.accent
-    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(spacing)) {
         tabs.forEachIndexed { i, label ->
             val isActive = i == selected
             // Underline is drawn behind the label rather than laid out as a sibling,
@@ -90,7 +91,7 @@ fun UnderlineTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
                 label,
                 color = if (isActive) CircleTheme.colors.text else CircleTheme.colors.muted,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 12.5.sp,
+                fontSize = 13.sp,
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Visible,
@@ -106,7 +107,7 @@ fun UnderlineTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
                             )
                         }
                     }
-                    .padding(bottom = 7.5.dp)
+                    .padding(start = 1.dp, end = 1.dp, top = 6.dp, bottom = 7.dp)
             )
         }
     }
