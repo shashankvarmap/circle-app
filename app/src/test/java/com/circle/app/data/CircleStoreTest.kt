@@ -217,4 +217,46 @@ class CircleStoreTest {
         assertEquals(p, CircleStore.postsInGroup("photo-walk").first())
         assertFalse(p in CircleStore.homeFeed)
     }
+
+    // ---- Profile, settings & safety ----
+
+    @Test
+    fun saveProfileValidatesTheHandleAndKeepsThePinnedThoughtAsTheBio() {
+        assertEquals("Lowercase letters, numbers and _ only", CircleStore.saveProfile("Sam", "sam smith", "hi", null))
+        assertEquals("At least 3 characters", CircleStore.saveProfile("Sam", "sa", "hi", null))
+        assertEquals("Add a display name", CircleStore.saveProfile("  ", "sam", "hi", null))
+        assertNull(CircleStore.saveProfile(" Sam ", "@Sam_1", " Out walking. ", null))
+        assertEquals("Sam", CircleStore.profile.displayName)
+        assertEquals("sam_1", CircleStore.profile.handle)
+        assertEquals("Out walking.", CircleStore.profile.pinnedThought)
+        assertEquals("S", CircleStore.profile.initial)
+    }
+
+    @Test
+    fun blockingRemovesTheFriendshipAndInnerCircle() {
+        CircleStore.block("AO")
+        assertFalse(CircleStore.isFriend("AO"))
+        assertFalse(CircleStore.isInner("AO"))
+        assertEquals(127, CircleStore.friendCount)
+        assertTrue("AO" in CircleStore.blockedIds)
+        CircleStore.unblock("AO")
+        assertFalse("AO" in CircleStore.blockedIds)
+    }
+
+    @Test
+    fun onlyFriendsCanBeMuted() {
+        CircleStore.mute("RS")
+        assertFalse("RS" in CircleStore.mutedIds)
+        CircleStore.mute("PK")
+        assertTrue("PK" in CircleStore.mutedIds)
+    }
+
+    @Test
+    fun resetRestoresDefaults() {
+        CircleStore.theme = ThemeMode.DAY
+        CircleStore.saveProfile("Sam", "sam", "", null)
+        CircleStore.reset()
+        assertEquals(ThemeMode.SYSTEM, CircleStore.theme)
+        assertEquals("shashank", CircleStore.profile.handle)
+    }
 }

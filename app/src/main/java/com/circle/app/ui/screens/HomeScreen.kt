@@ -181,7 +181,7 @@ private fun ComposeRow(nav: NavHostController) {
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Avatar("S", AvatarSlate, size = 32)
+        MeAvatar(32)
         Spacer(Modifier.width(10.dp))
         Text("What's on your mind?", color = CircleTheme.colors.muted, fontSize = 14.sp, modifier = Modifier.weight(1f))
         Icon(Icons.Outlined.Image, contentDescription = "Attach media", tint = CircleTheme.colors.muted, modifier = Modifier.size(18.dp))

@@ -40,6 +40,7 @@ import com.circle.app.data.Audience
 import com.circle.app.data.CircleStore
 import com.circle.app.navigation.Routes
 import com.circle.app.ui.components.Avatar
+import com.circle.app.ui.components.MeAvatar
 import com.circle.app.ui.components.EmbeddedPost
 import com.circle.app.ui.theme.*
 
@@ -111,7 +112,7 @@ fun ComposePostScreen(nav: NavHostController, quoteId: String? = null, groupId: 
             modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)
         ) {
             Row {
-                Avatar(CircleStore.me.initials, CircleStore.me.color, size = 38)
+                MeAvatar(38)
                 Spacer(Modifier.width(12.dp))
                 Box(Modifier.weight(1f).padding(top = 6.dp)) {
                     val placeholder = when {

@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.circle.app.data.CircleStore
+import com.circle.app.data.ThemeMode
 import com.circle.app.navigation.CircleNavGraph
 import com.circle.app.ui.theme.CircleTheme
 
@@ -21,7 +24,12 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun CircleApp() {
-    CircleTheme {
+    val night = when (CircleStore.theme) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.NIGHT -> true
+        ThemeMode.DAY -> false
+    }
+    CircleTheme(night = night) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = CircleTheme.colors.background,

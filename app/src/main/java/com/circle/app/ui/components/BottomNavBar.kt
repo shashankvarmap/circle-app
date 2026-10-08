@@ -135,18 +135,19 @@ fun CircleBottomNav(
             }
         }
 
-        // Profile — your own avatar, ringed in the active/idle color
+        // Profile — your own avatar (photo or initial), ringed in the active/idle color
         Box(
             modifier = Modifier
-                .size(24.dp)
+                .size(40.dp)
                 .clip(CircleShape)
-                .background(colors.navAvatar)
-                .border(1.5.dp, if (active == NavTab.PROFILE) colors.accent else colors.navIdle, CircleShape)
                 .clickable { nav.navigate(Routes.PROFILE) }
                 .semantics { contentDescription = "Profile" },
             contentAlignment = Alignment.Center
         ) {
-            Text("S", color = colors.navAvatarText, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+            MeAvatar(
+                24, fill = colors.navAvatar, textColor = colors.navAvatarText,
+                modifier = Modifier.border(1.5.dp, if (active == NavTab.PROFILE) colors.accent else colors.navIdle, CircleShape)
+            )
         }
     }
 }

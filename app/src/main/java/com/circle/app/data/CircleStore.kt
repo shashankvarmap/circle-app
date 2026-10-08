@@ -1,7 +1,10 @@
 package com.circle.app.data
 
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.circle.app.ui.theme.*
 
 /**
@@ -38,6 +41,18 @@ object CircleStore {
     val groups = mutableStateListOf<GroupInfo>()
     val events = mutableStateListOf<EventInfo>()
 
+    // ---- You, settings & safety ----
+
+    var profile by mutableStateOf(MyProfile())
+    var theme by mutableStateOf(ThemeMode.SYSTEM)
+    var privacy by mutableStateOf(PrivacyPrefs())
+    var notifications by mutableStateOf(NotificationPrefs())
+
+    /** People you blocked: hidden everywhere on your side. */
+    val blockedIds = mutableStateListOf<String>()
+    /** Friends you muted: their notes are hidden from your Home, nobody is told. */
+    val mutedIds = mutableStateListOf<String>()
+
     init {
         reset()
     }
@@ -58,7 +73,35 @@ object CircleStore {
         likedPostIds.clear(); likedPostIds.addAll(Seed.initialLikes)
         groups.clear(); groups.addAll(Seed.groups())
         events.clear(); events.addAll(Seed.events())
+
+        profile = MyProfile(); theme = ThemeMode.SYSTEM
+        privacy = PrivacyPrefs(); notifications = NotificationPrefs()
+        blockedIds.clear(); mutedIds.clear()
     }
+
+    // ---- Profile & settings ----
+
+    /** Saves the edit-profile form. Returns why it couldn't, or null on success. */
+    fun saveProfile(displayName: String, handle: String, pinnedThought: String, avatarUri: String?): String? {
+        val name = displayName.trim()
+        val h = handle.trim().removePrefix("@").lowercase()
+        if (name.isEmpty()) return "Add a display name"
+        HandleRules.problem(h)?.let { return it }
+        profile = MyProfile(name, h, pinnedThought.trim(), avatarUri)
+        return null
+    }
+
+    fun block(id: String) {
+        if (id == ME || id in blockedIds) return
+        blockedIds.add(id)
+        friendIds.remove(id); innerCircle.remove(id); mutedIds.remove(id)
+    }
+
+    fun unblock(id: String) { blockedIds.remove(id) }
+
+    fun mute(id: String) { if (isFriend(id) && id !in mutedIds) mutedIds.add(id) }
+
+    fun unmute(id: String) { mutedIds.remove(id) }
 
     fun person(id: String): Person? = people[id]
 

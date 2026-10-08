@@ -24,6 +24,13 @@ object Routes {
     const val THREAD = "thread/{postId}"
     const val YOUR_CIRCLE = "your_circle"
     const val EXPLORE_SEARCH = "explore_search"
+    const val SETTINGS = "settings"
+    const val EDIT_PROFILE = "edit_profile"
+    const val INFO = "info/{page}"
+    const val PEOPLE_LIST = "people/{kind}"
+
+    fun info(page: String) = "info/$page"
+    fun peopleList(kind: String) = "people/$kind"
 
     fun thread(postId: String) = "thread/$postId"
     /** Compose; [quote] embeds that note as a quote, [group] posts into that group. */
@@ -67,6 +74,10 @@ fun CircleNavGraph(navController: NavHostController = rememberNavController()) {
         composable(Routes.CREATE_EVENT) { CreateEventScreen(navController) }
         composable(Routes.YOUR_CIRCLE) { YourCircleScreen(navController) }
         composable(Routes.EXPLORE_SEARCH) { ExploreSearchScreen(navController) }
+        composable(Routes.SETTINGS) { SettingsScreen(navController) }
+        composable(Routes.EDIT_PROFILE) { EditProfileScreen(navController) }
+        composable(Routes.INFO) { entry -> InfoScreen(navController, entry.arguments?.getString("page").orEmpty()) }
+        composable(Routes.PEOPLE_LIST) { entry -> PeopleListScreen(navController, entry.arguments?.getString("kind").orEmpty()) }
         composable(Routes.THREAD) { entry ->
             ThreadScreen(navController, entry.arguments?.getString("postId").orEmpty())
         }

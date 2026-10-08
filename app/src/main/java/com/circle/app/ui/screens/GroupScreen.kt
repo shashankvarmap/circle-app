@@ -131,7 +131,7 @@ private fun ComposeToGroupRow(nav: NavHostController, groupId: String) {
             .clickable { nav.navigate(com.circle.app.navigation.Routes.compose(group = groupId)) }.padding(11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Avatar("S", AvatarSlate, size = 28)
+        MeAvatar(28)
         Spacer(Modifier.width(10.dp))
         Text("Post to the group…", color = CircleTheme.colors.muted, fontSize = 13.sp)
     }

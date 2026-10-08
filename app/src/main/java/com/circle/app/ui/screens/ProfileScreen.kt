@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -50,21 +51,19 @@ fun ProfileScreen(nav: NavHostController) {
         LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Avatar("S", AvatarSlate, size = 72)
+                    MeAvatar(68)
                     Spacer(Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Shashank", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        Text("@shashank", color = CircleTheme.colors.muted, fontSize = 13.sp)
+                        Text(
+                            CircleStore.profile.displayName, fontFamily = Display, fontWeight = FontWeight.SemiBold,
+                            fontSize = 24.sp, letterSpacing = (-0.36).sp, color = CircleTheme.colors.text
+                        )
+                        Text("@${CircleStore.profile.handle}", color = CircleTheme.colors.muted, fontSize = 13.sp)
                     }
                     Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(999.dp))
-                            .border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp))
-                            .clickable { }
-                            .padding(horizontal = 14.dp, vertical = 8.dp)
-                    ) {
-                        Text("Edit profile", color = CircleTheme.colors.text, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                    }
+                        modifier = Modifier.size(44.dp).clip(CircleShape).clickable { nav.navigate(Routes.SETTINGS) },
+                        contentAlignment = Alignment.Center
+                    ) { Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = CircleTheme.colors.text) }
                 }
             }
             item {
@@ -75,7 +74,7 @@ fun ProfileScreen(nav: NavHostController) {
                         Text("PINNED", color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                     }
                     Text(
-                        "Slowly rebuilding the workshop table. Say hi if you're nearby — always up for coffee and bad puns.",
+                        CircleStore.profile.pinnedThought.ifBlank { "No pinned thought yet. Add one in Settings → Edit profile." },
                         color = CircleTheme.colors.body, fontSize = 14.5.sp
                     )
                 }

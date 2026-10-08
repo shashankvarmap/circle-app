@@ -266,7 +266,7 @@ fun ReplyComposer(placeholder: String = "Add a reply…", onSend: (String) -> Un
         }
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Avatar("S", AvatarSlate, size = 28)
+        MeAvatar(28)
         Spacer(Modifier.width(9.dp))
         Row(
             modifier = Modifier
