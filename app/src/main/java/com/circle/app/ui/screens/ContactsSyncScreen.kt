@@ -44,13 +44,13 @@ fun ContactsSyncScreen(nav: NavHostController) {
     var stage by remember { mutableStateOf(Stage.PROMPT) }
     val scope = rememberCoroutineScope()
 
-    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+    Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
         Row(
             modifier = Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 18.dp),
             horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Skip for now", color = TextMuted, fontSize = 13.sp,
+                "Skip for now", color = CircleTheme.colors.muted, fontSize = 13.sp,
                 modifier = Modifier.clickable { nav.navigate(Routes.HOME) }
             )
         }
@@ -61,20 +61,20 @@ fun ContactsSyncScreen(nav: NavHostController) {
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
             ) {
                 Box(
-                    modifier = Modifier.size(64.dp).background(Surface, RoundedCornerShape(20.dp)),
+                    modifier = Modifier.size(64.dp).background(CircleTheme.colors.surface, RoundedCornerShape(20.dp)),
                     contentAlignment = Alignment.Center
-                ) { Icon(Icons.Outlined.People, contentDescription = null, tint = AccentDefault) }
+                ) { Icon(Icons.Outlined.People, contentDescription = null, tint = CircleTheme.colors.accent) }
                 Spacer(Modifier.height(22.dp))
-                Text("Find your circle", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, color = TextPrimary)
+                Text("Find your circle", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, color = CircleTheme.colors.text)
                 Spacer(Modifier.height(10.dp))
                 Text(
                     "See which of your contacts are already here, so you're not starting from zero.",
-                    color = TextBody, fontSize = 14.sp, textAlign = TextAlign.Center, lineHeight = 22.sp
+                    color = CircleTheme.colors.body, fontSize = 14.sp, textAlign = TextAlign.Center, lineHeight = 22.sp
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "We only check for matches — your contacts are never stored or shared.",
-                    color = TextDim, fontSize = 11.5.sp, textAlign = TextAlign.Center, lineHeight = 18.sp
+                    color = CircleTheme.colors.muted, fontSize = 11.5.sp, textAlign = TextAlign.Center, lineHeight = 18.sp
                 )
                 Spacer(Modifier.height(22.dp))
                 PrimaryButton("Connect contacts", modifier = Modifier.fillMaxWidth()) {
@@ -87,18 +87,18 @@ fun ContactsSyncScreen(nav: NavHostController) {
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
             ) {
-                CircularProgressIndicator(color = AccentDefault, strokeWidth = 2.5.dp, modifier = Modifier.size(26.dp))
+                CircularProgressIndicator(color = CircleTheme.colors.accent, strokeWidth = 2.5.dp, modifier = Modifier.size(26.dp))
                 Spacer(Modifier.height(16.dp))
-                Text("Looking for matches…", color = TextBody, fontSize = 13.5.sp)
+                Text("Looking for matches…", color = CircleTheme.colors.body, fontSize = 13.5.sp)
             }
 
             Stage.RESULTS -> Column(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp)) {
                 Spacer(Modifier.height(8.dp))
-                Text("3 people you know", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, color = TextPrimary)
+                Text("3 people you know", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, color = CircleTheme.colors.text)
                 Spacer(Modifier.height(2.dp))
                 Text(
                     "Send a friend request now — decide who goes in your Inner Circle later from their profile.",
-                    color = TextMuted, fontSize = 12.5.sp, lineHeight = 18.sp
+                    color = CircleTheme.colors.muted, fontSize = 12.5.sp, lineHeight = 18.sp
                 )
                 Spacer(Modifier.height(14.dp))
 
@@ -111,13 +111,13 @@ fun ContactsSyncScreen(nav: NavHostController) {
                         Avatar(c.initials, c.color, size = 42)
                         Spacer(Modifier.width(11.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(c.name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                            Text(c.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
                             val subtitle = when (s) {
                                 FriendStatus.NONE -> "In your phone contacts"
                                 FriendStatus.REQUESTED -> "Request sent"
                                 FriendStatus.ACCEPTED -> "${c.name.substringBefore(" ")} accepted your request"
                             }
-                            Text(subtitle, color = TextMuted, fontSize = 11.5.sp)
+                            Text(subtitle, color = CircleTheme.colors.muted, fontSize = 11.5.sp)
                         }
                         FriendRequestButton(c.name, addLabel = "Add")
                     }

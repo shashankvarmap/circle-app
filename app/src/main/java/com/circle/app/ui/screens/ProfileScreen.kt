@@ -49,37 +49,37 @@ fun ProfileScreen(nav: NavHostController) {
         ProfileTab.POSTS -> profilePosts.filter { it.isMedia }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+    Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
         LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Avatar("S", AvatarSlate, size = 72)
                     Spacer(Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Shashank", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        Text("@shashank", color = TextMuted, fontSize = 13.sp)
+                        Text("Shashank", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                        Text("@shashank", color = CircleTheme.colors.muted, fontSize = 13.sp)
                     }
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(999.dp))
-                            .border(1.dp, Border, RoundedCornerShape(999.dp))
+                            .border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp))
                             .clickable { }
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
-                        Text("Edit profile", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        Text("Edit profile", color = CircleTheme.colors.text, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                     }
                 }
             }
             item {
                 CircleCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.PushPin, contentDescription = null, tint = TextMuted, modifier = Modifier.size(13.dp))
+                        Icon(Icons.Outlined.PushPin, contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(13.dp))
                         Spacer(Modifier.width(5.dp))
-                        Text("PINNED", color = TextMuted, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        Text("PINNED", color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                     }
                     Text(
                         "Slowly rebuilding the workshop table. Say hi if you're nearby — always up for coffee and bad puns.",
-                        color = TextBody, fontSize = 14.5.sp
+                        color = CircleTheme.colors.body, fontSize = 14.5.sp
                     )
                 }
             }
@@ -90,9 +90,9 @@ fun ProfileScreen(nav: NavHostController) {
                         StatItem("6", "inner circle")
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Lock, contentDescription = null, tint = TextDim, modifier = Modifier.size(12.dp))
+                        Icon(Icons.Outlined.Lock, contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(12.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Only you see this", color = TextDim, fontSize = 10.5.sp)
+                        Text("Only you see this", color = CircleTheme.colors.muted, fontSize = 10.5.sp)
                     }
                 }
             }
@@ -111,7 +111,7 @@ fun ProfileScreen(nav: NavHostController) {
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         gridItems(List(6) { it }) {
-                            Box(modifier = Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(12.dp)).background(SurfaceAlt))
+                            Box(modifier = Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(12.dp)).background(CircleTheme.colors.track))
                         }
                     }
                 }
@@ -119,13 +119,13 @@ fun ProfileScreen(nav: NavHostController) {
             item {
                 CircleCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Lock, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Outlined.Lock, contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Private by default", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Private by default", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                     Text(
                         "If someone who isn't a friend finds their way here, all they see is your avatar and your pinned thought — nothing else on this page is visible until you're connected.",
-                        color = TextMuted, fontSize = 12.sp
+                        color = CircleTheme.colors.muted, fontSize = 12.sp
                     )
                 }
             }
@@ -137,29 +137,29 @@ fun ProfileScreen(nav: NavHostController) {
 @Composable
 private fun StatItem(value: String, label: String) {
     Row(verticalAlignment = Alignment.Bottom) {
-        Text(value, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Text(value, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         Spacer(Modifier.width(5.dp))
-        Text(label, color = TextMuted, fontSize = 13.sp)
+        Text(label, color = CircleTheme.colors.muted, fontSize = 13.sp)
     }
 }
 
 @Composable
 private fun ProfilePostCard(post: ProfilePost) {
     Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Surface).padding(13.dp),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(CircleTheme.colors.surface).padding(13.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
         Row {
-            Text("Shashank", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text("Shashank", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             Spacer(Modifier.width(6.dp))
-            Text("· ${post.time}", color = TextMuted, fontSize = 11.5.sp)
+            Text("· ${post.time}", color = CircleTheme.colors.muted, fontSize = 11.5.sp)
         }
-        Text(post.text, color = TextBody, fontSize = 13.5.sp)
+        Text(post.text, color = CircleTheme.colors.body, fontSize = 13.5.sp)
         if (post.isMedia) {
             Box(
-                modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(10.dp)).background(SurfaceAlt),
+                modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(10.dp)).background(CircleTheme.colors.track),
                 contentAlignment = Alignment.Center
-            ) { Icon(Icons.Outlined.Image, contentDescription = null, tint = TextDim) }
+            ) { Icon(Icons.Outlined.Image, contentDescription = null, tint = CircleTheme.colors.muted) }
         }
     }
 }

@@ -34,16 +34,16 @@ fun ThreadScreen(nav: NavHostController, postId: String) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
-    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+    Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
         Row(modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = TextBody, modifier = Modifier.clickable { nav.popBackStack() })
+            Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = CircleTheme.colors.body, modifier = Modifier.clickable { nav.popBackStack() })
             Spacer(Modifier.width(12.dp))
-            Text("Thread", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text("Thread", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         }
 
         if (post == null) {
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("This post isn't available.", color = TextMuted, fontSize = 13.sp)
+                Text("This post isn't available.", color = CircleTheme.colors.muted, fontSize = 13.sp)
             }
             return@Column
         }
@@ -64,7 +64,7 @@ fun ThreadScreen(nav: NavHostController, postId: String) {
 
         // New replies land as top-level comments at the end of this thread's list.
         Box(
-            modifier = Modifier.fillMaxWidth().background(Background).padding(horizontal = 14.dp, vertical = 10.dp)
+            modifier = Modifier.fillMaxWidth().background(CircleTheme.colors.background).padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             ReplyComposer { text ->
                 post.comments.add(CircleStore.you("now", text))
@@ -82,26 +82,26 @@ private fun RootPost(post: Post) {
             Spacer(Modifier.width(11.dp))
             Column {
                 Row {
-                    Text(post.author, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
+                    Text(post.author, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
                     Spacer(Modifier.width(6.dp))
-                    Text("· ${post.time}", color = TextMuted, fontSize = 13.sp)
+                    Text("· ${post.time}", color = CircleTheme.colors.muted, fontSize = 13.sp)
                 }
-                if (post.text.isNotEmpty()) Text(post.text, color = TextBody, fontSize = 14.5.sp)
+                if (post.text.isNotEmpty()) Text(post.text, color = CircleTheme.colors.body, style = CircleTheme.postText)
             }
         }
         post.quoted?.let { (author, text) ->
             Column(
-                modifier = Modifier.padding(start = 49.dp).fillMaxWidth().clip(RoundedCornerShape(11.dp)).background(Background).padding(12.dp)
+                modifier = Modifier.padding(start = 49.dp).fillMaxWidth().clip(RoundedCornerShape(11.dp)).background(CircleTheme.colors.background).padding(12.dp)
             ) {
-                Text(author, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Text(text, color = TextBody, fontSize = 13.sp)
+                Text(author, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text(text, color = CircleTheme.colors.body, fontSize = 13.sp)
             }
         }
         if (post.hasMedia) {
             Box(
-                modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(11.dp)).background(SurfaceAlt),
+                modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(11.dp)).background(CircleTheme.colors.track),
                 contentAlignment = Alignment.Center
-            ) { Icon(Icons.Outlined.Image, contentDescription = null, tint = TextDim) }
+            ) { Icon(Icons.Outlined.Image, contentDescription = null, tint = CircleTheme.colors.muted) }
         }
     }
 }

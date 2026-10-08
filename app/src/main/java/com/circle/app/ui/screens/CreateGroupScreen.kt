@@ -35,22 +35,22 @@ fun CreateGroupScreen(nav: NavHostController) {
     var category by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+    Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
         Row(
             modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Cancel", color = TextBody, fontSize = 14.5.sp, modifier = Modifier.clickable { nav.popBackStack() })
-            Text("New group", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text("Cancel", color = CircleTheme.colors.body, fontSize = 14.5.sp, modifier = Modifier.clickable { nav.popBackStack() })
+            Text("New group", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             val canCreate = name.isNotBlank()
             androidx.compose.foundation.layout.Box(
-                modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(if (canCreate) AccentDefault else SurfaceAlt)
+                modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(if (canCreate) CircleTheme.colors.accent else CircleTheme.colors.track)
                     .clickable(enabled = canCreate) {
                         CircleStore.createGroup(name, category, description, isPublic = !isPrivate)
                         nav.popBackStack()
                     }
                     .padding(horizontal = 16.dp, vertical = 7.dp)
-            ) { Text("Create", color = if (canCreate) OnAccent else TextDim, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+            ) { Text("Create", color = if (canCreate) CircleTheme.colors.onAccent else CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
         }
 
         Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -58,7 +58,7 @@ fun CreateGroupScreen(nav: NavHostController) {
                 androidx.compose.foundation.layout.Box(
                     modifier = Modifier.size(72.dp).clip(RoundedCornerShape(20.dp)).background(AvatarOrange),
                     contentAlignment = Alignment.Center
-                ) { Icon(Icons.Outlined.Image, contentDescription = "Add group icon", tint = OnAccent) }
+                ) { Icon(Icons.Outlined.Image, contentDescription = "Add group icon", tint = avatarTextColor(AvatarOrange)) }
             }
             LabeledField("GROUP NAME", name, { name = it }, "e.g. Aachen Photo Walk")
             LabeledField("CATEGORY", category, { category = it }, "e.g. Photography, Fitness & Sports")
@@ -78,7 +78,7 @@ fun CreateGroupScreen(nav: NavHostController) {
 
             Text(
                 "You can switch this later from the group's settings. Every group also gets a linked chat, in Messages → Group Messages, once it's created.",
-                color = TextDim, fontSize = 11.sp
+                color = CircleTheme.colors.muted, fontSize = 11.sp
             )
         }
     }
@@ -90,13 +90,13 @@ fun LabeledField(label: String, value: String, onChange: (String) -> Unit, place
         com.circle.app.ui.components.SectionLabel(label)
         OutlinedTextField(
             value = value, onValueChange = onChange,
-            placeholder = { Text(placeholder, color = TextMuted, fontSize = 14.sp) },
+            placeholder = { Text(placeholder, color = CircleTheme.colors.muted, fontSize = 14.sp) },
             modifier = Modifier.fillMaxWidth().let { if (multiline) it.height(96.dp) else it },
             shape = RoundedCornerShape(11.dp),
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = Surface, unfocusedContainerColor = Surface,
-                focusedIndicatorColor = AccentDefault, unfocusedIndicatorColor = Border,
-                focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
+                focusedContainerColor = CircleTheme.colors.surface, unfocusedContainerColor = CircleTheme.colors.surface,
+                focusedIndicatorColor = CircleTheme.colors.accent, unfocusedIndicatorColor = CircleTheme.colors.border,
+                focusedTextColor = CircleTheme.colors.text, unfocusedTextColor = CircleTheme.colors.text
             )
         )
     }
@@ -108,23 +108,23 @@ fun VisibilityOption(icon: androidx.compose.ui.graphics.vector.ImageVector, titl
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Surface)
-            .border(1.dp, if (selected) AccentDefault else Border, RoundedCornerShape(12.dp))
+            .background(CircleTheme.colors.surface)
+            .border(1.dp, if (selected) CircleTheme.colors.accent else CircleTheme.colors.border, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .padding(13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = TextBody, modifier = Modifier.size(18.dp))
+        Icon(icon, contentDescription = null, tint = CircleTheme.colors.body, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-            Text(subtitle, color = TextMuted, fontSize = 11.5.sp)
+            Text(title, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+            Text(subtitle, color = CircleTheme.colors.muted, fontSize = 11.5.sp)
         }
         androidx.compose.foundation.layout.Box(
-            modifier = Modifier.size(18.dp).clip(CircleShape).border(2.dp, if (selected) AccentDefault else BorderStrong, CircleShape),
+            modifier = Modifier.size(18.dp).clip(CircleShape).border(2.dp, if (selected) CircleTheme.colors.accent else CircleTheme.colors.border, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            if (selected) androidx.compose.foundation.layout.Box(modifier = Modifier.size(9.dp).background(AccentDefault, CircleShape))
+            if (selected) androidx.compose.foundation.layout.Box(modifier = Modifier.size(9.dp).background(CircleTheme.colors.accent, CircleShape))
         }
     }
 }

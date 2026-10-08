@@ -32,9 +32,9 @@ fun NotificationsScreen(nav: NavHostController) {
     var confirmation by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+    Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
         Box(modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 16.dp), contentAlignment = Alignment.CenterStart) {
-            Text("Notifications", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            Text("Notifications", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 17.sp)
         }
         Box(modifier = Modifier.padding(top = 12.dp, start = 16.dp)) {
             UnderlineTabs(listOf("Notifications", "Activity"), tab.ordinal) { tab = NTab.entries[it] }
@@ -45,11 +45,11 @@ fun NotificationsScreen(nav: NavHostController) {
                 item { SectionLabel("FRIEND REQUESTS") }
                 confirmation?.let { msg ->
                     item(key = "confirmation") {
-                        Text(msg, color = Success, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
+                        Text(msg, color = CircleTheme.colors.accent, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
                     }
                 }
                 if (CircleStore.incomingRequests.isEmpty()) {
-                    item { Text("No pending requests", color = TextDim, fontSize = 12.5.sp, modifier = Modifier.padding(vertical = 8.dp)) }
+                    item { Text("No pending requests", color = CircleTheme.colors.muted, fontSize = 12.5.sp, modifier = Modifier.padding(vertical = 8.dp)) }
                 }
                 items(CircleStore.incomingRequests, key = { it.name }) { person ->
                     RequestRow(
@@ -88,21 +88,21 @@ private fun RequestRow(person: Person, onAccept: () -> Unit, onDecline: () -> Un
         Avatar(person.initials, person.color, size = 40)
         Spacer(Modifier.width(11.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(person.name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-            Text(person.subtitle, color = TextMuted, fontSize = 11.5.sp)
+            Text(person.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+            Text(person.subtitle, color = CircleTheme.colors.muted, fontSize = 11.5.sp)
         }
         Box(
-            modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(AccentDefault)
+            modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(CircleTheme.colors.accent)
                 .clickable(onClick = onAccept).padding(horizontal = 13.dp, vertical = 7.dp)
         ) {
-            Text("Accept", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text("Accept", color = CircleTheme.colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
         }
         Spacer(Modifier.width(8.dp))
         Box(
-            modifier = Modifier.clip(RoundedCornerShape(999.dp)).border(1.dp, BorderStrong, RoundedCornerShape(999.dp))
+            modifier = Modifier.clip(RoundedCornerShape(999.dp)).border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp))
                 .clickable(onClick = onDecline).padding(horizontal = 13.dp, vertical = 7.dp)
         ) {
-            Text("Decline", color = TextBody, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+            Text("Decline", color = CircleTheme.colors.body, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
         }
     }
 }
@@ -117,13 +117,13 @@ private fun ActivityRow(name: String, action: String, initials: String, color: a
                 buildAnnotatedString2(name, action),
                 fontSize = 13.5.sp
             )
-            Text(time, color = TextMuted, fontSize = 11.5.sp)
+            Text(time, color = CircleTheme.colors.muted, fontSize = 11.5.sp)
         }
     }
 }
 
 @Composable
 private fun buildAnnotatedString2(name: String, action: String) = androidx.compose.ui.text.buildAnnotatedString {
-    withStyle(androidx.compose.ui.text.SpanStyle(color = TextPrimary, fontWeight = FontWeight.Bold)) { append(name) }
-    withStyle(androidx.compose.ui.text.SpanStyle(color = androidx.compose.ui.graphics.Color(0xFFB7BBC4))) { append(" $action") }
+    withStyle(androidx.compose.ui.text.SpanStyle(color = CircleTheme.colors.text, fontWeight = FontWeight.Bold)) { append(name) }
+    withStyle(androidx.compose.ui.text.SpanStyle(color = CircleTheme.colors.body)) { append(" $action") }
 }

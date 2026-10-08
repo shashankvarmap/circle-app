@@ -40,7 +40,7 @@ fun ExploreScreen(nav: NavHostController) {
     var searching by remember { mutableStateOf(false) }
     var tab by remember { mutableStateOf(SearchTab.PEOPLE) }
 
-    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+    Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
         LazyColumn(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(16.dp),
@@ -51,14 +51,14 @@ fun ExploreScreen(nav: NavHostController) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Surface)
+                        .background(CircleTheme.colors.surface)
                         .clickable { searching = true }
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Outlined.Search, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Outlined.Search, contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(9.dp))
-                    Text("Search", color = TextMuted, fontSize = 13.5.sp)
+                    Text("Search", color = CircleTheme.colors.muted, fontSize = 13.5.sp)
                 }
             }
 
@@ -79,11 +79,11 @@ fun ExploreScreen(nav: NavHostController) {
             } else {
                 item {
                     Column(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Surface).padding(16.dp)
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(CircleTheme.colors.surface).padding(16.dp)
                     ) {
-                        Text("Explore", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 19.sp, color = TextPrimary)
+                        Text("Explore", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 19.sp, color = CircleTheme.colors.text)
                         Spacer(Modifier.height(6.dp))
-                        Text("Groups to join, events to go to, and posts people have chosen to share here.", color = TextBody, fontSize = 12.5.sp)
+                        Text("Groups to join, events to go to, and posts people have chosen to share here.", color = CircleTheme.colors.body, fontSize = 12.5.sp)
                     }
                 }
                 item {
@@ -102,13 +102,13 @@ fun ExploreScreen(nav: NavHostController) {
                 }
                 item {
                     Column {
-                        Text("EXPLORE POSTS", color = TextMuted, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                        Text("EXPLORE POSTS", color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
                         Spacer(Modifier.height(10.dp))
                         PostsGrid()
                         Spacer(Modifier.height(6.dp))
                         Text(
                             "Only posts their owner opted into Explore. Tapping through still only shows photo + bio — nothing more unlocks.",
-                            color = TextDim, fontSize = 11.sp
+                            color = CircleTheme.colors.muted, fontSize = 11.sp
                         )
                     }
                 }
@@ -122,7 +122,7 @@ fun ExploreScreen(nav: NavHostController) {
 private fun SectionHeaderRow(label: String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         SectionLabel(label)
-        Text("See All", color = AccentDefault, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
+        Text("See All", color = CircleTheme.colors.accent, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
     }
 }
 
@@ -142,8 +142,8 @@ private fun GroupRailItem(name: String, category: String, initial: String, color
     Column(modifier = Modifier.width(104.dp).clickable(onClick = onClick)) {
         GroupTile(initial, color, size = 96)
         Spacer(Modifier.height(6.dp))
-        Text(name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 2)
-        Text(category, color = TextMuted, fontSize = 11.sp)
+        Text(name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 2)
+        Text(category, color = CircleTheme.colors.muted, fontSize = 11.sp)
     }
 }
 
@@ -169,24 +169,24 @@ private fun EventRailCard(event: EventInfo, onClick: () -> Unit) {
         modifier = Modifier
             .width(180.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(Surface)
+            .background(CircleTheme.colors.surface)
             .clickable(onClick = onClick)
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(9.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(
-                modifier = Modifier.size(42.dp).clip(RoundedCornerShape(9.dp)).background(AccentDefault.copy(alpha = 0.14f)),
+                modifier = Modifier.size(42.dp).clip(RoundedCornerShape(9.dp)).background(CircleTheme.colors.accent.copy(alpha = 0.14f)),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(event.month, color = AccentDefault, fontWeight = FontWeight.Bold, fontSize = 9.sp)
-                Text(event.day, color = AccentDefault, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(event.month, color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                Text(event.day, color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
-            Text("${event.going}/${event.capacity}", color = TextMuted, fontSize = 11.sp)
+            Text("${event.going}/${event.capacity}", color = CircleTheme.colors.muted, fontSize = 11.sp)
         }
-        Text(event.title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
-        Text(event.venue, color = TextBody, fontSize = 11.5.sp, maxLines = 1)
+        Text(event.title, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+        Text(event.venue, color = CircleTheme.colors.body, fontSize = 11.5.sp, maxLines = 1)
     }
 }
 
@@ -196,14 +196,14 @@ private fun CreateTile(icon: Boolean, wide: Boolean, onClick: () -> Unit) {
     Box(
         modifier = mod
             .clip(RoundedCornerShape(14.dp))
-            .background(Surface)
+            .background(CircleTheme.colors.surface)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Outlined.Add, contentDescription = "Create", tint = AccentDefault)
+            Icon(Icons.Outlined.Add, contentDescription = "Create", tint = CircleTheme.colors.accent)
             Spacer(Modifier.height(6.dp))
-            Text(if (wide) "Create an event" else "Create a group", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text(if (wide) "Create an event" else "Create a group", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 12.sp)
         }
     }
 }
@@ -223,9 +223,9 @@ private fun PostsGrid() {
     ) {
         items(captions) { caption ->
             Column {
-                Box(modifier = Modifier.fillMaxWidth().height(130.dp).clip(RoundedCornerShape(12.dp)).background(SurfaceAlt))
+                Box(modifier = Modifier.fillMaxWidth().height(130.dp).clip(RoundedCornerShape(12.dp)).background(CircleTheme.colors.track))
                 Spacer(Modifier.height(6.dp))
-                Text(caption, color = TextBody, fontSize = 11.5.sp)
+                Text(caption, color = CircleTheme.colors.body, fontSize = 11.5.sp)
             }
         }
     }
@@ -246,8 +246,8 @@ private fun PersonRow(name: String, subtitle: String, initials: String, color: C
         Avatar(initials, color, size = 40)
         Spacer(Modifier.width(11.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-            Text(subtitle, color = TextMuted, fontSize = 11.5.sp)
+            Text(name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+            Text(subtitle, color = CircleTheme.colors.muted, fontSize = 11.5.sp)
         }
         FriendRequestButton(name)
     }
@@ -265,16 +265,16 @@ private fun GroupsList(nav: NavHostController) {
 @Composable
 private fun GroupListRow(group: GroupInfo, onClick: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp)).background(Surface).clickable(onClick = onClick).padding(13.dp),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp)).background(CircleTheme.colors.surface).clickable(onClick = onClick).padding(13.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(group.name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text("PUBLIC", color = Success, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
+            Text(group.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text("PUBLIC", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
         }
-        if (group.description.isNotEmpty()) Text(group.description, color = TextBody, fontSize = 12.5.sp)
+        if (group.description.isNotEmpty()) Text(group.description, color = CircleTheme.colors.body, fontSize = 12.5.sp)
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("${group.memberCount} members", color = TextMuted, fontSize = 11.5.sp)
+            Text("${group.memberCount} members", color = CircleTheme.colors.muted, fontSize = 11.5.sp)
             JoinRequestButton(group)
         }
     }

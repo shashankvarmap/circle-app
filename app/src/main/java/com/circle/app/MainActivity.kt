@@ -22,7 +22,11 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun CircleApp() {
     CircleTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = CircleTheme.colors.background,
+            contentColor = CircleTheme.colors.text
+        ) {
             CircleNavGraph()
         }
     }

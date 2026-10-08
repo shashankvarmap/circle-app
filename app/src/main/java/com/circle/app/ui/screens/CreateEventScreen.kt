@@ -34,22 +34,22 @@ fun CreateEventScreen(nav: NavHostController) {
     var description by remember { mutableStateOf("") }
     val visibilityLabels = listOf("Friends", "Friends of friends", "Open nearby")
 
-    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+    Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
         Row(
             modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Cancel", color = TextBody, fontSize = 14.5.sp, modifier = Modifier.clickable { nav.popBackStack() })
-            Text("New event", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text("Cancel", color = CircleTheme.colors.body, fontSize = 14.5.sp, modifier = Modifier.clickable { nav.popBackStack() })
+            Text("New event", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             val canCreate = title.isNotBlank()
             Box(
-                modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(if (canCreate) AccentDefault else SurfaceAlt)
+                modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(if (canCreate) CircleTheme.colors.accent else CircleTheme.colors.track)
                     .clickable(enabled = canCreate) {
                         CircleStore.createEvent(title, venue = "", visibility = visibilityLabels[visibility], description = description, capacity = capacity)
                         nav.popBackStack()
                     }
                     .padding(horizontal = 16.dp, vertical = 7.dp)
-            ) { Text("Create", color = if (canCreate) OnAccent else TextDim, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+            ) { Text("Create", color = if (canCreate) CircleTheme.colors.onAccent else CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
         }
 
         Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -74,22 +74,22 @@ fun CreateEventScreen(nav: NavHostController) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 SectionLabel("CAPACITY")
                 Row(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(11.dp)).background(Surface).padding(horizontal = 14.dp, vertical = 9.dp),
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(11.dp)).background(CircleTheme.colors.surface).padding(horizontal = 14.dp, vertical = 9.dp),
                     horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Max attendees", color = TextBody, fontSize = 13.5.sp)
+                    Text("Max attendees", color = CircleTheme.colors.body, fontSize = 13.5.sp)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         Box(
-                            modifier = Modifier.size(26.dp).clip(CircleShape).background(SurfaceAlt)
+                            modifier = Modifier.size(26.dp).clip(CircleShape).background(CircleTheme.colors.track)
                                 .clickable { if (capacity > 1) capacity-- },
                             contentAlignment = Alignment.Center
-                        ) { Text("−", color = TextPrimary, fontWeight = FontWeight.Bold) }
-                        Text("$capacity", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        ) { Text("−", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold) }
+                        Text("$capacity", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Box(
-                            modifier = Modifier.size(26.dp).clip(CircleShape).background(SurfaceAlt)
+                            modifier = Modifier.size(26.dp).clip(CircleShape).background(CircleTheme.colors.track)
                                 .clickable { capacity++ },
                             contentAlignment = Alignment.Center
-                        ) { Text("+", color = TextPrimary, fontWeight = FontWeight.Bold) }
+                        ) { Text("+", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold) }
                     }
                 }
             }
@@ -107,7 +107,7 @@ fun CreateEventScreen(nav: NavHostController) {
 
             Text(
                 "The reply thread only unlocks for people who tap Join — not a public comment section. Report and block tools are available on every event.",
-                color = TextDim, fontSize = 11.sp
+                color = CircleTheme.colors.muted, fontSize = 11.sp
             )
         }
     }
@@ -116,12 +116,12 @@ fun CreateEventScreen(nav: NavHostController) {
 @Composable
 private fun PickerRow(icon: androidx.compose.ui.graphics.vector.ImageVector, placeholder: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(11.dp)).background(Surface).padding(horizontal = 14.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(11.dp)).background(CircleTheme.colors.surface).padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = TextMuted, modifier = Modifier.size(15.dp))
+        Icon(icon, contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(15.dp))
         Spacer(Modifier.width(8.dp))
-        Text(placeholder, color = TextMuted, fontSize = 13.5.sp)
+        Text(placeholder, color = CircleTheme.colors.muted, fontSize = 13.5.sp)
     }
 }
 
@@ -130,11 +130,11 @@ private fun VisibilityChip(label: String, selected: Boolean, onClick: () -> Unit
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(if (selected) AccentDefault else androidx.compose.ui.graphics.Color.Transparent)
-            .border(1.dp, if (selected) AccentDefault else BorderStrong, RoundedCornerShape(999.dp))
+            .background(if (selected) CircleTheme.colors.accent else androidx.compose.ui.graphics.Color.Transparent)
+            .border(1.dp, if (selected) CircleTheme.colors.accent else CircleTheme.colors.border, RoundedCornerShape(999.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 13.dp, vertical = 8.dp)
     ) {
-        Text(label, color = if (selected) OnAccent else TextBody, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+        Text(label, color = if (selected) CircleTheme.colors.onAccent else CircleTheme.colors.body, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
     }
 }

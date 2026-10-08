@@ -60,7 +60,7 @@ fun Avatar(initials: String, color: Color, size: Int = 40) {
         modifier = Modifier.size(size.dp).clip(CircleShape).background(color),
         contentAlignment = Alignment.Center
     ) {
-        Text(initials, color = OnAccent, fontWeight = FontWeight.Bold, fontSize = (size / 3).sp)
+        Text(initials, color = avatarTextColor(color), fontWeight = FontWeight.Bold, fontSize = (size / 3).sp)
     }
 }
 
@@ -71,19 +71,20 @@ fun GroupTile(initial: String, color: Color, size: Int = 40) {
         modifier = Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.3).dp)).background(color),
         contentAlignment = Alignment.Center
     ) {
-        Text(initial, color = OnAccent, fontWeight = FontWeight.Bold, fontSize = (size / 2.5).sp)
+        Text(initial, color = avatarTextColor(color), fontWeight = FontWeight.Bold, fontSize = (size / 2.5).sp)
     }
 }
 
 @Composable
 fun SectionLabel(text: String) {
-    Text(text, color = TextMuted, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 0.5.sp)
+    Text(text, color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 0.5.sp)
 }
 
 /** Small underline text tabs — the "Twitter For You / Following" style used
  *  across Home (Friends/Groups), Notifications, Explore search, and Group. */
 @Composable
 fun UnderlineTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+    val accent = CircleTheme.colors.accent
     Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
         tabs.forEachIndexed { i, label ->
             val isActive = i == selected
@@ -91,7 +92,7 @@ fun UnderlineTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
             // so each tab is sized purely by its own text — no fillMaxWidth/intrinsics.
             Text(
                 label,
-                color = if (isActive) TextPrimary else TextMuted,
+                color = if (isActive) CircleTheme.colors.text else CircleTheme.colors.muted,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 12.5.sp,
                 maxLines = 1,
@@ -103,7 +104,7 @@ fun UnderlineTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
                         if (isActive) {
                             val stroke = 1.5.dp.toPx()
                             drawRect(
-                                AccentDefault,
+                                accent,
                                 topLeft = Offset(0f, size.height - stroke),
                                 size = Size(size.width, stroke)
                             )
@@ -130,11 +131,11 @@ fun ThreadComment(comment: Comment) {
             ) {
                 Text(
                     if (showReplies) "Hide replies" else "View $n ${if (n == 1) "reply" else "replies"}",
-                    color = TextMuted, fontWeight = FontWeight.SemiBold, fontSize = 11.5.sp
+                    color = CircleTheme.colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 11.5.sp
                 )
                 Icon(
                     if (showReplies) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
-                    contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp)
+                    contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(16.dp)
                 )
             }
             if (showReplies) {
@@ -154,11 +155,11 @@ private fun CommentRow(comment: Comment, avatarSize: Int) {
         Spacer(Modifier.width(10.dp))
         Column {
             Row {
-                Text(comment.author, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text(comment.author, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 Spacer(Modifier.width(6.dp))
-                Text("· ${comment.time}", color = TextMuted, fontSize = 11.5.sp)
+                Text("· ${comment.time}", color = CircleTheme.colors.muted, fontSize = 11.5.sp)
             }
-            Text(comment.text, color = TextBody, fontSize = 13.sp)
+            Text(comment.text, color = CircleTheme.colors.body, fontSize = 13.sp)
         }
     }
 }
@@ -195,18 +196,18 @@ fun PostActions(
         ) {
             Icon(
                 Icons.Outlined.ChatBubbleOutline, contentDescription = "Reply",
-                tint = TextMuted, modifier = Modifier.size(18.dp)
+                tint = CircleTheme.colors.muted, modifier = Modifier.size(18.dp)
             )
             if (commentCount > 0) {
                 Spacer(Modifier.width(5.dp))
-                Text("$commentCount", color = TextMuted, fontSize = 12.sp)
+                Text("$commentCount", color = CircleTheme.colors.muted, fontSize = 12.sp)
             }
         }
         if (showRepost) {
             Box {
                 Icon(
                     Icons.Outlined.Repeat, contentDescription = "Repost / Quote",
-                    tint = if (reposted) AccentDefault else TextMuted,
+                    tint = if (reposted) CircleTheme.colors.accent else CircleTheme.colors.muted,
                     modifier = Modifier.size(18.dp).clickable { showRepostMenu = true }
                 )
                 DropdownMenu(expanded = showRepostMenu, onDismissRequest = { showRepostMenu = false }) {
@@ -226,7 +227,7 @@ fun PostActions(
             Icon(
                 reaction?.icon ?: Icons.Outlined.FavoriteBorder,
                 contentDescription = "Like",
-                tint = if (reaction != null) AccentDefault else TextMuted,
+                tint = if (reaction != null) CircleTheme.colors.accent else CircleTheme.colors.muted,
                 modifier = Modifier
                     .size(18.dp)
                     .pointerInput(Unit) {
@@ -252,14 +253,14 @@ fun PostActions(
                     modifier = Modifier
                         .offset(y = (-38).dp)
                         .clip(RoundedCornerShape(999.dp))
-                        .background(SurfaceAlt)
-                        .border(1.dp, Border, RoundedCornerShape(999.dp))
+                        .background(CircleTheme.colors.track)
+                        .border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp))
                         .padding(horizontal = 9.dp, vertical = 7.dp),
                     horizontalArrangement = Arrangement.spacedBy(11.dp)
                 ) {
                     Reaction.values().forEach { r ->
                         Icon(
-                            r.icon, contentDescription = r.name, tint = AccentDefault,
+                            r.icon, contentDescription = r.name, tint = CircleTheme.colors.accent,
                             modifier = Modifier.size(18.dp).clickable {
                                 reaction = r
                                 showReactionPicker = false
@@ -277,9 +278,10 @@ fun CircleCard(content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .cardShadow(CircleTheme.colors, cornerRadius = 13.dp)
             .clip(RoundedCornerShape(13.dp))
-            .background(Surface)
-            .border(1.dp, Border, RoundedCornerShape(13.dp))
+            .background(CircleTheme.colors.surface)
+            .border(1.dp, CircleTheme.colors.border, RoundedCornerShape(13.dp))
             .padding(13.dp),
         verticalArrangement = Arrangement.spacedBy(9.dp)
     ) { content() }
@@ -290,12 +292,12 @@ fun PrimaryButton(text: String, modifier: Modifier = Modifier, onClick: () -> Un
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(AccentDefault)
+            .background(CircleTheme.colors.accent)
             .clickable(onClick = onClick)
             .padding(vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(text, color = CircleTheme.colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
     }
 }
 
@@ -317,18 +319,18 @@ fun ReplyComposer(placeholder: String = "Add a reply…", onSend: (String) -> Un
             modifier = Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(999.dp))
-                .background(Surface)
-                .border(1.dp, Border, RoundedCornerShape(999.dp))
+                .background(CircleTheme.colors.surface)
+                .border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp))
                 .padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(modifier = Modifier.weight(1f)) {
-                if (text.isEmpty()) Text(placeholder, color = TextDim, fontSize = 13.sp)
+                if (text.isEmpty()) Text(placeholder, color = CircleTheme.colors.muted, fontSize = 13.sp)
                 BasicTextField(
                     value = text,
                     onValueChange = { text = it },
-                    textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 13.sp),
-                    cursorBrush = SolidColor(AccentDefault),
+                    textStyle = androidx.compose.ui.text.TextStyle(color = CircleTheme.colors.text, fontSize = 13.sp),
+                    cursorBrush = SolidColor(CircleTheme.colors.accent),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = { send() }),
                     maxLines = 4,
@@ -339,13 +341,13 @@ fun ReplyComposer(placeholder: String = "Add a reply…", onSend: (String) -> Un
                 modifier = Modifier
                     .size(30.dp)
                     .clip(CircleShape)
-                    .background(if (canSend) AccentDefault else SurfaceAlt)
+                    .background(if (canSend) CircleTheme.colors.accent else CircleTheme.colors.track)
                     .clickable(enabled = canSend) { send() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.AutoMirrored.Outlined.Send, contentDescription = "Send",
-                    tint = if (canSend) OnAccent else TextDim, modifier = Modifier.size(15.dp)
+                    tint = if (canSend) CircleTheme.colors.onAccent else CircleTheme.colors.muted, modifier = Modifier.size(15.dp)
                 )
             }
         }
@@ -360,17 +362,17 @@ fun FriendRequestButton(name: String, addLabel: String = "Add friend") {
         FriendStatus.NONE -> Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(999.dp))
-                .background(AccentDefault)
+                .background(CircleTheme.colors.accent)
                 .clickable { CircleStore.sendFriendRequest(name) }
                 .padding(horizontal = 14.dp, vertical = 7.dp)
-        ) { Text(addLabel, color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+        ) { Text(addLabel, color = CircleTheme.colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
 
         FriendStatus.REQUESTED -> Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)) {
-            Text("Requested", color = TextMuted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+            Text("Requested", color = CircleTheme.colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
         }
 
         FriendStatus.ACCEPTED -> Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)) {
-            Text("✓ Friends", color = Success, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+            Text("✓ Friends", color = CircleTheme.colors.accent, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
         }
     }
 }
@@ -381,22 +383,22 @@ fun FriendRequestButton(name: String, addLabel: String = "Add friend") {
 fun JoinRequestButton(group: GroupInfo, modifier: Modifier = Modifier) {
     when {
         group.isMember -> Box(
-            modifier = modifier.clip(RoundedCornerShape(999.dp)).border(1.dp, Border, RoundedCornerShape(999.dp))
+            modifier = modifier.clip(RoundedCornerShape(999.dp)).border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp))
                 .padding(horizontal = 14.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center
-        ) { Text("✓ Member", color = Success, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+        ) { Text("✓ Member", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
 
         group.joinRequested -> Box(
-            modifier = modifier.clip(RoundedCornerShape(999.dp)).border(1.dp, BorderStrong, RoundedCornerShape(999.dp))
+            modifier = modifier.clip(RoundedCornerShape(999.dp)).border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp))
                 .padding(horizontal = 14.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center
-        ) { Text("Requested", color = TextMuted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
+        ) { Text("Requested", color = CircleTheme.colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
 
         else -> Box(
-            modifier = modifier.clip(RoundedCornerShape(999.dp)).background(AccentDefault)
+            modifier = modifier.clip(RoundedCornerShape(999.dp)).background(CircleTheme.colors.accent)
                 .clickable { CircleStore.requestToJoin(group) }
                 .padding(horizontal = 14.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center
-        ) { Text("Request to join", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+        ) { Text("Request to join", color = CircleTheme.colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
     }
 }

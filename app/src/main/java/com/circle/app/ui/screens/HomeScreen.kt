@@ -49,12 +49,12 @@ fun HomeScreen(nav: NavHostController) {
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+    Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
         Box(
             modifier = Modifier.fillMaxWidth().height(52.dp).clickable { doRefresh() },
             contentAlignment = Alignment.Center
         ) {
-            Text("Circle.", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 19.sp, color = TextPrimary)
+            Text("Circle.", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 19.sp, color = CircleTheme.colors.text)
         }
 
         Box(modifier = Modifier.fillMaxWidth().padding(top = 9.dp), contentAlignment = Alignment.Center) {
@@ -64,7 +64,7 @@ fun HomeScreen(nav: NavHostController) {
         }
         Text(
             "Tip: press & hold the Home icon below to flip feeds too",
-            color = androidx.compose.ui.graphics.Color(0xFF454A55), fontSize = 9.5.sp,
+            color = CircleTheme.colors.muted, fontSize = 9.5.sp,
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
 
@@ -77,8 +77,8 @@ fun HomeScreen(nav: NavHostController) {
             if (feed == Feed.FRIENDS) {
                 item {
                     when (refresh) {
-                        Refresh.CHECKING -> RefreshRow("Checking for new posts…", TextMuted)
-                        Refresh.DONE -> RefreshRow("Nothing to refresh — you're caught up", Success, showCheck = true)
+                        Refresh.CHECKING -> RefreshRow("Checking for new posts…", CircleTheme.colors.muted)
+                        Refresh.DONE -> RefreshRow("Nothing to refresh — you're caught up", CircleTheme.colors.accent, showCheck = true)
                         Refresh.IDLE -> {}
                     }
                 }
@@ -87,13 +87,13 @@ fun HomeScreen(nav: NavHostController) {
                 item { RepostCard(nav) }
                 item { QuoteCard(nav) }
                 item { MediaPostCard(nav) }
-                item { Text("You're all caught up", color = TextDim, fontSize = 12.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
+                item { Text("You're all caught up", color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
             } else {
                 item { GroupsChipRow(nav) }
                 item {
                     Text(
                         "Group posts stay in the group — no repost, no quote, no share out to Home.",
-                        color = TextDim, fontSize = 11.sp
+                        color = CircleTheme.colors.muted, fontSize = 11.sp
                     )
                 }
                 item { GroupFeedCard(nav, "group-golden-hour", "Aachen Photo Walk", AvatarOrange, "PK", "Priya Kapoor", "40m", "Golden hour shoot this Sunday — meet at the cathedral steps, 6:30 sharp.") }
@@ -124,15 +124,15 @@ private fun ComposeRow(nav: NavHostController) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(13.dp))
-            .background(Surface)
+            .background(CircleTheme.colors.surface)
             .clickable { nav.navigate(Routes.COMPOSE_POST) }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Avatar("S", AvatarSlate, size = 32)
         Spacer(Modifier.width(10.dp))
-        Text("What's on your mind?", color = TextMuted, fontSize = 14.sp, modifier = Modifier.weight(1f))
-        Icon(Icons.Outlined.Image, contentDescription = "Attach media", tint = TextMuted, modifier = Modifier.size(18.dp))
+        Text("What's on your mind?", color = CircleTheme.colors.muted, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Icon(Icons.Outlined.Image, contentDescription = "Attach media", tint = CircleTheme.colors.muted, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -144,11 +144,11 @@ private fun ThoughtCard(nav: NavHostController) {
             Spacer(Modifier.width(11.dp))
             Column {
                 Row {
-                    Text("Amara Osei", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
+                    Text("Amara Osei", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
                     Spacer(Modifier.width(6.dp))
-                    Text("· 2h", color = TextMuted, fontSize = 13.sp)
+                    Text("· 2h", color = CircleTheme.colors.muted, fontSize = 13.sp)
                 }
-                Text("Finally finished the puzzle we started at Mom's over the summer.", color = TextBody, fontSize = 14.5.sp)
+                Text("Finally finished the puzzle we started at Mom's over the summer.", color = CircleTheme.colors.body, style = CircleTheme.postText)
             }
         }
         Box(Modifier.padding(start = 49.dp)) {
@@ -160,22 +160,22 @@ private fun ThoughtCard(nav: NavHostController) {
 @Composable
 private fun RepostCard(nav: NavHostController) {
     CircleCard {
-        Text("↻  You reposted", color = TextMuted, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
+        Text("↻  You reposted", color = CircleTheme.colors.muted, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(11.dp))
-                .background(Background)
+                .background(CircleTheme.colors.background)
                 .padding(13.dp)
         ) {
             Avatar("PK", AvatarSage, size = 34)
             Spacer(Modifier.width(9.dp))
             Column {
                 Row {
-                    Text("Priya Kapoor", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Priya Kapoor", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Spacer(Modifier.width(6.dp))
-                    Text("· 5h", color = TextMuted, fontSize = 12.5.sp)
+                    Text("· 5h", color = CircleTheme.colors.muted, fontSize = 12.5.sp)
                 }
-                Text("Sea glass hunting turned into a two hour walk. Worth it.", color = TextBody, fontSize = 14.sp)
+                Text("Sea glass hunting turned into a two hour walk. Worth it.", color = CircleTheme.colors.body, style = CircleTheme.postText)
             }
         }
         Box(Modifier.padding(start = 43.dp)) { PostActions(nav, "priya-seaglass") }
@@ -190,21 +190,21 @@ private fun QuoteCard(nav: NavHostController) {
             Spacer(Modifier.width(11.dp))
             Column {
                 Row {
-                    Text("You", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
+                    Text("You", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
                     Spacer(Modifier.width(6.dp))
-                    Text("· 1h", color = TextMuted, fontSize = 13.sp)
+                    Text("· 1h", color = CircleTheme.colors.muted, fontSize = 13.sp)
                 }
-                Text("This is exactly the energy I needed today.", color = TextBody, fontSize = 14.5.sp)
+                Text("This is exactly the energy I needed today.", color = CircleTheme.colors.body, style = CircleTheme.postText)
             }
         }
         Row(
-            modifier = Modifier.padding(start = 49.dp).clip(RoundedCornerShape(11.dp)).background(Background).padding(12.dp)
+            modifier = Modifier.padding(start = 49.dp).clip(RoundedCornerShape(11.dp)).background(CircleTheme.colors.background).padding(12.dp)
         ) {
             Avatar("JL", AvatarBlue, size = 28)
             Spacer(Modifier.width(8.dp))
             Column {
-                Text("Jonah Lee", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Text("Some days the good coffee is the whole plan.", color = TextBody, fontSize = 13.sp)
+                Text("Jonah Lee", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("Some days the good coffee is the whole plan.", color = CircleTheme.colors.body, fontSize = 13.sp)
             }
         }
         Box(Modifier.padding(start = 49.dp)) {
@@ -220,14 +220,14 @@ private fun MediaPostCard(nav: NavHostController) {
             Avatar("S", AvatarSlate, size = 32)
             Spacer(Modifier.width(9.dp))
             Column {
-                Text("You", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
-                Text("40m", color = TextMuted, fontSize = 11.5.sp)
+                Text("You", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
+                Text("40m", color = CircleTheme.colors.muted, fontSize = 11.5.sp)
             }
         }
         Box(
-            modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(11.dp)).background(SurfaceAlt),
+            modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(11.dp)).background(CircleTheme.colors.track),
             contentAlignment = Alignment.Center
-        ) { Icon(Icons.Outlined.Image, contentDescription = null, tint = TextDim) }
+        ) { Icon(Icons.Outlined.Image, contentDescription = null, tint = CircleTheme.colors.muted) }
         PostActions(nav, "you-media")
     }
 }
@@ -252,18 +252,18 @@ private fun GroupFeedCard(nav: NavHostController, postId: String, groupName: Str
         Row(verticalAlignment = Alignment.CenterVertically) {
             GroupTile(groupName.first().toString(), groupColor, size = 22)
             Spacer(Modifier.width(8.dp))
-            Text(groupName, color = TextBody, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+            Text(groupName, color = CircleTheme.colors.body, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
         }
         Row {
             Avatar(initials, AvatarBlue, size = 34)
             Spacer(Modifier.width(10.dp))
             Column {
                 Row {
-                    Text(name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                    Text(name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
                     Spacer(Modifier.width(6.dp))
-                    Text("· $time", color = TextMuted, fontSize = 12.sp)
+                    Text("· $time", color = CircleTheme.colors.muted, fontSize = 12.sp)
                 }
-                Text(text, color = TextBody, fontSize = 13.5.sp)
+                Text(text, color = CircleTheme.colors.body, style = CircleTheme.postText)
             }
         }
         // Group posts: comment + like only, no repost/quote

@@ -26,13 +26,13 @@ private enum class MTab { DIRECT, GROUP }
 fun MessagesScreen(nav: NavHostController) {
     var tab by remember { mutableStateOf(MTab.DIRECT) }
 
-    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+    Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
         Row(
             modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Messages", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-            Icon(Icons.Outlined.Add, contentDescription = "New chat", tint = AccentDefault)
+            Text("Messages", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            Icon(Icons.Outlined.Add, contentDescription = "New chat", tint = CircleTheme.colors.accent)
         }
         Box(modifier = Modifier.padding(top = 12.dp, start = 16.dp)) {
             UnderlineTabs(listOf("Messages", "Group Messages"), tab.ordinal) { tab = MTab.entries[it] }
@@ -48,7 +48,7 @@ fun MessagesScreen(nav: NavHostController) {
                 item {
                     Text(
                         "Only chats tied to a group you've joined show up here. Chats you start with friends live under Messages instead.",
-                        color = TextDim, fontSize = 11.sp, modifier = Modifier.padding(bottom = 10.dp)
+                        color = CircleTheme.colors.muted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 10.dp)
                     )
                 }
                 item {
@@ -59,10 +59,10 @@ fun MessagesScreen(nav: NavHostController) {
                         GroupTile("A", AvatarOrange, size = 44)
                         Spacer(Modifier.width(11.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Aachen Photo Walk", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-                            Text("Tomas: I'll bring a tripod to share", color = TextBody, fontSize = 12.5.sp, maxLines = 1)
+                            Text("Aachen Photo Walk", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                            Text("Tomas: I'll bring a tripod to share", color = CircleTheme.colors.body, fontSize = 12.5.sp, maxLines = 1)
                         }
-                        Text("12m", color = TextMuted, fontSize = 11.sp)
+                        Text("12m", color = CircleTheme.colors.muted, fontSize = 11.sp)
                     }
                 }
                 item {
@@ -70,10 +70,10 @@ fun MessagesScreen(nav: NavHostController) {
                         GroupTile("R", AvatarBlue, size = 44)
                         Spacer(Modifier.width(11.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("RWTH Board Game Club", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-                            Text("Jonah: Anyone up for Catan tonight?", color = TextBody, fontSize = 12.5.sp, maxLines = 1)
+                            Text("RWTH Board Game Club", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                            Text("Jonah: Anyone up for Catan tonight?", color = CircleTheme.colors.body, fontSize = 12.5.sp, maxLines = 1)
                         }
-                        Text("2h", color = TextMuted, fontSize = 11.sp)
+                        Text("2h", color = CircleTheme.colors.muted, fontSize = 11.sp)
                     }
                 }
             }
@@ -88,13 +88,13 @@ private fun DmRow(name: String, preview: String, initials: String, color: Color,
         Avatar(initials, color, size = 44)
         Spacer(Modifier.width(11.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-            Text(preview, color = TextBody, fontSize = 12.5.sp, maxLines = 1)
+            Text(name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+            Text(preview, color = CircleTheme.colors.body, fontSize = 12.5.sp, maxLines = 1)
         }
-        Text(time, color = TextMuted, fontSize = 11.sp)
+        Text(time, color = CircleTheme.colors.muted, fontSize = 11.sp)
         if (unread) {
             Spacer(Modifier.width(8.dp))
-            Box(modifier = Modifier.size(8.dp).background(AccentDefault, androidx.compose.foundation.shape.CircleShape))
+            Box(modifier = Modifier.size(8.dp).background(CircleTheme.colors.accent, androidx.compose.foundation.shape.CircleShape))
         }
     }
 }
@@ -108,9 +108,9 @@ private fun GroupChatRow(name: String, preview: String, time: String) {
         }
         Spacer(Modifier.width(11.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-            Text(preview, color = TextBody, fontSize = 12.5.sp, maxLines = 1)
+            Text(name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+            Text(preview, color = CircleTheme.colors.body, fontSize = 12.5.sp, maxLines = 1)
         }
-        Text(time, color = TextMuted, fontSize = 11.sp)
+        Text(time, color = CircleTheme.colors.muted, fontSize = 11.sp)
     }
 }

@@ -33,7 +33,7 @@ fun OnboardingScreen(nav: NavHostController) {
     var slide by remember { mutableStateOf(0) }
     val isLast = slide == 3
 
-    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+    Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
         Spacer(Modifier.height(44.dp))
 
         Column(
@@ -59,7 +59,7 @@ fun OnboardingScreen(nav: NavHostController) {
                         modifier = Modifier
                             .height(6.dp)
                             .width(if (i == slide) 20.dp else 6.dp)
-                            .background(if (i == slide) AccentDefault else BorderStrong, CircleShape)
+                            .background(if (i == slide) CircleTheme.colors.accent else CircleTheme.colors.border, CircleShape)
                     )
                 }
             }
@@ -78,28 +78,28 @@ fun OnboardingScreen(nav: NavHostController) {
 @Composable
 private fun SlideIntro() {
     Box(
-        modifier = Modifier.size(64.dp).background(AccentDefault, androidx.compose.foundation.shape.RoundedCornerShape(20.dp)),
+        modifier = Modifier.size(64.dp).background(CircleTheme.colors.accent, androidx.compose.foundation.shape.RoundedCornerShape(20.dp)),
         contentAlignment = Alignment.Center
-    ) { Icon(Icons.Outlined.Circle, contentDescription = null, tint = OnAccent) }
+    ) { Icon(Icons.Outlined.Circle, contentDescription = null, tint = CircleTheme.colors.onAccent) }
     Spacer(Modifier.height(22.dp))
-    Text("Circle.", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 26.sp, color = TextPrimary)
+    Text("Circle.", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 26.sp, color = CircleTheme.colors.text)
     Spacer(Modifier.height(10.dp))
     Text(
         "A place for the people you actually know — not everyone you've ever met.",
-        color = TextBody, fontSize = 14.5.sp, textAlign = TextAlign.Center, lineHeight = 22.sp
+        color = CircleTheme.colors.body, fontSize = 14.5.sp, textAlign = TextAlign.Center, lineHeight = 22.sp
     )
 }
 
 @Composable
 private fun SlidePricing() {
-    Text("\u201C", fontFamily = Display, fontSize = 40.sp, color = AccentDefault)
+    Text("\u201C", fontFamily = Display, fontSize = 40.sp, color = CircleTheme.colors.accent)
     Text(
         "If the app is free, you're the product.",
         fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 21.sp,
-        fontStyle = FontStyle.Italic, textAlign = TextAlign.Center, color = TextPrimary, lineHeight = 28.sp
+        fontStyle = FontStyle.Italic, textAlign = TextAlign.Center, color = CircleTheme.colors.text, lineHeight = 28.sp
     )
     Spacer(Modifier.height(18.dp))
-    Text("So this one isn't free.", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = TextPrimary)
+    Text("So this one isn't free.", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = CircleTheme.colors.text)
     Spacer(Modifier.height(10.dp))
     BulletList(
         listOf(
@@ -112,12 +112,12 @@ private fun SlidePricing() {
 
 @Composable
 private fun SlideStory() {
-    Text("Once upon a time,", color = TextMuted, fontStyle = FontStyle.Italic, fontSize = 13.sp)
+    Text("Once upon a time,", color = CircleTheme.colors.muted, fontStyle = FontStyle.Italic, fontSize = 13.sp)
     Spacer(Modifier.height(16.dp))
     Text(
         "social media used to be simple.",
         fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 20.sp,
-        textAlign = TextAlign.Center, color = TextPrimary, lineHeight = 28.sp
+        textAlign = TextAlign.Center, color = CircleTheme.colors.text, lineHeight = 28.sp
     )
     Spacer(Modifier.height(16.dp))
     BulletList(
@@ -131,14 +131,14 @@ private fun SlideStory() {
 @Composable
 private fun SlideMission() {
     Box(
-        modifier = Modifier.size(64.dp).background(Surface, androidx.compose.foundation.shape.RoundedCornerShape(20.dp)),
+        modifier = Modifier.size(64.dp).background(CircleTheme.colors.surface, androidx.compose.foundation.shape.RoundedCornerShape(20.dp)),
         contentAlignment = Alignment.Center
-    ) { Icon(Icons.Outlined.Circle, contentDescription = null, tint = AccentDefault) }
+    ) { Icon(Icons.Outlined.Circle, contentDescription = null, tint = CircleTheme.colors.accent) }
     Spacer(Modifier.height(18.dp))
     Text(
         "Circle is for you and your friends.",
         fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 21.sp,
-        textAlign = TextAlign.Center, color = TextPrimary
+        textAlign = TextAlign.Center, color = CircleTheme.colors.text
     )
     Spacer(Modifier.height(14.dp))
     BulletList(
@@ -158,8 +158,8 @@ private fun BulletList(items: List<String>) {
     ) {
         items.forEach { line ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(modifier = Modifier.padding(top = 7.dp).size(5.dp).background(AccentDefault, CircleShape))
-                Text(line, color = TextBody, fontSize = 14.sp, lineHeight = 21.sp)
+                Box(modifier = Modifier.padding(top = 7.dp).size(5.dp).background(CircleTheme.colors.accent, CircleShape))
+                Text(line, color = CircleTheme.colors.body, fontSize = 14.sp, lineHeight = 21.sp)
             }
         }
     }

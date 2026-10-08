@@ -11,14 +11,22 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.circle.app.navigation.Routes
 import com.circle.app.ui.theme.*
@@ -29,7 +37,7 @@ enum class NavTab { HOME, MESSAGES, EXPLORE, NOTIFICATIONS, PROFILE }
 
 /**
  * Shared bottom nav. `active` highlights the current tab. Explore sits raised
- * in the center with an accent OUTLINE (not filled) — that replaced the old
+ * 24dp in the center with an accent OUTLINE (not filled) — that replaced the old
  * "+" compose button in the design. Holding the Home icon for ~450ms does a
  * clean, cumulative 360° spin and fires [onHomeIconHold] — used on HomeScreen
  * to flip between the Friends/Groups feed without ever spinning "back".
@@ -40,6 +48,7 @@ fun CircleBottomNav(
     active: NavTab,
     onHomeIconHold: (() -> Unit)? = null
 ) {
+    val colors = CircleTheme.colors
     val scope = rememberCoroutineScope()
     val rotation = remember { Animatable(0f) }
 
@@ -47,8 +56,10 @@ fun CircleBottomNav(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
-            .background(Background)
-            .border(width = 1.dp, color = Border),
+            .background(colors.background)
+            .drawBehind {
+                drawRect(colors.navLine, topLeft = Offset.Zero, size = Size(size.width, 1.dp.toPx()))
+            },
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -81,42 +92,62 @@ fun CircleBottomNav(
             Icon(
                 Icons.Outlined.Home,
                 contentDescription = "Home",
-                tint = if (active == NavTab.HOME) AccentDefault else TextMuted,
+                tint = if (active == NavTab.HOME) colors.accent else colors.navIdle,
                 modifier = Modifier.rotate(rotation.value)
             )
         }
 
         NavIcon(Icons.Outlined.Send, "Messages", active == NavTab.MESSAGES) { nav.navigate(Routes.MESSAGES) }
 
-        // Explore — raised center, accent-outlined
+        // Explore — raised 24dp, accent-outlined, with a 4dp background halo over the bar line
         Box(
             modifier = Modifier
-                .size(46.dp)
-                .offset(y = (-14).dp)
+                .offset(y = (-24).dp)
+                .size(54.dp)
                 .clip(CircleShape)
-                .background(Background)
-                .border(width = 2.dp, color = AccentDefault, shape = CircleShape)
+                .background(colors.background)
                 .clickable { nav.navigate(Routes.EXPLORE) },
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Outlined.Explore, contentDescription = "Explore", tint = AccentDefault)
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .border(width = 2.dp, color = colors.accent, shape = CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Outlined.Explore, contentDescription = "Explore", tint = colors.accent, modifier = Modifier.size(19.dp))
+            }
         }
 
         Box {
-            NavIcon(Icons.Outlined.FavoriteBorder, "Notifications", active == NavTab.NOTIFICATIONS) {
+            NavIcon(Icons.Outlined.FavoriteBorder, "Alerts", active == NavTab.NOTIFICATIONS) {
                 nav.navigate(Routes.NOTIFICATIONS)
             }
             if (active != NavTab.NOTIFICATIONS) {
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
+                        .size(11.dp) // 8dp dot + 1.5dp background halo, as in the prototype
                         .align(Alignment.TopEnd)
-                        .background(Danger, CircleShape)
+                        .border(1.5.dp, colors.background, CircleShape)
+                        .padding(1.5.dp)
+                        .background(colors.alertDot, CircleShape)
                 )
             }
         }
 
-        NavIcon(Icons.Outlined.Person, "Profile", active == NavTab.PROFILE) { nav.navigate(Routes.PROFILE) }
+        // Profile — your own avatar, ringed in the active/idle color
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(colors.navAvatar)
+                .border(1.5.dp, if (active == NavTab.PROFILE) colors.accent else colors.navIdle, CircleShape)
+                .clickable { nav.navigate(Routes.PROFILE) }
+                .semantics { contentDescription = "Profile" },
+            contentAlignment = Alignment.Center
+        ) {
+            Text("S", color = colors.navAvatarText, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+        }
     }
 }
 
@@ -125,7 +156,7 @@ private fun NavIcon(icon: ImageVector, label: String, isActive: Boolean, onClick
     Icon(
         icon,
         contentDescription = label,
-        tint = if (isActive) AccentDefault else TextMuted,
+        tint = if (isActive) CircleTheme.colors.accent else CircleTheme.colors.navIdle,
         modifier = Modifier.size(24.dp).clickable(onClick = onClick)
     )
 }
