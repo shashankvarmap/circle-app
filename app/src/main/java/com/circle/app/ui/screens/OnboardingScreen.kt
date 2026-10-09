@@ -16,8 +16,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavHostController
-import com.circle.app.navigation.Routes
 import com.circle.app.ui.components.PrimaryButton
 import com.circle.app.ui.theme.*
 
@@ -29,7 +27,7 @@ private data class Bullet(val text: String)
  * slide 2 the "once upon a time" doom-scroll story, slide 3 the mission.
  */
 @Composable
-fun OnboardingScreen(nav: NavHostController) {
+fun OnboardingScreen(onDone: () -> Unit) {
     var slide by remember { mutableStateOf(0) }
     val isLast = slide == 3
 
@@ -65,9 +63,7 @@ fun OnboardingScreen(nav: NavHostController) {
             }
             Spacer(Modifier.height(20.dp))
             if (isLast) {
-                PrimaryButton("Get started", modifier = Modifier.fillMaxWidth()) {
-                    nav.navigate(Routes.CONTACTS_SYNC)
-                }
+                PrimaryButton("Get started", modifier = Modifier.fillMaxWidth(), onClick = onDone)
             } else {
                 PrimaryButton("Next", modifier = Modifier.fillMaxWidth()) { slide++ }
             }

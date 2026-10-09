@@ -18,8 +18,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavHostController
-import com.circle.app.navigation.Routes
 import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.components.FriendRequestButton
 import com.circle.app.ui.components.PrimaryButton
@@ -35,7 +33,7 @@ private enum class Stage { PROMPT, LOADING, RESULTS }
 private val contactIds = listOf("PK", "JL", "AO")
 
 @Composable
-fun ContactsSyncScreen(nav: NavHostController) {
+fun ContactsSyncScreen(onDone: () -> Unit) {
     var stage by remember { mutableStateOf(Stage.PROMPT) }
     val scope = rememberCoroutineScope()
 
@@ -46,7 +44,7 @@ fun ContactsSyncScreen(nav: NavHostController) {
         ) {
             Text(
                 "Skip for now", color = CircleTheme.colors.muted, fontSize = 13.sp,
-                modifier = Modifier.clickable { nav.navigate(Routes.HOME) }
+                modifier = Modifier.clickable(onClick = onDone).padding(vertical = 12.dp)
             )
         }
 
@@ -120,9 +118,7 @@ fun ContactsSyncScreen(nav: NavHostController) {
                 }
 
                 Spacer(Modifier.weight(1f))
-                PrimaryButton("Continue", modifier = Modifier.fillMaxWidth().padding(bottom = 18.dp)) {
-                    nav.navigate(Routes.HOME)
-                }
+                PrimaryButton("Continue", modifier = Modifier.fillMaxWidth().padding(bottom = 18.dp), onClick = onDone)
             }
         }
     }

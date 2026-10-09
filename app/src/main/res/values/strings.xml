@@ -1,3 +1,16 @@
 <resources>
-    <string name="app_name">Circle</string>
+    <string name="app_name" translatable="false">Circle</string>
+
+    <!-- Wordmark: "Circle." with the full stop in accent. -->
+    <string name="wordmark_name" translatable="false">Circle</string>
+    <string name="wordmark_stop" translatable="false">.</string>
+
+    <!-- Welcome -->
+    <string name="welcome_tagline">A small place for the people you actually know.</string>
+    <string name="welcome_line">See what your friends are up to.</string>
+    <string name="welcome_create_account">Create account</string>
+    <string name="welcome_log_in">Log in</string>
+    <string name="welcome_agree_prefix">"By continuing you agree to the "</string>
+    <string name="welcome_agree_link">Terms and Privacy Policy</string>
+    <string name="welcome_agree_suffix">.</string>
 </resources>

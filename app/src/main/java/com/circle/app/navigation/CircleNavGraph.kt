@@ -6,10 +6,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.circle.app.data.session.Destination
+import com.circle.app.ui.launch.SessionViewModel
 import com.circle.app.ui.screens.*
 
 object Routes {
-    const val ONBOARDING = "onboarding"
+    const val WELCOME = "welcome"
+    /** The 4-slide story: only reached right after creating an account. */
+    const val STORY = "story"
     const val CONTACTS_SYNC = "contacts_sync"
     const val HOME = "home"
     const val EXPLORE = "explore"
@@ -47,11 +51,34 @@ object Routes {
     fun eventDetail(eventId: String) = "$EVENT_DETAIL?eventId=$eventId"
 }
 
+/** The route for a step of getting in. */
+fun Destination.route(): String = when (this) {
+    Destination.HOME -> Routes.HOME
+    Destination.WELCOME, Destination.WELCOME_LOG_IN_ONLY -> Routes.WELCOME
+    Destination.FIND_FRIENDS -> Routes.CONTACTS_SYNC
+    Destination.STORY -> Routes.STORY
+}
+
+/** Goes to [d] and clears everything behind it (getting in and out never leaves a back stack). */
+fun NavHostController.resetTo(d: Destination) = navigate(d.route()) { popUpTo(graph.id) { inclusive = true } }
+
 @Composable
-fun CircleNavGraph(navController: NavHostController = rememberNavController()) {
-    NavHost(navController = navController, startDestination = Routes.ONBOARDING) {
-        composable(Routes.ONBOARDING) { OnboardingScreen(navController) }
-        composable(Routes.CONTACTS_SYNC) { ContactsSyncScreen(navController) }
+fun CircleNavGraph(
+    session: SessionViewModel,
+    start: Destination,
+    navController: NavHostController = rememberNavController()
+) {
+    NavHost(navController = navController, startDestination = start.route()) {
+        composable(Routes.WELCOME) {
+            WelcomeScreen(
+                session,
+                onCreateAccount = { session.createAccount { navController.resetTo(it) } },
+                onLogIn = { session.logIn { navController.resetTo(it) } },
+                onLegal = { navController.navigate(Routes.info("terms")) }
+            )
+        }
+        composable(Routes.STORY) { OnboardingScreen(onDone = { session.storyDone { navController.resetTo(it) } }) }
+        composable(Routes.CONTACTS_SYNC) { ContactsSyncScreen(onDone = { session.findFriendsDone { navController.resetTo(it) } }) }
         composable(Routes.HOME) { HomeScreen(navController) }
         composable(Routes.EXPLORE) { ExploreScreen(navController) }
         composable(Routes.NOTIFICATIONS) { NotificationsScreen(navController) }
@@ -78,7 +105,13 @@ fun CircleNavGraph(navController: NavHostController = rememberNavController()) {
         composable(Routes.CREATE_EVENT) { CreateEventScreen(navController) }
         composable(Routes.YOUR_CIRCLE) { YourCircleScreen(navController) }
         composable(Routes.EXPLORE_SEARCH) { ExploreSearchScreen(navController) }
-        composable(Routes.SETTINGS) { SettingsScreen(navController) }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                navController,
+                onLogOut = { session.logOut { navController.resetTo(it) } },
+                onAccountDeleted = { session.accountDeleted { navController.resetTo(it) } }
+            )
+        }
         composable(Routes.PERSON) { entry -> PersonProfileScreen(navController, entry.arguments?.getString("personId").orEmpty()) }
         composable(Routes.CHAT) { entry -> ChatScreen(navController, entry.arguments?.getString("chatId").orEmpty()) }
         composable(Routes.EDIT_PROFILE) { EditProfileScreen(navController) }

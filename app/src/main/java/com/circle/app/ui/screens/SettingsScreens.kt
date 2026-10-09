@@ -59,7 +59,7 @@ import com.circle.app.ui.theme.*
 // ---------------------------------------------------------------- Settings
 
 @Composable
-fun SettingsScreen(nav: NavHostController) {
+fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDeleted: () -> Unit) {
     val colors = CircleTheme.colors
     val context = LocalContext.current
     var confirmLogout by rememberSaveable { mutableStateOf(false) }
@@ -70,14 +70,13 @@ fun SettingsScreen(nav: NavHostController) {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "?"
     }
 
-    fun toOnboarding() = nav.navigate(Routes.ONBOARDING) { popUpTo(nav.graph.id) { inclusive = true } }
 
     if (confirmLogout) {
         AlertDialog(
             onDismissRequest = { confirmLogout = false },
             title = { Text("Log out of Circle?") },
-            text = { Text("You'll go back to the start. Everything stays as it is for when you come back.") },
-            confirmButton = { TextButton(onClick = { confirmLogout = false; toOnboarding() }) { Text("Log out", color = colors.accent) } },
+            text = { Text("You'll go back to the Welcome screen. Everything stays as it is for when you log back in.") },
+            confirmButton = { TextButton(onClick = { confirmLogout = false; onLogOut() }) { Text("Log out", color = colors.accent) } },
             dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text("Cancel", color = colors.text) } }
         )
     }
@@ -96,7 +95,7 @@ fun SettingsScreen(nav: NavHostController) {
                 TextButton(onClick = {
                     confirmDelete = false
                     CircleStore.reset() // the demo restores its seed data; with a backend this deletes the account
-                    toOnboarding()
+                    onAccountDeleted()
                 }) { Text("Delete account", color = colors.alertDot) }
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Keep my account", color = colors.text) } }

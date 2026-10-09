@@ -11,11 +11,11 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] PROGRESS.md created
 
 ## Phase 1: First-launch fix (ACCESS_AND_LAUNCH 0.1)
-- [ ] `LaunchDecider` (pure Kotlin): session / onboardingSeen -> start screen
-- [ ] `onboardingSeen` + session stored locally (DataStore)
-- [ ] Logged in: straight to Home, no story; story only once after account creation
-- [ ] Log out / Delete account -> Welcome (never the story)
-- [ ] Five tests (one per case)
+- [x] `LaunchFlow` (pure Kotlin): session / onboardingSeen -> start screen
+- [x] `onboardingSeen` + session stored locally (DataStore), system splash only while it is read
+- [x] Logged in: straight to Home, no story; story only once after account creation (Welcome > Find friends > story > Home)
+- [x] Log out / Delete account -> Welcome (Log in only once onboarded; never the story)
+- [x] Five tests (LaunchFlowTest) + Robolectric UI test of the start screen; verified on the emulator
 
 ## Phase 2: Privacy core (MASTER_PROMPT section 2) — gates everything after it
 - [ ] `Relationship` = SELF, FRIEND, REQUEST_SENT, REQUEST_RECEIVED, NONE, BLOCKED_BY_ME, BLOCKED_ME

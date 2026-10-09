@@ -53,3 +53,34 @@ main gap for section 2). `strings.xml` holds only `app_name`: all user-visible t
 
 ### Decisions
 - (Phase 0) None yet.
+
+---
+
+## Phase 1: First-launch fix (ACCESS_AND_LAUNCH 0.1)
+
+**Works now**
+- The start screen is decided by `data/session/LaunchFlow` (pure Kotlin) from two local facts kept in DataStore
+  (`SessionStore`): has a session, and onboardingSeen. Logged in: straight to Home. First launch: Welcome. Logged out after
+  onboarding: Welcome with **Log in only**. The 4-slide story appears exactly once, after Create account > Find friends.
+  Log in never shows it; Log out and Delete account return to Welcome.
+- The system splash (core-splashscreen) stays only while the session is read; nothing else is shown before Home.
+- New **Welcome** screen per the getting-in prototype (wordmark over two rings, tagline, Create account, Log in, Terms link).
+  Its text is the first to live in `strings.xml`.
+- Tests: `LaunchFlowTest` (the five cases + a walk-through), `FirstLaunchUiTest` (Robolectric: logged in shows Home and no
+  story; first launch shows Create account; logged out shows Log in only). Verified on the Pixel 7 emulator: create account >
+  find friends > story > Home; force-stop and reopen: Home; log out: Welcome without Create account; log in: Home, no story.
+
+**Stubs:** Create account and Log in skip the phone, code, profile and age steps (Phase 9 inserts them). Sessions have no
+token yet (the fake has none).
+
+**Decisions**
+- Compose BOM 2024.06 -> 2024.09.03 (Compose 1.7): lifecycle 2.8's `collectAsStateWithLifecycle` needs Compose UI 1.7's
+  `LocalLifecycleOwner`; the old pair crashes at runtime.
+- New libraries: DataStore preferences (required by the doc), core-splashscreen (keeps the cold start to the system splash),
+  lifecycle-viewmodel-compose / runtime-compose (ViewModels, required by FRONTEND_COMPLETE 8), and for tests Robolectric +
+  compose ui-test (UI tests run inside `./gradlew build` with no emulator) and coroutines-test.
+- Unit tests run on the debug variant only (`enableUnitTest = false` for release): the Compose test activity exists only
+  in the debug manifest.
+- A small hand-written `AppGraph` instead of a DI library (a handful of objects; tests swap them).
+- Case 3 taken literally: after the story was seen on a device, Welcome offers Log in only (Create account is hidden).
+  Deleting the account also lands there. Flag if the owner wants Create account back after a deletion.
