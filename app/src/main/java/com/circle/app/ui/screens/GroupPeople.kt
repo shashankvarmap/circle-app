@@ -18,6 +18,10 @@ import com.circle.app.data.repo.GroupView
 import com.circle.app.data.repo.JoinRequestView
 import com.circle.app.data.repo.PersonRef
 import com.circle.app.ui.format.relativeTime
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.res.stringResource
+import com.circle.app.R
 import com.circle.app.ui.a11y.rememberReduceMotion
 import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.components.GroupTile
@@ -38,7 +42,7 @@ private sealed interface Slot {
  * chip. Every person opens their profile, rendered by your relationship to them.
  */
 @Composable
-fun GroupPeople(group: GroupView, showMap: Boolean, onPerson: (String) -> Unit) {
+fun GroupPeople(group: GroupView, showMap: Boolean, onPerson: (String) -> Unit, host: HostActions? = null) {
     // Members only: the repository returns no people to anyone else.
     val people = group.people ?: return
     val hosts = people.hosts
@@ -46,9 +50,12 @@ fun GroupPeople(group: GroupView, showMap: Boolean, onPerson: (String) -> Unit) 
     val hidden = people.hiddenCount
 
     if (showMap) GroupOrbit(group, hosts, members, people.requests.map { it.person }, hidden, onPerson)
-    else GroupList(hosts, members, hidden, onPerson)
-    AskedToJoin(people.requests, onPerson)
+    else GroupList(hosts, members, hidden, onPerson, host)
+    AskedToJoin(people.requests, onPerson, host)
 }
+
+/** What a host can do in the People tab. Ordinary members get none of these. */
+class HostActions(val approve: (String) -> Unit, val decline: (String) -> Unit, val remove: (String) -> Unit)
 
 @Composable
 private fun GroupOrbit(group: GroupView, hosts: List<PersonRef>, members: List<PersonRef>, requests: List<PersonRef>, hidden: Int, onPerson: (String) -> Unit) {
@@ -113,12 +120,16 @@ private fun GroupOrbit(group: GroupView, hosts: List<PersonRef>, members: List<P
 }
 
 @Composable
-private fun GroupList(hosts: List<PersonRef>, members: List<PersonRef>, hidden: Int, onPerson: (String) -> Unit) {
+private fun GroupList(hosts: List<PersonRef>, members: List<PersonRef>, hidden: Int, onPerson: (String) -> Unit, host: HostActions?) {
     Column {
         ListHeading("HOSTS")
         hosts.forEach { PersonListRow(it, "Host", onPerson) }
         ListHeading("MEMBERS")
-        members.forEach { PersonListRow(it, "Member", onPerson) }
+        members.forEach { m ->
+            PersonListRow(m, "Member", onPerson) {
+                if (host != null) SmallPill(stringResource(R.string.group_remove), filled = false) { host.remove(m.id) }
+            }
+        }
         if (hidden > 0) {
             Text("and $hidden more members", color = CircleTheme.colors.muted, fontSize = 12.5.sp, modifier = Modifier.padding(vertical = 8.dp))
         }
@@ -126,7 +137,7 @@ private fun GroupList(hosts: List<PersonRef>, members: List<PersonRef>, hidden: 
 }
 
 @Composable
-private fun AskedToJoin(requests: List<JoinRequestView>, onPerson: (String) -> Unit) {
+private fun AskedToJoin(requests: List<JoinRequestView>, onPerson: (String) -> Unit, host: HostActions?) {
     if (requests.isEmpty()) return
     Column(Modifier.padding(top = 8.dp)) {
         ListHeading("ASKED TO JOIN · ${requests.size}")
@@ -134,7 +145,15 @@ private fun AskedToJoin(requests: List<JoinRequestView>, onPerson: (String) -> U
             "Dashed circles are join requests. Every member can see them, not just the hosts.",
             color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp)
         )
-        requests.forEach { r -> PersonListRow(r.person, "asked ${relativeTime(r.askedAt)} ago", onPerson) }
+        requests.forEach { r ->
+            PersonListRow(r.person, "asked ${relativeTime(r.askedAt)} ago", onPerson) {
+                if (host != null) {
+                    SmallPill(stringResource(R.string.group_approve), filled = true) { host.approve(r.person.id) }
+                    Spacer(Modifier.width(6.dp))
+                    SmallPill(stringResource(R.string.profile_decline), filled = false) { host.decline(r.person.id) }
+                }
+            }
+        }
     }
 }
 
@@ -145,17 +164,34 @@ private fun ListHeading(text: String) {
 
 /** A person in a list: the whole row (at least 48dp) opens their profile. */
 @Composable
-fun PersonListRow(p: PersonRef, subtitle: String, onPerson: (String) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(RoundedCornerShape(10.dp))
-            .clickable(onClickLabel = "Open ${p.name}'s profile") { onPerson(p.id) }.padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Avatar(p.initials, p.color, size = 36)
-        Spacer(Modifier.width(11.dp))
-        Column {
-            Text(p.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-            Text(subtitle, color = CircleTheme.colors.muted, fontSize = 11.5.sp)
+fun PersonListRow(p: PersonRef, subtitle: String, onPerson: (String) -> Unit, trailing: (@Composable RowScope.() -> Unit)? = null) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.weight(1f).heightIn(min = 52.dp).clip(RoundedCornerShape(10.dp))
+                .clickable(onClickLabel = "Open ${p.name}'s profile") { onPerson(p.id) }.padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Avatar(p.initials, p.color, size = 36)
+            Spacer(Modifier.width(11.dp))
+            Column {
+                Text(p.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                Text(subtitle, color = CircleTheme.colors.muted, fontSize = 11.5.sp)
+            }
         }
+        trailing?.invoke(this)
     }
+}
+
+@Composable
+fun SmallPill(text: String, filled: Boolean, onClick: () -> Unit) {
+    val colors = CircleTheme.colors
+    val shape = RoundedCornerShape(999.dp)
+    Box(
+        Modifier.heightIn(min = 40.dp).clip(shape)
+            .background(if (filled) colors.accent else colors.background)
+            .border(1.dp, if (filled) colors.accent else colors.border, shape)
+            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+            .padding(horizontal = 13.dp),
+        contentAlignment = Alignment.Center
+    ) { Text(text, color = if (filled) colors.onAccent else colors.text, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
 }

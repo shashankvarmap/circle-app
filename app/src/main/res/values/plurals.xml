@@ -16,4 +16,8 @@
         <item quantity="one">Only your %1$d inner-circle friend can see this.</item>
         <item quantity="other">Only your %1$d inner-circle friends can see this.</item>
     </plurals>
+    <plurals name="invites_sent">
+        <item quantity="one">Invited %1$d friend</item>
+        <item quantity="other">Invited %1$d friends</item>
+    </plurals>
 </resources>

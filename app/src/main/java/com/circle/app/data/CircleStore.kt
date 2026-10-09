@@ -65,6 +65,10 @@ object CircleStore {
 
     val alerts = mutableStateListOf<Alert>()
 
+    /** Invitations you sent, and quiet notices for other people (delivered by a backend). */
+    val invites = mutableStateListOf<Invite>()
+    val sentNotices = mutableStateListOf<Notice>()
+
     // ---- You & settings ----
 
     var profile by mutableStateOf(MyProfile())
@@ -98,6 +102,7 @@ object CircleStore {
         events.clear(); events.addAll(Seed.events())
         chats.clear(); chats.addAll(ChatSeed.chats()); hiddenMessageIds.clear()
         alerts.clear(); alerts.addAll(Seed.alerts())
+        invites.clear(); sentNotices.clear()
 
         profile = MyProfile(); theme = ThemeMode.SYSTEM
         privacy = PrivacyPrefs(); notifications = NotificationPrefs()

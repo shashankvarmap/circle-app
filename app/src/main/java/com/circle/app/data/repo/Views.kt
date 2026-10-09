@@ -236,6 +236,8 @@ data class GroupView(
     val compassDeg: Float?,
     /** Null unless you're a member. */
     val people: GroupPeopleView?,
+    /** Hosts approve requests, edit the group and remove members. */
+    val iAmHost: Boolean = false,
 )
 
 data class EventSummary(

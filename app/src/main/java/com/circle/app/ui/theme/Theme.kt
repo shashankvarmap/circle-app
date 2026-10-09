@@ -11,6 +11,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.core.view.WindowCompat
@@ -57,6 +58,11 @@ private fun CirclePalette.toColorScheme(): ColorScheme {
     return base.copy(
         primary = accent, onPrimary = onAccent,
         secondary = accent, onSecondary = onAccent,
+        tertiary = accent, onTertiary = onAccent,
+        // Pickers and chips use the container colours: keep them in the palette, no Material purple.
+        primaryContainer = accent.copy(alpha = 0.22f).compositeOver(surface), onPrimaryContainer = text,
+        secondaryContainer = accent.copy(alpha = 0.16f).compositeOver(surface), onSecondaryContainer = text,
+        tertiaryContainer = accent.copy(alpha = 0.22f).compositeOver(surface), onTertiaryContainer = text,
         background = background, onBackground = text,
         surface = surface, onSurface = text,
         surfaceVariant = track, onSurfaceVariant = muted,

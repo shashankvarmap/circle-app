@@ -245,3 +245,32 @@ recorded but there are no push notifications yet. Photos stay as device URIs.
 - A chat started with several friends and no name is titled by first names ("Priya, Jonah").
 - Report from a 1:1 reports the person; from a group chat, the group.
 - Found on the device and fixed: the swipe actions showed through the unread row's translucent tint.
+
+---
+
+## Phase 7: Groups and events (F4)
+
+**Works now**
+- **Groups:** creating a group makes you host and member, opens it, lists it in Explore when public, and gives it a linked
+  chat under Messages > Groups. The ⋯ menu offers Edit group (name, description, public/private) to hosts, Invite friends and
+  Leave group (confirmed) to members, and Report group to non-hosts. In the People tab, **hosts only** get Approve / Decline on
+  each join request (approving moves the person onto the members list) and Remove on members (hosts can't be removed).
+  Ordinary members still see the requests, never the buttons.
+- **Events:** Create event has real date and time pickers (in the palette), a topic (Outdoors / Social / Music / Making) and a
+  venue; it refuses a time in the past. An event within 7 days sits on the Explore map in its topic's quarter at a free angle;
+  later ones are in the list. The ⋯ menu offers Edit event and Cancel event (confirmed; everyone with a seat gets a notice) to
+  the host, and Invite friends, Report event, Block host to everyone else. Leaving a seat locks the thread again and records a
+  quiet notice to the host. The unlocked thread is a real thread: like, reply with the "Replying to" chip, nested replies,
+  delete your own, report others'.
+- Invites (groups and events) go to friends only and are recorded; with a backend they land in the friends' Alerts.
+- Material containers (date and time pickers, chips) now use palette colours instead of Material purple.
+- Tests: `GroupsAndEventsTest` (creator is host with a chat, only hosts approve/decline, edit/remove rules, leaving, invites to
+  friends only, map placement by topic and time, past times refused, edit/cancel by host only, leave notifies host, event
+  thread replies/likes/delete). Verified on the emulator: create-event form, date and time pickers.
+
+**Stubs:** invites and host notices are recorded but delivered only with a backend. Events have no time-zone field yet (times
+are shown in the viewer's zone).
+
+**Decisions**
+- Group join requests and their Approve/Decline live in the People tab's "Asked to join" list (also under the map view).
+- A cancelled event is removed (not shown as "cancelled") because nothing in the documents describes a cancelled state.

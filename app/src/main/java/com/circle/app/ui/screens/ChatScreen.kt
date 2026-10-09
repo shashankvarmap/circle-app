@@ -113,7 +113,7 @@ class ChatViewModel(repo: CircleRepository, private val chatId: String) : RepoVi
     fun sendMedia(media: List<com.circle.app.data.media.MediaRef>) = run({ sendMedia(chatId, media) })
     fun invite(eventId: String) = run({ sendEventInvite(chatId, eventId) })
     fun setMuted(muted: Boolean) = run({ setChatMuted(chatId, muted) })
-    fun clear() = run({ clearChat(chatId) })
+    fun clearMessages() = run({ clearChat(chatId) })
     fun block(personId: String, then: () -> Unit) = run({ block(personId) }) { if (it is com.circle.app.data.repo.Outcome.Success) then() }
 }
 
@@ -341,7 +341,7 @@ private fun ChatTopBar(nav: NavHostController, chat: ChatView, vm: ChatViewModel
         "clear" -> com.circle.app.ui.components.ConfirmDialog(
             stringResource(R.string.chat_clear_title), stringResource(R.string.chat_clear_body), stringResource(R.string.chat_clear),
             destructive = true, onDismiss = { confirm = null }
-        ) { vm.clear() }
+        ) { vm.clearMessages() }
         "block" -> chat.person?.let { p ->
             com.circle.app.ui.components.ConfirmDialog(
                 stringResource(R.string.profile_block_title, p.firstName), stringResource(R.string.profile_block_body), stringResource(R.string.profile_block),

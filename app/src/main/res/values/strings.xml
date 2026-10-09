@@ -284,4 +284,39 @@
     <string name="newchat_name_title">Name this chat (optional)</string>
     <string name="newchat_name_hint">e.g. Weekend Trip</string>
     <string name="newchat_note">Only friends. A chat you start with several friends shows in Messages.</string>
+
+    <!-- Groups (F4) -->
+    <string name="group_title">Group</string>
+    <string name="group_options">Group options</string>
+    <string name="group_edit">Edit group</string>
+    <string name="group_invite">Invite friends</string>
+    <string name="group_invite_send">Invite</string>
+    <string name="group_leave">Leave group</string>
+    <string name="group_leave_title">Leave %1$s?</string>
+    <string name="group_leave_body">You\'ll stop seeing its posts and its chat. To come back you\'d ask to join again.</string>
+    <string name="group_report">Report group</string>
+    <string name="group_remove">Remove</string>
+    <string name="group_remove_title">Remove this member?</string>
+    <string name="group_remove_body">They leave the group and its chat. They aren\'t told who removed them.</string>
+    <string name="group_approve">Approve</string>
+    <string name="group_field_name">Name</string>
+    <string name="group_field_description">Description</string>
+    <string name="group_field_public">Public (listed in Explore)</string>
+
+    <!-- Events (F4) -->
+    <string name="event_title">Event</string>
+    <string name="event_options">Event options</string>
+    <string name="event_edit">Edit event</string>
+    <string name="event_cancel">Cancel event</string>
+    <string name="event_cancel_title">Cancel this event?</string>
+    <string name="event_cancel_body">It\'s removed for everyone, and everyone with a seat is told.</string>
+    <string name="event_report">Report event</string>
+    <string name="event_block_host">Block host</string>
+    <string name="event_field_title">Title</string>
+    <string name="event_field_venue">Venue</string>
+    <string name="event_field_description">Description</string>
+
+    <!-- Create event -->
+    <string name="event_in_past">That time has already passed. Pick a time ahead.</string>
+    <string name="event_topic_note">Events this week sit on the Explore map by topic; later ones are in the list.</string>
 </resources>

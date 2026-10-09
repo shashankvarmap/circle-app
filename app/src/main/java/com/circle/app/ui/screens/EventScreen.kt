@@ -34,14 +34,32 @@ import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.components.ReplyComposer
 import com.circle.app.ui.components.ThreadComment
 import com.circle.app.ui.theme.*
+import com.circle.app.R
+import com.circle.app.data.repo.Outcome
+import com.circle.app.ui.components.*
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 
 class EventViewModel(repo: CircleRepository, private val eventId: String) : RepoViewModel(repo) {
     /** Null while loading or when the event isn't visible to you. */
     val event = repo.event(eventId).state(null)
     fun takeSeat() = run({ takeSeat(eventId) })
     fun leaveSeat() = run({ leaveSeat(eventId) })
-    fun comment(text: String) = run({ addEventComment(eventId, text) })
+    fun comment(text: String, replyTo: String?) = run({ addEventComment(eventId, text, replyTo) })
+    fun likeComment(id: String) = run({ toggleEventCommentLike(eventId, id) })
+    fun deleteComment(id: String) = run({ deleteEventComment(eventId, id) })
+    fun invite(ids: List<String>, then: (Outcome<Int>) -> Unit) = run({ inviteToEvent(eventId, ids) }, then)
+    fun edit(title: String, venue: String, description: String) = run({ editEvent(eventId, title, venue, description) })
+    fun cancel(then: () -> Unit) = run({ cancelEvent(eventId) }) { if (it is Outcome.Success) then() }
+    fun blockHost(hostId: String, then: () -> Unit) = run({ block(hostId) }) { if (it is Outcome.Success) then() }
 }
+
+private enum class EventDialog { EDIT, CANCEL, INVITE, REPORT, BLOCK }
 
 @Composable
 fun EventScreen(nav: NavHostController, eventId: String?) {
@@ -56,12 +74,69 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
     val isJoined = view.hasSeat
     val screenReader = com.circle.app.ui.a11y.rememberScreenReaderOn()
     var showMap by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!screenReader) }
+    var dialog by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<EventDialog?>(null) }
+    var menu by remember { mutableStateOf(false) }
+    var replyTo by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    var expanded by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(setOf<String>()) }
+    var confirmDelete by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    var reportingComment by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
-    Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
-        Row(modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = CircleTheme.colors.body, modifier = Modifier.clickable { nav.popBackStack() })
-            Spacer(Modifier.width(12.dp))
-            Text("Event", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+    reportingComment?.let { ReportSheet(com.circle.app.data.ReportKind.COMMENT, it, onDone = { reportingComment = null }) }
+    confirmDelete?.let { id ->
+        ConfirmDialog(stringResource(R.string.comment_delete_title), "", stringResource(R.string.comment_delete), destructive = true, onDismiss = { confirmDelete = null }) {
+            vm.deleteComment(id)
+        }
+    }
+    when (dialog) {
+        EventDialog.EDIT -> {
+            val title = remember { mutableStateOf(event.title) }
+            val venue = remember { mutableStateOf(event.venue) }
+            val description = remember { mutableStateOf(view.description) }
+            EditFieldsDialog(
+                stringResource(R.string.event_edit),
+                listOf(stringResource(R.string.event_field_title) to title, stringResource(R.string.event_field_venue) to venue, stringResource(R.string.event_field_description) to description),
+                onDismiss = { dialog = null }
+            ) { vm.edit(title.value, venue.value, description.value) }
+        }
+        EventDialog.CANCEL -> ConfirmDialog(
+            stringResource(R.string.event_cancel_title), stringResource(R.string.event_cancel_body), stringResource(R.string.event_cancel),
+            destructive = true, onDismiss = { dialog = null }
+        ) { vm.cancel { nav.popBackStack() } }
+        EventDialog.INVITE -> FriendPickerSheet(stringResource(R.string.group_invite), stringResource(R.string.group_invite_send), onDismiss = { dialog = null }) { ids ->
+            vm.invite(ids) { if (it is Outcome.Success) android.widget.Toast.makeText(context, context.resources.getQuantityString(R.plurals.invites_sent, it.value, it.value), android.widget.Toast.LENGTH_SHORT).show() }
+        }
+        EventDialog.REPORT -> ReportSheet(com.circle.app.data.ReportKind.EVENT, event.id, onDone = { dialog = null })
+        EventDialog.BLOCK -> ConfirmDialog(
+            stringResource(R.string.profile_block_title, host.firstName), stringResource(R.string.profile_block_body), stringResource(R.string.profile_block),
+            destructive = true, onDismiss = { dialog = null }
+        ) { vm.blockHost(host.id) { nav.popBackStack() } }
+        null -> Unit
+    }
+
+    Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background).imePadding()) {
+        Row(modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(44.dp).clip(CircleShape).clickable { nav.popBackStack() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back), tint = CircleTheme.colors.body)
+            }
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.event_title), color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Box {
+                Box(Modifier.size(44.dp).clip(CircleShape).clickable { menu = true }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.event_options), tint = CircleTheme.colors.text)
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    if (view.iAmHost) {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.event_edit)) }, onClick = { menu = false; dialog = EventDialog.EDIT })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.event_cancel)) }, onClick = { menu = false; dialog = EventDialog.CANCEL })
+                    }
+                    DropdownMenuItem(text = { Text(stringResource(R.string.group_invite)) }, onClick = { menu = false; dialog = EventDialog.INVITE })
+                    if (!view.iAmHost) {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.event_report)) }, onClick = { menu = false; dialog = EventDialog.REPORT })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.event_block_host)) }, onClick = { menu = false; dialog = EventDialog.BLOCK })
+                    }
+                }
+            }
         }
 
         LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -145,8 +220,27 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                     is EventThreadView.Open -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         val n = thread.comments.size
                         com.circle.app.ui.components.SectionLabel(if (n == 0) "THREAD · NO REPLIES YET" else "THREAD · $n ${if (n == 1) "REPLY" else "REPLIES"}")
-                        thread.comments.forEach { c -> ThreadComment(c, expanded = true, onToggleReplies = {}, onPerson = { id -> nav.openPerson(id) }, actions = null) }
-                        ReplyComposer { text -> vm.comment(text) }
+                        val actions = object : CommentActions {
+                            override fun like(comment: com.circle.app.data.repo.CommentView) = vm.likeComment(comment.id)
+                            override fun reply(comment: com.circle.app.data.repo.CommentView) { replyTo = comment.id }
+                            override fun delete(comment: com.circle.app.data.repo.CommentView) { confirmDelete = comment.id }
+                            override fun report(comment: com.circle.app.data.repo.CommentView) { reportingComment = comment.id }
+                        }
+                        thread.comments.forEach { c ->
+                            ThreadComment(
+                                c, expanded = c.id in expanded,
+                                onToggleReplies = { expanded = if (c.id in expanded) expanded - c.id else expanded + c.id },
+                                onPerson = { id -> nav.openPerson(id) }, actions = actions
+                            )
+                        }
+                        val all = thread.comments + thread.comments.flatMap { it.replies }
+                        val target = replyTo?.let { id -> all.firstOrNull { it.id == id } }
+                        ReplyComposer(above = target?.let { t -> { ReplyingToChip(t.author.firstName) { replyTo = null } } }) { text ->
+                            val top = target?.let { t -> thread.comments.firstOrNull { it.id == t.id || it.replies.any { r -> r.id == t.id } } }
+                            vm.comment(text, target?.id)
+                            top?.let { expanded = expanded + it.id }
+                            replyTo = null
+                        }
                     }
                     is EventThreadView.Locked -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         LockedPanel("The conversation opens when you take a seat.", "${thread.replyCount} replies so far")

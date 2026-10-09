@@ -689,7 +689,7 @@ class FakeCircleRepository(
         } else null
         return GroupView(
             GroupRef(g.id, g.name, g.initial, g.color), g.category, g.topic, g.description, g.isPublic,
-            g.memberCount, g.isMember, g.joinRequested, g.compassDeg, people,
+            g.memberCount, g.isMember, g.joinRequested, g.compassDeg, people, iAmHost = g.isMember && ME in g.hostIds,
         )
     }
 
@@ -744,9 +744,56 @@ class FakeCircleRepository(
         val g = store.group(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         if (g.isMember) {
             g.isMember = false
+            g.hostIds.remove(ME)
             g.memberCount = (g.memberCount - 1).coerceAtLeast(0)
         }
         return Outcome.Success(Unit)
+    }
+
+    private fun hostedGroup(groupId: String): GroupInfo? = store.group(groupId)?.takeIf { it.isMember && ME in it.hostIds }
+
+    override suspend fun approveJoinRequest(groupId: String, personId: String): Outcome<Unit> {
+        val g = hostedGroup(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (!g.joinRequests.removeAll { it.first == personId }) return Outcome.Error("no request")
+        if (personId !in g.memberIds) g.memberIds.add(personId)
+        g.memberCount += 1
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun declineJoinRequest(groupId: String, personId: String): Outcome<Unit> {
+        val g = hostedGroup(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        g.joinRequests.removeAll { it.first == personId }
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun editGroup(groupId: String, name: String, description: String, isPublic: Boolean): Outcome<Unit> {
+        val g = hostedGroup(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (name.isBlank()) return Outcome.Error("Add a name")
+        g.name = name.trim(); g.description = description.trim(); g.isPublic = isPublic
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun removeMember(groupId: String, personId: String): Outcome<Unit> {
+        val g = hostedGroup(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (personId == ME || personId in g.hostIds) return Outcome.Error("can't remove a host")
+        if (g.memberIds.remove(personId)) g.memberCount = (g.memberCount - 1).coerceAtLeast(1)
+        return Outcome.Success(Unit)
+    }
+
+    private fun invite(friendIds: List<String>, groupId: String?, eventId: String?): Outcome<Int> {
+        val friends = friendIds.distinct().filter { rel(it) == Relationship.FRIEND }
+        friends.forEach { store.invites.add(Invite(it, groupId, eventId, Clock.now())) }
+        return Outcome.Success(friends.size)
+    }
+
+    override suspend fun inviteToGroup(groupId: String, friendIds: List<String>): Outcome<Int> {
+        val g = store.group(groupId)?.takeIf { it.isMember } ?: return Outcome.Denied(DenyReason.GROUP_NOT_MEMBER)
+        return invite(friendIds, g.id, null)
+    }
+
+    override suspend fun inviteToEvent(eventId: String, friendIds: List<String>): Outcome<Int> {
+        val e = store.event(eventId)?.takeIf { eventVisible(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        return invite(friendIds, null, e.id)
     }
 
     private val tileColors = listOf(AvatarOrange, AvatarSage, AvatarBlue, AvatarRose, AvatarTeal, AvatarAmber)
@@ -760,6 +807,8 @@ class FakeCircleRepository(
             isPublic = isPublic, compassDeg = null, memberCount = 1, isMember = true, // the creator is a member
         ).apply { hostIds.add(ME) }
         store.groups.add(0, g)
+        // Every group gets its linked chat, in Messages > Groups.
+        store.chats.add(0, Chat("g-${g.id}", emptyList(), groupId = g.id, messages = emptyList()))
         return Outcome.Success(g.id)
     }
 
@@ -772,28 +821,106 @@ class FakeCircleRepository(
     }
 
     override suspend fun leaveSeat(eventId: String): Outcome<Unit> {
-        store.event(eventId)?.joined = false // the thread locks again; the host is quietly told (with a backend)
+        val e = store.event(eventId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (e.joined) {
+            e.joined = false // the thread locks again
+            val me = store.profile.displayName
+            store.sentNotices.add(Notice(e.hostId, "$me left ${e.title}", Clock.now())) // the host is quietly told
+        }
         return Outcome.Success(Unit)
     }
 
-    override suspend fun addEventComment(eventId: String, text: String): Outcome<Unit> {
-        val e = store.event(eventId)?.takeIf { eventVisible(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
-        denied(AccessPolicy.eventThread(e.joined || e.hostId == ME))?.let { return it }
+    /** The event's thread, if you have a seat. */
+    private fun seatedThread(eventId: String): Pair<EventInfo?, Outcome.Denied?> {
+        val e = store.event(eventId)?.takeIf { eventVisible(it) } ?: return null to Outcome.Denied(DenyReason.NOT_FOUND)
+        denied(AccessPolicy.eventThread(e.joined || e.hostId == ME))?.let { return null to it }
+        return e to null
+    }
+
+    override suspend fun addEventComment(eventId: String, text: String, replyToCommentId: String?): Outcome<Unit> {
+        val (e, d) = seatedThread(eventId); d?.let { return it }
         val t = text.trim()
         if (t.isEmpty()) return Outcome.Error("empty")
-        e.comments.add(Comment(newId("c"), ME, Clock.now(), t))
+        return addTo(e!!.comments, Comment(newId("c"), ME, Clock.now(), t), replyToCommentId)
+    }
+
+    override suspend fun toggleEventCommentLike(eventId: String, commentId: String): Outcome<Boolean> {
+        val (e, d) = seatedThread(eventId); d?.let { return it }
+        val c = (e!!.comments + e.comments.flatMap { it.replies }).firstOrNull { it.id == commentId }
+            ?.takeIf { !hiddenFromMe(it.authorId) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        val nowLiked = !store.likedCommentIds.remove(c.id)
+        if (nowLiked) store.likedCommentIds.add(c.id)
+        return Outcome.Success(nowLiked)
+    }
+
+    override suspend fun deleteEventComment(eventId: String, commentId: String): Outcome<Unit> {
+        val (e, d) = seatedThread(eventId); d?.let { return it }
+        return deleteFrom(e!!.comments, commentId)
+    }
+
+    /** Adds a comment, or a reply under the top-level comment that [replyTo] belongs to (one level deep). */
+    private fun addTo(list: androidx.compose.runtime.snapshots.SnapshotStateList<Comment>, comment: Comment, replyTo: String?): Outcome<Unit> {
+        if (replyTo == null) { list.add(comment); return Outcome.Success(Unit) }
+        val i = list.indexOfFirst { top -> top.id == replyTo || top.replies.any { it.id == replyTo } }
+        if (i < 0 || hiddenFromMe(list[i].authorId)) return Outcome.Denied(DenyReason.NOT_FOUND)
+        list[i] = list[i].copy(replies = list[i].replies + comment)
         return Outcome.Success(Unit)
     }
 
-    override suspend fun createEvent(title: String, visibility: EventVisibility, description: String, capacity: Int): Outcome<String> {
+    private fun deleteFrom(list: androidx.compose.runtime.snapshots.SnapshotStateList<Comment>, commentId: String): Outcome<Unit> {
+        val c = (list + list.flatMap { it.replies }).firstOrNull { it.id == commentId } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (c.authorId != ME) return Outcome.Error("not yours")
+        if (!list.removeAll { it.id == commentId }) {
+            val i = list.indexOfFirst { top -> top.replies.any { it.id == commentId } }
+            list[i] = list[i].copy(replies = list[i].replies.filterNot { it.id == commentId })
+        }
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun createEvent(
+        title: String,
+        visibility: EventVisibility,
+        description: String,
+        capacity: Int,
+        startsAt: java.time.Instant,
+        topic: String,
+        venue: String,
+    ): Outcome<String> {
         if (title.isBlank()) return Outcome.Error("Add a title")
+        if (startsAt.isBefore(Clock.now())) return Outcome.Error("past")
+        // On the map (inner ring, at its topic's angle) only if it's within the next 7 days; else the list.
+        val soon = startsAt.isBefore(Clock.now().plusSeconds(7 * 24 * 3600L))
         val e = EventInfo(
-            id = newId("event"), title = title.trim(), topic = "EVENT", compassDeg = null,
-            startsAt = Clock.now().plusSeconds(7 * 24 * 3600L), venue = "", visibility = visibility, hostId = ME,
+            id = newId("event"), title = title.trim(), topic = topic, compassDeg = if (soon) topicAngle(topic) else null,
+            startsAt = startsAt, venue = venue.trim(), visibility = visibility, hostId = ME,
             description = description.trim(), capacity = capacity.coerceAtLeast(1), goingBase = 1, joined = false,
         )
         store.events.add(0, e)
         return Outcome.Success(e.id)
+    }
+
+    /** A free angle inside the topic's quarter of the map, so new events don't sit on top of others. */
+    private fun topicAngle(topic: String): Float {
+        val center = when (topic) { "OUTDOORS" -> 45f; "SOCIAL" -> 135f; "MUSIC" -> 225f; else -> 315f }
+        val taken = store.events.mapNotNull { it.compassDeg }
+        return listOf(0f, -22f, 22f, -36f, 36f, -11f, 11f).map { center + it }.firstOrNull { a -> taken.none { kotlin.math.abs(it - a) < 10f } } ?: center
+    }
+
+    override suspend fun editEvent(eventId: String, title: String, venue: String, description: String): Outcome<Unit> {
+        val e = store.event(eventId)?.takeIf { it.hostId == ME } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (title.isBlank()) return Outcome.Error("Add a title")
+        e.title = title.trim(); e.venue = venue.trim(); e.description = description.trim()
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun cancelEvent(eventId: String): Outcome<Unit> {
+        val e = store.event(eventId)?.takeIf { it.hostId == ME } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        store.events.remove(e)
+        // Everyone with a seat is told (the seed's going people stand in for them).
+        eventSeats(e, false).mapNotNull { it.personId }.filter { it != ME }.forEach {
+            store.sentNotices.add(Notice(it, "${e.title} was cancelled", Clock.now()))
+        }
+        return Outcome.Success(Unit)
     }
 
     // =========================================================================== alerts

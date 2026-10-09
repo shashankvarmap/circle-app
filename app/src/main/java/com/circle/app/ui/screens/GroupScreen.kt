@@ -30,6 +30,14 @@ import com.circle.app.ui.vm.circleViewModel
 import com.circle.app.navigation.openPerson
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.circle.app.ui.components.*
+import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import com.circle.app.R
+import com.circle.app.data.repo.Outcome
 import com.circle.app.ui.theme.*
 
 class GroupViewModel(repo: CircleRepository, private val groupId: String) : RepoViewModel(repo) {
@@ -38,7 +46,14 @@ class GroupViewModel(repo: CircleRepository, private val groupId: String) : Repo
     /** Empty unless you're a member: group posts are by membership, never friendship. */
     val posts = repo.groupPosts(groupId).state(emptyList())
     fun leave() = run({ leaveGroup(groupId) })
+    fun approve(personId: String) = run({ approveJoinRequest(groupId, personId) })
+    fun decline(personId: String) = run({ declineJoinRequest(groupId, personId) })
+    fun remove(personId: String) = run({ removeMember(groupId, personId) })
+    fun edit(name: String, description: String, isPublic: Boolean) = run({ editGroup(groupId, name, description, isPublic) })
+    fun invite(ids: List<String>, then: (Outcome<Int>) -> Unit) = run({ inviteToGroup(groupId, ids) }, then)
 }
+
+private enum class GroupDialog { LEAVE, EDIT, INVITE, REPORT, REMOVE }
 
 /**
  * Group detail. Outsiders see "Request to join", which stays pending: never instant.
@@ -56,12 +71,61 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
     var tab by rememberSaveable { mutableStateOf(0) } // 0 Posts, 1 People
     val screenReader = com.circle.app.ui.a11y.rememberScreenReaderOn()
     var showMap by rememberSaveable { mutableStateOf(!screenReader) }
+    var dialog by rememberSaveable { mutableStateOf<GroupDialog?>(null) }
+    var removing by rememberSaveable { mutableStateOf<String?>(null) }
+    var menu by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    when (dialog) {
+        GroupDialog.LEAVE -> ConfirmDialog(
+            stringResource(R.string.group_leave_title, group.name), stringResource(R.string.group_leave_body), stringResource(R.string.group_leave),
+            destructive = true, onDismiss = { dialog = null }
+        ) { vm.leave() }
+        GroupDialog.REMOVE -> ConfirmDialog(
+            stringResource(R.string.group_remove_title), stringResource(R.string.group_remove_body), stringResource(R.string.group_remove),
+            destructive = true, onDismiss = { dialog = null; removing = null }
+        ) { removing?.let { vm.remove(it) } }
+        GroupDialog.EDIT -> {
+            val name = remember { mutableStateOf(group.name) }
+            val description = remember { mutableStateOf(group.description) }
+            var isPublic by remember { mutableStateOf(group.isPublic) }
+            EditFieldsDialog(
+                stringResource(R.string.group_edit),
+                listOf(stringResource(R.string.group_field_name) to name, stringResource(R.string.group_field_description) to description),
+                extra = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.group_field_public), color = CircleTheme.colors.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        androidx.compose.material3.Switch(isPublic, { isPublic = it })
+                    }
+                },
+                onDismiss = { dialog = null }
+            ) { vm.edit(name.value, description.value, isPublic) }
+        }
+        GroupDialog.INVITE -> FriendPickerSheet(stringResource(R.string.group_invite), stringResource(R.string.group_invite_send), onDismiss = { dialog = null }) { ids ->
+            vm.invite(ids) { if (it is Outcome.Success) android.widget.Toast.makeText(context, context.resources.getQuantityString(R.plurals.invites_sent, it.value, it.value), android.widget.Toast.LENGTH_SHORT).show() }
+        }
+        GroupDialog.REPORT -> ReportSheet(com.circle.app.data.ReportKind.GROUP, group.id, onDone = { dialog = null })
+        null -> Unit
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
-        Row(modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = CircleTheme.colors.body, modifier = Modifier.clickable { nav.popBackStack() })
-            Spacer(Modifier.width(12.dp))
-            Text("Group", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Row(modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(44.dp).clip(CircleShape).clickable { nav.popBackStack() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back), tint = CircleTheme.colors.body)
+            }
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.group_title), color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Box {
+                Box(Modifier.size(44.dp).clip(CircleShape).clickable { menu = true }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.group_options), tint = CircleTheme.colors.text)
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    if (group.iAmHost) DropdownMenuItem(text = { Text(stringResource(R.string.group_edit)) }, onClick = { menu = false; dialog = GroupDialog.EDIT })
+                    if (isMember) DropdownMenuItem(text = { Text(stringResource(R.string.group_invite)) }, onClick = { menu = false; dialog = GroupDialog.INVITE })
+                    if (isMember) DropdownMenuItem(text = { Text(stringResource(R.string.group_leave)) }, onClick = { menu = false; dialog = GroupDialog.LEAVE })
+                    if (!group.iAmHost) DropdownMenuItem(text = { Text(stringResource(R.string.group_report)) }, onClick = { menu = false; dialog = GroupDialog.REPORT })
+                }
+            }
         }
 
         LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -95,7 +159,10 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                             contentAlignment = Alignment.Center
                         ) { Text("✓ Member", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
                         Spacer(Modifier.width(10.dp))
-                        Text("Leave", color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.clickable { vm.leave() })
+                        Text(
+                            stringResource(R.string.group_leave), color = CircleTheme.colors.muted, fontSize = 12.sp,
+                            modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { dialog = GroupDialog.LEAVE }.padding(12.dp)
+                        )
                     }
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -121,7 +188,15 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                 }
             }
             if (isMember && tab == 1) {
-                item { GroupPeople(group, showMap) { nav.openPerson(it) } }
+                item {
+                    GroupPeople(
+                        group, showMap, onPerson = { nav.openPerson(it) },
+                        host = if (group.iAmHost) HostActions(
+                            approve = vm::approve, decline = vm::decline,
+                            remove = { removing = it; dialog = GroupDialog.REMOVE }
+                        ) else null
+                    )
+                }
             } else if (isMember) {
                 item { ComposeToGroupRow(nav, group.id) }
 

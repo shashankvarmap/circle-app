@@ -95,18 +95,21 @@ class Post(
 
 class GroupInfo(
     val id: String,
-    val name: String,
+    name: String,
     val category: String,
     /** Explore kicker topic, e.g. "PHOTOGRAPHY". */
     val topic: String,
-    val description: String,
+    description: String,
     val color: Color,
-    val isPublic: Boolean,
+    isPublic: Boolean,
     /** Compass angle on the Explore map; null = not placed on the map (list only). */
     val compassDeg: Float?,
     memberCount: Int,
     isMember: Boolean
 ) {
+    var name by mutableStateOf(name)
+    var description by mutableStateOf(description)
+    var isPublic by mutableStateOf(isPublic)
     val initial: String get() = name.first().uppercase()
     var memberCount by mutableIntStateOf(memberCount)
     var isMember by mutableStateOf(isMember)
@@ -122,22 +125,25 @@ class GroupInfo(
 
 class EventInfo(
     val id: String,
-    val title: String,
+    title: String,
     /** Explore kicker topic, e.g. "OUTDOORS". */
     val topic: String,
     /** Compass angle on the Explore map (inner ring); null = list only. */
     val compassDeg: Float?,
     val startsAt: Instant,
-    val venue: String,
+    venue: String,
     val visibility: EventVisibility,
     val hostId: String,
-    val description: String,
+    description: String,
     val capacity: Int,
     /** People going other than me. The host is always among them. */
     val goingBase: Int,
     joined: Boolean,
     comments: List<Comment> = emptyList()
 ) {
+    var title by mutableStateOf(title)
+    var venue by mutableStateOf(venue)
+    var description by mutableStateOf(description)
     /** I have a seat. */
     var joined by mutableStateOf(joined)
     val going: Int get() = goingBase + if (joined) 1 else 0
@@ -145,6 +151,12 @@ class EventInfo(
     val isFull: Boolean get() = going >= capacity
     val comments: SnapshotStateList<Comment> = mutableStateListOf<Comment>().apply { addAll(comments) }
 }
+
+/** An invitation you sent to a friend (to a group or an event). With a backend it lands in their Alerts. */
+data class Invite(val toPersonId: String, val groupId: String?, val eventId: String?, val at: Instant)
+
+/** A quiet note the server would deliver to someone else (e.g. the host when you leave a seat). */
+data class Notice(val toPersonId: String, val text: String, val at: Instant)
 
 /** A quiet alert. [actorId] did [kind]; [postId] is what it refers to, if anything. */
 data class Alert(

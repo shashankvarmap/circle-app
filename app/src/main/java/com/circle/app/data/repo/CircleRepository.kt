@@ -125,10 +125,32 @@ interface CircleRepository {
     suspend fun requestToJoin(groupId: String): Outcome<Unit>
     suspend fun leaveGroup(groupId: String): Outcome<Unit>
     suspend fun createGroup(name: String, category: String, description: String, isPublic: Boolean): Outcome<String>
+    /** Hosts only. Approving makes the person a member. */
+    suspend fun approveJoinRequest(groupId: String, personId: String): Outcome<Unit>
+    suspend fun declineJoinRequest(groupId: String, personId: String): Outcome<Unit>
+    suspend fun editGroup(groupId: String, name: String, description: String, isPublic: Boolean): Outcome<Unit>
+    suspend fun removeMember(groupId: String, personId: String): Outcome<Unit>
+    /** Sends invites to friends (they land in the friends' Alerts with a backend). */
+    suspend fun inviteToGroup(groupId: String, friendIds: List<String>): Outcome<Int>
+    suspend fun inviteToEvent(eventId: String, friendIds: List<String>): Outcome<Int>
     suspend fun takeSeat(eventId: String): Outcome<Unit>
     suspend fun leaveSeat(eventId: String): Outcome<Unit>
-    suspend fun addEventComment(eventId: String, text: String): Outcome<Unit>
-    suspend fun createEvent(title: String, visibility: EventVisibility, description: String, capacity: Int): Outcome<String>
+    suspend fun addEventComment(eventId: String, text: String, replyToCommentId: String? = null): Outcome<Unit>
+    suspend fun toggleEventCommentLike(eventId: String, commentId: String): Outcome<Boolean>
+    suspend fun deleteEventComment(eventId: String, commentId: String): Outcome<Unit>
+    suspend fun createEvent(
+        title: String,
+        visibility: EventVisibility,
+        description: String,
+        capacity: Int,
+        startsAt: java.time.Instant = java.time.Instant.now().plusSeconds(7 * 24 * 3600L),
+        topic: String = "SOCIAL",
+        venue: String = "",
+    ): Outcome<String>
+    /** Hosts only. */
+    suspend fun editEvent(eventId: String, title: String, venue: String, description: String): Outcome<Unit>
+    /** Hosts only: the event is removed and everyone with a seat is told. */
+    suspend fun cancelEvent(eventId: String): Outcome<Unit>
 
     // ---- Alerts ----
     fun alerts(): Flow<List<AlertView>>

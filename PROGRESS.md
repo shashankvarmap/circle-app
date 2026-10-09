@@ -77,10 +77,12 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] Group chat member avatars/names open the profile (Limited for non-friends)
 
 ## Phase 7: Groups and events (F4)
-- [~] Create group/event exist; event has no date/time/topic; group/event not placed on map
+- [x] Create group: you're host and member, it opens, it's in Explore (if public) and gets its chat in Messages > Groups
+- [x] Create event: date and time pickers, topic, venue; on the map by topic within 7 days, else in the list; opens after creating
 - [x] Request to join pending + visible to all members; People orbit; event seats; Take a seat / Leave seat; thread unlock
-- [ ] Hosts Approve / Decline; Leave group confirm; host Edit / Remove member
-- [ ] Invite friends; host tools (edit / cancel event); report / block host; leave notifies host
+- [x] Hosts Approve / Decline requests; Leave group (confirmed); host Edit group and Remove member
+- [x] Invite friends (groups, events); host Edit / Cancel event (seated people told); Report event, Block host; leaving a seat tells the host
+- [x] Event thread is a real thread (like, reply with chip, nested replies, delete / report)
 
 ## Phase 8: Settings, safety, states (F5)
 - [x] Settings list, Edit profile, Blocked / Muted lists, theme switch live
