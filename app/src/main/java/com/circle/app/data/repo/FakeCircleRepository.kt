@@ -480,14 +480,16 @@ class FakeCircleRepository(
 
     // =========================================================================== chats
 
-    private fun chatVisible(c: Chat): Boolean = when {
+    private fun chatVisible(c: Chat): Boolean = !c.hiddenForMe && when {
         c.groupId != null -> AccessPolicy.groupContent(store.group(c.groupId)?.isMember == true).allowed
         c.directPersonId != null -> !hiddenFromMe(c.directPersonId!!)
         else -> true
     }
 
     private fun visibleMessages(c: Chat) =
-        c.messages.filter { it.id !in store.hiddenMessageIds && !hiddenFromMe(it.senderId) }
+        c.messages.filter { m ->
+            m.id !in store.hiddenMessageIds && !hiddenFromMe(m.senderId) && c.clearedAt.let { it == null || m.createdAt.isAfter(it) }
+        }
 
     private fun chatKind(c: Chat) = when {
         c.groupId != null -> ChatKind.GROUP
@@ -521,8 +523,10 @@ class FakeCircleRepository(
                 },
                 lastAt = last?.createdAt,
                 unread = c.unread,
+                pinned = c.pinned,
+                muted = c.muted,
             )
-        }
+        }.sortedByDescending { it.lastAt } // newest first, never ranked
     }
 
     override fun chat(chatId: String): Flow<ChatView?> = observe {
@@ -536,6 +540,8 @@ class FakeCircleRepository(
             memberCount = c.groupId?.let { store.group(it)?.memberCount } ?: (c.memberIds.size + 1),
             friendsSinceYear = c.directPersonId?.let { store.person(it)?.sinceYear },
             messages = messages.mapNotNull { m -> messageView(m, byId) },
+            firstUnreadId = c.lastReadAt?.let { read -> messages.firstOrNull { it.senderId != ME && it.createdAt.isAfter(read) }?.id },
+            muted = c.muted,
         )
     }
 
@@ -553,12 +559,76 @@ class FakeCircleRepository(
             },
             // Receipts are mutual: you see theirs only while yours are on.
             seenAt = m.seenAt?.takeIf { m.senderId == ME && store.privacy.readReceipts },
+            media = m.media,
         )
     }
 
+    /** A chat you may write in: visible to you, and a 1:1 only with a friend. */
+    private fun writableChat(chatId: String): Pair<Chat?, Outcome.Denied?> {
+        val c = store.chat(chatId)?.takeIf { chatVisible(it) } ?: return null to Outcome.Denied(DenyReason.NOT_FOUND)
+        c.directPersonId?.let { denied(AccessPolicy.directMessage(rel(it)))?.let { d -> return null to d } }
+        return c to null
+    }
+
+    override suspend fun createChat(friendIds: List<String>, name: String?): Outcome<String> {
+        val ids = friendIds.distinct().filter { it != ME }
+        if (ids.isEmpty()) return Outcome.Error("empty")
+        ids.forEach { id -> denied(AccessPolicy.directMessage(rel(id)))?.let { return it } }
+        if (ids.size == 1) return openDirectChat(ids.single())
+        val title = name?.trim()?.takeIf { it.isNotEmpty() }
+            ?: ids.mapNotNull { store.person(it)?.firstName }.joinToString(", ")
+        val c = Chat(newId("chat"), ids, name = title, messages = emptyList())
+        store.chats.add(0, c)
+        return Outcome.Success(c.id)
+    }
+
+    override suspend fun sendMedia(chatId: String, media: List<com.circle.app.data.media.MediaRef>): Outcome<Unit> {
+        val (c, d) = writableChat(chatId); d?.let { return it }
+        if (media.isEmpty()) return Outcome.Error("empty")
+        c!!.messages.add(ChatMessage(newId("m"), ME, Clock.now(), MessageKind.PHOTO, media = media))
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun sendEventInvite(chatId: String, eventId: String): Outcome<Unit> {
+        val (c, d) = writableChat(chatId); d?.let { return it }
+        val e = store.event(eventId)?.takeIf { eventVisible(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        c!!.messages.add(ChatMessage(newId("m"), ME, Clock.now(), MessageKind.EVENT_INVITE, eventId = e.id))
+        return Outcome.Success(Unit)
+    }
+
+    private fun mineChat(chatId: String) = store.chat(chatId)?.takeIf { chatVisible(it) }
+
+    override suspend fun setChatPinned(chatId: String, pinned: Boolean): Outcome<Unit> {
+        val c = mineChat(chatId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        c.pinned = pinned
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun setChatMuted(chatId: String, muted: Boolean): Outcome<Unit> {
+        val c = mineChat(chatId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        c.muted = muted
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun deleteChat(chatId: String): Outcome<Unit> {
+        val c = mineChat(chatId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        c.clearedAt = Clock.now(); c.hiddenForMe = true; c.pinned = false; c.unread = false
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun clearChat(chatId: String): Outcome<Unit> {
+        val c = mineChat(chatId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        c.clearedAt = Clock.now()
+        return Outcome.Success(Unit)
+    }
+
+    override fun myEvents(): Flow<List<EventSummary>> = observe {
+        store.events.filter { (it.joined || it.hostId == ME) && eventVisible(it) }.sortedBy { it.startsAt }.map { summary(it) }
+    }
+
     override suspend fun sendMessage(chatId: String, text: String, replyToId: String?): Outcome<Unit> {
-        val c = store.chat(chatId)?.takeIf { chatVisible(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
-        c.directPersonId?.let { denied(AccessPolicy.directMessage(rel(it)))?.let { d -> return d } }
+        val (c, d) = writableChat(chatId); d?.let { return it }
+        c!!
         val t = text.trim()
         if (t.isEmpty()) return Outcome.Error("empty")
         val reply = replyToId?.takeIf { id -> visibleMessages(c).any { it.id == id } }
@@ -590,7 +660,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun markRead(chatId: String) {
-        store.chat(chatId)?.unread = false
+        store.chat(chatId)?.let { it.unread = false; it.lastReadAt = Clock.now() }
     }
 
     override suspend fun openDirectChat(personId: String): Outcome<String> {

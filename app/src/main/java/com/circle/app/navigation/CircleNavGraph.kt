@@ -49,6 +49,9 @@ object Routes {
         if (args.isNotEmpty()) append("?").append(args.joinToString("&"))
     }
 
+    const val NEW_CHAT = "new_chat"
+    const val CHAT_VIEWER = "chatviewer/{chatId}/{messageId}"
+    fun chatViewer(chatId: String, messageId: String) = "chatviewer/$chatId/$messageId"
     const val VIEWER = "viewer/{noteId}?index={index}"
     /** Full-screen photo viewer for a note's media (re-checked through the repository). */
     fun viewer(noteId: String, index: Int = 0) = "viewer/$noteId?index=$index"
@@ -98,6 +101,10 @@ fun CircleNavGraph(
             )
         ) { entry ->
             ComposePostScreen(navController, entry.arguments?.getString("quote"), entry.arguments?.getString("group"), entry.arguments?.getString("edit"))
+        }
+        composable(Routes.NEW_CHAT) { NewChatScreen(navController) }
+        composable(Routes.CHAT_VIEWER) { entry ->
+            ChatMediaViewerScreen(navController, entry.arguments?.getString("chatId").orEmpty(), entry.arguments?.getString("messageId").orEmpty())
         }
         composable(Routes.VIEWER, arguments = listOf(navArgument("index") { type = androidx.navigation.NavType.IntType; defaultValue = 0 })) { entry ->
             PhotoViewerScreen(navController, entry.arguments?.getString("noteId").orEmpty(), entry.arguments?.getInt("index") ?: 0)

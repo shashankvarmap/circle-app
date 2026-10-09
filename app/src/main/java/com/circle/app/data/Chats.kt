@@ -10,7 +10,7 @@ import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
 
-enum class MessageKind { TEXT, SHARED_NOTE, EVENT_INVITE }
+enum class MessageKind { TEXT, SHARED_NOTE, EVENT_INVITE, PHOTO }
 
 /**
  * One message in a chat. Rich messages point at a post ([postId], a shared note) or an event
@@ -27,6 +27,8 @@ data class ChatMessage(
     val replyToId: String? = null,
     /** When the other person read it (shown only if they have read receipts on). */
     val seenAt: Instant? = null,
+    /** Photos (and short videos) sent in the chat. */
+    val media: List<com.circle.app.data.media.MediaRef> = emptyList(),
 )
 
 /**
@@ -40,9 +42,19 @@ class Chat(
     val groupId: String? = null,
     messages: List<ChatMessage>,
     unread: Boolean = false,
+    pinned: Boolean = false,
+    /** Until when you had read this chat; later messages from others are new. */
+    lastReadAt: Instant? = null,
 ) {
     val messages: SnapshotStateList<ChatMessage> = mutableStateListOf<ChatMessage>().apply { addAll(messages) }
     var unread by mutableStateOf(unread)
+    var pinned by mutableStateOf(pinned)
+    var muted by mutableStateOf(false)
+    var lastReadAt by mutableStateOf(lastReadAt)
+    /** Deleted from your list (the others keep it). */
+    var hiddenForMe by mutableStateOf(false)
+    /** "Clear chat": messages up to here are gone from your side only. */
+    var clearedAt by mutableStateOf<Instant?>(null)
     val isGroupChat: Boolean get() = groupId != null
     /** The other person in a 1:1 chat. */
     val directPersonId: String? get() = if (groupId == null && name == null) memberIds.singleOrNull() else null
@@ -61,7 +73,7 @@ internal object ChatSeed {
 
     fun chats() = listOf(
         Chat(
-            "pk", listOf("PK"), unread = true, messages = listOf(
+            "pk", listOf("PK"), unread = true, pinned = true, lastReadAt = t(140), messages = listOf(
                 ChatMessage("pk1", "PK", y("21:40"), text = "Did you see? Amara finally finished the puzzle."),
                 ChatMessage("pk2", "PK", y("21:40"), MessageKind.SHARED_NOTE, postId = "amara-puzzle"),
                 ChatMessage("pk2b", "PK", y("21:43"), text = "And my friend Elena's museum tip. You two would get on."),
@@ -92,7 +104,7 @@ internal object ChatSeed {
             )
         ),
         Chat(
-            "g-photo-walk", listOf("PK", "TN", "AO", "EV"), groupId = "photo-walk", unread = true, messages = listOf(
+            "g-photo-walk", listOf("PK", "TN", "AO", "EV"), groupId = "photo-walk", unread = true, lastReadAt = t(80), messages = listOf(
                 ChatMessage("pw1", "PK", t(85), text = "Meet at the cathedral steps, 6:30"),
                 ChatMessage("pw2", "PK", t(85), text = "Golden hour is short this week"),
                 ChatMessage("pw2b", "EV", t(77), text = "Could someone lend me a 50mm for Sunday? Mine is at the repair shop."),

@@ -103,6 +103,18 @@ interface CircleRepository {
     suspend fun markRead(chatId: String)
     /** Opens (or creates) the 1:1 chat with a friend; returns the chat id. Friends only. */
     suspend fun openDirectChat(personId: String): Outcome<String>
+    /** New chat: one friend opens the 1:1 chat; several make a chat (with an optional name). Friends only. */
+    suspend fun createChat(friendIds: List<String>, name: String?): Outcome<String>
+    suspend fun sendMedia(chatId: String, media: List<com.circle.app.data.media.MediaRef>): Outcome<Unit>
+    suspend fun sendEventInvite(chatId: String, eventId: String): Outcome<Unit>
+    suspend fun setChatPinned(chatId: String, pinned: Boolean): Outcome<Unit>
+    suspend fun setChatMuted(chatId: String, muted: Boolean): Outcome<Unit>
+    /** Removes the chat from your list only. */
+    suspend fun deleteChat(chatId: String): Outcome<Unit>
+    /** Clears the messages on your side only. */
+    suspend fun clearChat(chatId: String): Outcome<Unit>
+    /** Events you host or have a seat at (what you can invite friends to). */
+    fun myEvents(): Flow<List<EventSummary>>
 
     // ---- Groups, events, explore ----
     fun explore(): Flow<ExploreView>

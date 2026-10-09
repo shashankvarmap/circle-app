@@ -87,7 +87,7 @@ fun CreateGroupScreen(nav: NavHostController) {
             }
 
             Text(
-                "You can switch this later from the group's settings. Every group also gets a linked chat, in Messages → Group Messages, once it's created.",
+                "You can switch this later from the group's settings. Every group also gets a linked chat, in Messages → Groups, once it's created.",
                 color = CircleTheme.colors.muted, fontSize = 11.sp
             )
         }

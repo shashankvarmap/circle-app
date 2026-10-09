@@ -235,4 +235,53 @@
     <string name="report_thanks">Thanks. We\'ll look at this.</string>
     <string name="report_thanks_body">Your report is recorded. You can also block them at any time.</string>
     <string name="report_done">Done</string>
+
+    <!-- Messages list (V2 1) -->
+    <string name="messages_title">Messages</string>
+    <string name="messages_new_chat">New chat</string>
+    <string name="messages_search">Search chats</string>
+    <string name="messages_tab_messages">Messages</string>
+    <string name="messages_tab_groups">Groups</string>
+    <string name="messages_groups_note">Chats for the groups you\'ve joined. They appear when you join, not when you ask.</string>
+    <string name="messages_empty">No chats yet.</string>
+    <string name="messages_empty_groups">No group chats yet.</string>
+    <string name="messages_start_chat">Start a chat</string>
+    <string name="messages_explore_groups">Explore groups</string>
+    <string name="messages_no_match">No chats match \"%1$s\".</string>
+    <string name="messages_pinned_caps">PINNED</string>
+    <string name="messages_all_caps">ALL CHATS</string>
+    <string name="messages_footer">Only friends can message you directly.</string>
+    <string name="messages_pin">Pin</string>
+    <string name="messages_unpin">Unpin</string>
+    <string name="messages_mute">Mute</string>
+    <string name="messages_unmute">Unmute</string>
+    <string name="messages_pinned">Pinned</string>
+    <string name="messages_muted">Muted</string>
+    <string name="messages_unread">Unread</string>
+    <string name="messages_open_chat">Open chat</string>
+    <string name="messages_delete_title">Delete this chat?</string>
+    <string name="messages_delete_body">It\'s removed from your list. The others in it keep their messages.</string>
+    <string name="chat_photo">Photo</string>
+
+    <!-- Chat extras (V2 2-3) -->
+    <string name="chat_search">Search in chat</string>
+    <string name="chat_search_hint">Search this chat</string>
+    <string name="chat_search_close">Close search</string>
+    <string name="chat_search_none">No messages match \"%1$s\".</string>
+    <string name="chat_clear">Clear chat</string>
+    <string name="chat_clear_title">Clear this chat?</string>
+    <string name="chat_clear_body">Messages are removed from your side only. The others keep theirs.</string>
+    <string name="chat_more_options">Chat options</string>
+    <string name="chat_new_messages">New messages</string>
+    <string name="chat_jump_latest">Jump to latest</string>
+    <string name="chat_plus">Add a photo or an event invite</string>
+    <string name="chat_plus_photo">Photo</string>
+    <string name="chat_plus_event">Invite to an event</string>
+    <string name="chat_plus_no_events">You aren\'t hosting or going to any events yet.</string>
+    <string name="newchat_chat">Chat</string>
+    <string name="newchat_next">Next</string>
+    <string name="newchat_create">Create</string>
+    <string name="newchat_name_title">Name this chat (optional)</string>
+    <string name="newchat_name_hint">e.g. Weekend Trip</string>
+    <string name="newchat_note">Only friends. A chat you start with several friends shows in Messages.</string>
 </resources>

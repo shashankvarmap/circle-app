@@ -68,12 +68,13 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] My Profile PHOTOS shows your real photo notes (opens the viewer) instead of placeholder boxes
 
 ## Phase 6: Messages and chat (MESSAGES_AND_SETTINGS_V2)
-- [~] List: missing "+" New chat, search, Pinned / All chats, unread tint, swipe Pin/Mute/Delete, "Groups" tab rename, footer, empty state
+- [x] List: "+" New chat, search, Messages | Groups tabs, Pinned / All chats, unread tint + dot, swipe-left Pin/Mute/Delete + long-press menu, footer, empty states, newest first
 - [x] Chat: bubbles, runs, day pills, swipe-right reply, hold Copy / Delete for me / Unsend
-- [~] Chat: missing ⋯ menu, + sheet (Photo, Invite to an event), photo messages + viewer, Jump to latest, New messages divider, Sending/Not sent, Seen only with receipts on
-- [x] Shared note opens thread only if allowed (to be rebuilt on NoteView)
-- [ ] New chat flow (friends only; 1:1 or named multi-person)
-- [~] Group chat member avatars/names open profiles (done); Limited for non-friends (with Phase 2)
+- [x] Chat: ⋯ menu (Mute, Search in chat, Clear chat, Block, Report), + sheet (Photo, Invite to an event), photo messages + viewer, Jump to latest, New messages divider, Seen only with receipts on
+- [ ] Chat: "Sending…" / "Not sent · tap to retry" states (the fake never fails; comes with the Phase 11 fail switch)
+- [x] Shared note opens thread only if allowed (NoteView); event invite opens only if visible, else the gate
+- [x] New chat flow (friends only; 1:1 or named multi-person chat in Messages)
+- [x] Group chat member avatars/names open the profile (Limited for non-friends)
 
 ## Phase 7: Groups and events (F4)
 - [~] Create group/event exist; event has no date/time/topic; group/event not placed on map

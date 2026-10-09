@@ -215,3 +215,33 @@ Block. Unfriend leaves Your circle and the counts; Block hides the person everyw
 
 **Note:** a scripted edit briefly corrupted ProfileScreen.kt (an empty match inserted text between every character) and hung
 the Kotlin compiler; the file was restored from git before the edit was redone. Nothing broken was committed.
+
+---
+
+## Phase 6: Messages and chat (MESSAGES_AND_SETTINGS_V2)
+
+**Works now**
+- **Messages list:** "Messages" (Fraunces 26) with the New chat button (42dp accent ring), "Search chats" filtering by chat
+  or member name, tabs **Messages | Groups** (renamed everywhere), PINNED then ALL CHATS, 52dp avatars (rounded squares
+  for groups), "You:" and "Tomas:" prefixes, Photo / Event invite / Shared a note previews, unread tint + heavier name +
+  accent time + 10dp dot, newest first. Swipe a row left to reveal Pin / Mute / Delete (long-press gives the same menu;
+  TalkBack gets them as custom actions). Footer, the Groups line, and empty states with one action. No presence or typing.
+- **Chat:** ⋯ menu with Mute, Search in chat (filters the conversation), Clear chat (your side only), Block (1:1) and
+  Report (opens the report flow). The "+" button opens a sheet with Photo (system picker, several) and Invite to an event
+  (events you host or have a seat at). Photo messages are 210 x 140 cards that open the full-screen viewer. A "New
+  messages" divider marks the first message after you last read the chat; "Jump to latest" appears when scrolled up.
+- **New chat:** a searchable friend picker with checkboxes; one friend opens (or creates) the 1:1, several ask for an
+  optional name and create a chat in Messages. Non-friends are refused by the repository.
+- Tests: `ChatsTest` (new chats, friends only, pin/mute/clear/delete on your side only, photo and invite messages,
+  new-messages marker, ordering). Verified on the emulator: list layout, swipe actions, chat menu, "+" sheet, new chat picker.
+
+**Stubs:** "Sending…" / "Not sent · tap to retry" need a network that can fail (Phase 11 fail switch). Muting a chat is
+recorded but there are no push notifications yet. Photos stay as device URIs.
+
+**Decisions**
+- The Messages footer says "Only friends can message you directly." (ACCESS_AND_LAUNCH 0.2 wording, because group chats can
+  include non-friends) instead of V2's "Nobody else can message you."
+- Chats sort newest first; pinned ones sit in their own section.
+- A chat started with several friends and no name is titled by first names ("Priya, Jonah").
+- Report from a 1:1 reports the person; from a group chat, the group.
+- Found on the device and fixed: the swipe actions showed through the unread row's translucent tint.

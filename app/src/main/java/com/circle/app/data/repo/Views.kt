@@ -172,6 +172,8 @@ data class ChatRowView(
     val preview: ChatPreview?,
     val lastAt: Instant?,
     val unread: Boolean,
+    val pinned: Boolean = false,
+    val muted: Boolean = false,
 )
 
 /** An event as it appears in a chat card. */
@@ -190,6 +192,7 @@ data class MessageView(
     val replyTo: ReplySnippet?,
     /** Shown only when the other person has read receipts on. */
     val seenAt: Instant?,
+    val media: List<com.circle.app.data.media.MediaRef> = emptyList(),
 ) {
     val mine: Boolean get() = sender.isMe
 }
@@ -203,6 +206,9 @@ data class ChatView(
     val memberCount: Int,
     val friendsSinceYear: Int?,
     val messages: List<MessageView>,
+    /** The first message that arrived after you last read the chat (for the "New messages" divider). */
+    val firstUnreadId: String? = null,
+    val muted: Boolean = false,
 )
 
 // ---- Groups, events, explore --------------------------------------------------------------------

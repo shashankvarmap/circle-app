@@ -29,6 +29,8 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -107,6 +109,12 @@ class ChatViewModel(repo: CircleRepository, private val chatId: String) : RepoVi
     }
     fun deleteForMe(messageId: String) = run({ deleteForMe(chatId, messageId) })
     fun unsend(messageId: String) = run({ unsend(chatId, messageId) })
+    val myEvents = repo.myEvents().state(emptyList())
+    fun sendMedia(media: List<com.circle.app.data.media.MediaRef>) = run({ sendMedia(chatId, media) })
+    fun invite(eventId: String) = run({ sendEventInvite(chatId, eventId) })
+    fun setMuted(muted: Boolean) = run({ setChatMuted(chatId, muted) })
+    fun clear() = run({ clearChat(chatId) })
+    fun block(personId: String, then: () -> Unit) = run({ block(personId) }) { if (it is com.circle.app.data.repo.Outcome.Success) then() }
 }
 
 /** One row of the conversation, oldest first. */
@@ -114,15 +122,17 @@ private sealed interface ChatEntry {
     val key: String
     data class Day(val at: java.time.Instant, val date: java.time.LocalDate) : ChatEntry { override val key get() = "day-$date" }
     data class Msg(val m: MessageView, val firstOfRun: Boolean, val lastOfRun: Boolean) : ChatEntry { override val key get() = m.id }
+    data object NewMessages : ChatEntry { override val key get() = "new-messages" }
 }
 
-private fun entries(messages: List<MessageView>, zone: ZoneId = ZoneId.systemDefault()): List<ChatEntry> {
+private fun entries(messages: List<MessageView>, firstUnreadId: String?, zone: ZoneId = ZoneId.systemDefault()): List<ChatEntry> {
     val out = mutableListOf<ChatEntry>()
     fun day(m: MessageView) = m.createdAt.atZone(zone).toLocalDate()
     messages.forEachIndexed { i, m ->
         val prev = messages.getOrNull(i - 1)
         val next = messages.getOrNull(i + 1)
         if (prev == null || day(prev) != day(m)) out += ChatEntry.Day(m.createdAt, day(m))
+        if (m.id == firstUnreadId) out += ChatEntry.NewMessages
         val first = prev == null || prev.sender.id != m.sender.id || day(prev) != day(m)
         val last = next == null || next.sender.id != m.sender.id || day(next) != day(m)
         out += ChatEntry.Msg(m, first, last)
@@ -150,6 +160,17 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
     var draft by rememberSaveable { mutableStateOf("") }
     var replyToId by rememberSaveable { mutableStateOf<String?>(null) }
     var gate by remember { mutableStateOf<Pair<String, GateKind>?>(null) }
+    var searching by rememberSaveable { mutableStateOf(false) }
+    var search by rememberSaveable { mutableStateOf("") }
+    var plusSheet by rememberSaveable { mutableStateOf(false) }
+    var reporting by rememberSaveable { mutableStateOf(false) }
+    // The "New messages" divider stays where it was when you opened the chat.
+    var unreadMarker by rememberSaveable { mutableStateOf<String?>(null) }
+    var markerTaken by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(chat?.id) {
+        val first = chat ?: return@LaunchedEffect
+        if (!markerTaken) { unreadMarker = first.firstUnreadId; markerTaken = true }
+    }
 
     val c = chat
     if (c == null) {
@@ -160,7 +181,9 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
     }
 
     val messages = c.messages
-    val rows = entries(messages).asReversed() // reverse layout: index 0 is the newest
+    val q = search.trim()
+    val shownMessages = if (searching && q.isNotEmpty()) messages.filter { it.text.contains(q, ignoreCase = true) } else messages
+    val rows = entries(shownMessages, if (searching) null else unreadMarker).asReversed() // reverse layout: index 0 is the newest
     val replyTo = replyToId?.let { id -> messages.firstOrNull { it.id == id } }
     val isGroupLike = c.kind != ChatKind.DIRECT
     val youName = stringResource(R.string.chat_you)
@@ -183,19 +206,35 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
     gate?.let { (personId, kind) ->
         NotFriendsSheet(personId = personId, kind = kind, onViewProfile = { nav.openPerson(personId) }, onDismiss = { gate = null })
     }
+    if (reporting) {
+        com.circle.app.ui.components.ReportSheet(
+            if (c.group != null) com.circle.app.data.ReportKind.GROUP else com.circle.app.data.ReportKind.PERSON,
+            c.group?.id ?: c.person?.id ?: c.id, onDone = { reporting = false }
+        )
+    }
+    if (plusSheet) {
+        val events by vm.myEvents.collectAsStateWithLifecycle()
+        ChatPlusSheet(events, onDismiss = { plusSheet = false }, onMedia = { vm.sendMedia(it); scope.launch { listState.animateScrollToItem(0) } }, onInvite = { vm.invite(it) })
+    }
 
-    Column(Modifier.fillMaxSize().background(colors.background)) {
-        ChatTopBar(nav, c)
+    Column(Modifier.fillMaxSize().background(colors.background).imePadding()) {
+        if (searching) ChatSearchBar(search, { search = it }, onClose = { searching = false; search = "" })
+        else ChatTopBar(nav, c, vm, onSearch = { searching = true }, onReport = { reporting = true })
 
+        Box(Modifier.weight(1f).fillMaxWidth()) {
         CompositionLocalProvider(LocalViewConfiguration provides chatConfig) {
             LazyColumn(
                 state = listState,
                 reverseLayout = true,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
             ) {
+                if (searching && q.isNotEmpty() && shownMessages.isEmpty()) item(key = "nomatch") {
+                    Text(stringResource(R.string.chat_search_none, q), color = colors.muted, fontSize = 13.sp, modifier = Modifier.fillMaxWidth().padding(24.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
                 items(rows, key = { it.key }) { entry ->
                     when (entry) {
+                        ChatEntry.NewMessages -> NewMessagesDivider()
                         is ChatEntry.Day -> DayPill(dayLabel(entry.at))
                         is ChatEntry.Msg -> {
                             val m = entry.m
@@ -221,6 +260,7 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
                                 }) else null,
                                 onOpen = when (m.kind) {
                                     MessageKind.TEXT -> null
+                                    MessageKind.PHOTO -> ({ nav.navigate(Routes.chatViewer(c.id, m.id)) })
                                     MessageKind.SHARED_NOTE -> when (val note = m.sharedNote) {
                                         is NoteView.Full -> ({ nav.navigate(Routes.thread(note.note.id)) })
                                         is NoteView.Snippet -> ({ gate = note.authorId to GateKind.NOTE })
@@ -239,9 +279,44 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
                 }
             }
         }
+            // "Jump to latest" when you've scrolled up.
+            val awayFromLatest by remember { derivedStateOf { listState.firstVisibleItemIndex > 3 } }
+            if (awayFromLatest) {
+                Text(
+                    stringResource(R.string.chat_jump_latest), color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.5.sp,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp).clip(RoundedCornerShape(999.dp))
+                        .background(colors.accent).clickable { scope.launch { listState.animateScrollToItem(0) } }
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+        }
 
         if (replyTo != null) ReplyStrip(senderName(replyTo), summary(replyTo.kind, replyTo.text)) { replyToId = null }
-        Composer(draft, onChange = { draft = it }, onSend = ::send)
+        Composer(draft, onChange = { draft = it }, onSend = ::send, onPlus = { plusSheet = true })
+    }
+}
+
+@Composable
+private fun NewMessagesDivider() {
+    val colors = CircleTheme.colors
+    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f).height(1.dp).background(colors.accent.copy(alpha = 0.5f)))
+        Text(stringResource(R.string.chat_new_messages), color = colors.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 10.dp))
+        Box(Modifier.weight(1f).height(1.dp).background(colors.accent.copy(alpha = 0.5f)))
+    }
+}
+
+@Composable
+private fun ChatSearchBar(value: String, onChange: (String) -> Unit, onClose: () -> Unit) {
+    val colors = CircleTheme.colors
+    Column {
+        Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.chat_search_close), tint = colors.text)
+            }
+            SearchField(value, onChange, placeholder = stringResource(R.string.chat_search_hint), modifier = Modifier.weight(1f))
+        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(colors.border))
     }
 }
 
@@ -249,6 +324,7 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
 @Composable
 private fun copyText(m: MessageView): String = when (m.kind) {
     MessageKind.TEXT -> m.text
+    MessageKind.PHOTO -> stringResource(R.string.chat_photo)
     MessageKind.SHARED_NOTE -> when (val n = m.sharedNote) {
         is NoteView.Full -> "${n.note.author.name}: ${n.note.text}"
         is NoteView.Snippet -> "${n.authorName}: ${n.text}"
@@ -257,16 +333,22 @@ private fun copyText(m: MessageView): String = when (m.kind) {
     MessageKind.EVENT_INVITE -> m.event?.let { "${it.title}, ${eventWhen(it.startsAt)}" } ?: stringResource(R.string.chat_event_invite)
 }
 
-/** One-line summary of a message, for reply snippets and list previews. */
 @Composable
-fun summary(kind: MessageKind, text: String): String = when (kind) {
-    MessageKind.TEXT -> text
-    MessageKind.SHARED_NOTE -> stringResource(R.string.chat_shared_a_note)
-    MessageKind.EVENT_INVITE -> stringResource(R.string.chat_event_invite)
-}
-
-@Composable
-private fun ChatTopBar(nav: NavHostController, chat: ChatView) {
+private fun ChatTopBar(nav: NavHostController, chat: ChatView, vm: ChatViewModel, onSearch: () -> Unit, onReport: () -> Unit) {
+    var menu by remember { mutableStateOf(false) }
+    var confirm by rememberSaveable { mutableStateOf<String?>(null) }
+    when (confirm) {
+        "clear" -> com.circle.app.ui.components.ConfirmDialog(
+            stringResource(R.string.chat_clear_title), stringResource(R.string.chat_clear_body), stringResource(R.string.chat_clear),
+            destructive = true, onDismiss = { confirm = null }
+        ) { vm.clear() }
+        "block" -> chat.person?.let { p ->
+            com.circle.app.ui.components.ConfirmDialog(
+                stringResource(R.string.profile_block_title, p.firstName), stringResource(R.string.profile_block_body), stringResource(R.string.profile_block),
+                destructive = true, onDismiss = { confirm = null }
+            ) { vm.block(p.id) { nav.popBackStack() } }
+        }
+    }
     val colors = CircleTheme.colors
     val subline = when (chat.kind) {
         ChatKind.GROUP -> androidx.compose.ui.res.pluralStringResource(R.plurals.members_count, chat.memberCount, chat.memberCount)
@@ -300,6 +382,19 @@ private fun ChatTopBar(nav: NavHostController, chat: ChatView) {
                 Column {
                     Text(chat.title, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 15.5.sp, maxLines = 1, modifier = Modifier.semantics { heading() })
                     Text(subline, color = colors.muted, fontSize = 11.5.sp, maxLines = 1)
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            Box {
+                Box(Modifier.size(44.dp).clip(CircleShape).clickable { menu = true }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.chat_more_options), tint = colors.text)
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(if (chat.muted) R.string.messages_unmute else R.string.messages_mute)) }, onClick = { menu = false; vm.setMuted(!chat.muted) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.chat_search)) }, onClick = { menu = false; onSearch() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.chat_clear)) }, onClick = { menu = false; confirm = "clear" })
+                    if (chat.person != null) DropdownMenuItem(text = { Text(stringResource(R.string.profile_block)) }, onClick = { menu = false; confirm = "block" })
+                    if (chat.kind != ChatKind.MULTI) DropdownMenuItem(text = { Text(stringResource(R.string.profile_report)) }, onClick = { menu = false; onReport() })
                 }
             }
         }
@@ -446,6 +541,7 @@ private fun MessageRow(
                 ) {
                     when (m.kind) {
                         MessageKind.TEXT -> Bubble(m, lastOfRun)
+                        MessageKind.PHOTO -> PhotoMessage(m)
                         MessageKind.SHARED_NOTE -> SharedNoteCard(m.sharedNote, onPerson)
                         MessageKind.EVENT_INVITE -> EventInviteCard(m.event)
                     }
@@ -577,6 +673,22 @@ private fun AuthorLine(name: String, personId: String, onPerson: (String) -> Uni
     }
 }
 
+/** Photos sent in a chat: 210 x 140, rounded 16. Tap opens the full-screen viewer. */
+@Composable
+private fun PhotoMessage(m: MessageView) {
+    val first = m.media.firstOrNull()
+    Box(Modifier.size(210.dp, 140.dp).clip(RoundedCornerShape(16.dp)).background(CircleTheme.colors.track)) {
+        if (first != null) com.circle.app.ui.components.MediaThumb(first)
+        if (m.media.size > 1) {
+            Text(
+                "+${m.media.size - 1}", color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).clip(RoundedCornerShape(999.dp))
+                    .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f)).padding(horizontal = 8.dp, vertical = 2.dp)
+            )
+        }
+    }
+}
+
 /** An event invite. Tap opens the event (Back returns here). */
 @Composable
 private fun EventInviteCard(event: EventCardView?) {
@@ -627,7 +739,7 @@ private fun ReplyStrip(name: String, snippet: String, onClose: () -> Unit) {
 }
 
 @Composable
-private fun Composer(text: String, onChange: (String) -> Unit, onSend: () -> Unit) {
+private fun Composer(text: String, onChange: (String) -> Unit, onSend: () -> Unit, onPlus: () -> Unit) {
     val colors = CircleTheme.colors
     val canSend = text.isNotBlank()
     val hint = stringResource(R.string.chat_message_hint)
@@ -636,6 +748,11 @@ private fun Composer(text: String, onChange: (String) -> Unit, onSend: () -> Uni
         Modifier.fillMaxWidth().background(colors.surface).padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.Bottom
     ) {
+        Box(
+            Modifier.size(42.dp).clip(CircleShape).border(1.5.dp, colors.border, CircleShape).clickable(onClick = onPlus),
+            contentAlignment = Alignment.Center
+        ) { Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.chat_plus), tint = colors.text) }
+        Spacer(Modifier.width(8.dp))
         Box(
             Modifier.weight(1f).heightIn(min = 42.dp).clip(RoundedCornerShape(21.dp)).background(colors.background)
                 .border(1.dp, colors.border, RoundedCornerShape(21.dp)).padding(horizontal = 15.dp, vertical = 10.dp),

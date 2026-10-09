@@ -55,30 +55,38 @@ class ViewerViewModel(repo: CircleRepository, noteId: String) : RepoViewModel(re
 fun PhotoViewerScreen(nav: NavHostController, noteId: String, index: Int) {
     val vm = circleViewModel(key = "viewer-$noteId") { ViewerViewModel(it, noteId) }
     val view by vm.note.collectAsStateWithLifecycle()
+    when (val v = view) {
+        is NoteView.Full -> MediaViewer(v.note.media, index) { nav.popBackStack() }
+        null -> MediaViewer(null, index) { nav.popBackStack() }
+        else -> MediaViewer(null, index, unavailable = true) { nav.popBackStack() }
+    }
+}
+
+/**
+ * The viewer itself. [media] null = loading (or [unavailable]); empty = a seed photo post with no
+ * file, shown as the calm placeholder.
+ */
+@Composable
+fun MediaViewer(media: List<MediaRef>?, index: Int, unavailable: Boolean = false, onClose: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        when (val v = view) {
-            is NoteView.Full -> {
-                val media = v.note.media
-                if (media.isEmpty()) {
-                    // A seed photo post has no file: the same calm placeholder, zoomable.
-                    ZoomBox { Icon(Icons.Outlined.Image, contentDescription = stringResource(R.string.note_photo), tint = Color.Gray, modifier = Modifier.size(64.dp)) }
-                } else {
-                    val pager = rememberPagerState(initialPage = index.coerceIn(0, media.lastIndex)) { media.size }
-                    HorizontalPager(pager, Modifier.fillMaxSize()) { page -> MediaPage(media[page]) }
-                    if (media.size > 1) {
-                        Text(
-                            "${pager.currentPage + 1} / ${media.size}", color = Color.White, fontSize = 13.sp,
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp)
-                        )
-                    }
+        when {
+            unavailable -> Text(stringResource(R.string.note_unavailable), color = Color.White, modifier = Modifier.align(Alignment.Center))
+            media == null -> Unit
+            media.isEmpty() -> ZoomBox { Icon(Icons.Outlined.Image, contentDescription = stringResource(R.string.note_photo), tint = Color.Gray, modifier = Modifier.size(64.dp)) }
+            else -> {
+                val pager = rememberPagerState(initialPage = index.coerceIn(0, media.lastIndex)) { media.size }
+                HorizontalPager(pager, Modifier.fillMaxSize()) { page -> MediaPage(media[page]) }
+                if (media.size > 1) {
+                    Text(
+                        "${pager.currentPage + 1} / ${media.size}", color = Color.White, fontSize = 13.sp,
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp)
+                    )
                 }
             }
-            null -> Unit
-            else -> Text(stringResource(R.string.note_unavailable), color = Color.White, modifier = Modifier.align(Alignment.Center))
         }
         Box(
             Modifier.statusBarsPadding().padding(8.dp).size(48.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f))
-                .clickable { nav.popBackStack() },
+                .clickable(onClick = onClose),
             contentAlignment = Alignment.Center
         ) { Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.media_close), tint = Color.White) }
     }
