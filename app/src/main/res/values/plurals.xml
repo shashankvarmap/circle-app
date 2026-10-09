@@ -20,4 +20,16 @@
         <item quantity="one">Invited %1$d friend</item>
         <item quantity="other">Invited %1$d friends</item>
     </plurals>
+    <plurals name="invites_shared">
+        <item quantity="one">You\'ve shared your invite %1$d time. Only you see this.</item>
+        <item quantity="other">You\'ve shared your invite %1$d times. Only you see this.</item>
+    </plurals>
+    <plurals name="find_found">
+        <item quantity="one">%1$d person you know</item>
+        <item quantity="other">%1$d people you know</item>
+    </plurals>
+    <plurals name="signup_and_more">
+        <item quantity="one">and %1$d more</item>
+        <item quantity="other">and %1$d more</item>
+    </plurals>
 </resources>

@@ -3,6 +3,8 @@
 
     <!-- Only to show the "You're offline" banner. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Asked only when you tap Connect contacts (with the rationale on screen first). -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
 
     <application
         android:name=".CircleApplication"
@@ -27,6 +29,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="circle" android:host="app" />
+            </intent-filter>
+            <!-- Invite links (Android App Link). Placeholder domain until the real one is chosen;
+                 the site must serve /.well-known/assetlinks.json (template in design-handoff/assetlinks.json). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="circle.app" android:pathPrefix="/i/" />
             </intent-filter>
         </activity>
     </application>

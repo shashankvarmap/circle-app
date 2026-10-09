@@ -93,10 +93,11 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] Empty / offline / error states (one `EmptyState`, nine kinds), skeletons, live offline banner, error + Try again on Home, Messages, Alerts
 
 ## Phase 9: Getting in (ACCESS_AND_LAUNCH 1-4)
-- [ ] Welcome, Your number (libphonenumber, typed code, searchable list, E.164), Code, Profile setup, Age 18+, Agreement, Find friends copy
-- [ ] Invite sheet + App Link plumbing (stub domain)
-- [ ] Membership (billing interface, placeholder prices), Your data (download / delete DELETE), Terms / Privacy / Company
-- [ ] CLAIMS.md; "no ads" reduced to allowed places
+- [x] Welcome, Your number (libphonenumber, typed code prefilled from SIM/network/region, every country searchable, E.164), Code (6 boxes, auto-verify, 30s resend, shake, 5 tries -> 5 min lock), Profile setup (photo, name 30, live handle check with 400ms debounce, pinned 140), Age 18+ by calendar + agreement, Find friends (hash on device, permission on tap)
+- [x] A new account starts on the empty Home; Log in opens the existing account; both verified on the emulator
+- [x] Invite sheet (link + Copy, Messages / WhatsApp / Mail / More, contacts with Invite -> SMS app, private count) from empty Home and Settings; App Link plumbing (https://circle.app/i/{handle}, placeholder domain, assetlinks template)
+- [x] Membership (billing interface, placeholder prices from the "store"), Your data (request download + audit log; Delete account typing DELETE), Terms / Privacy / Company tabs
+- [x] CLAIMS.md; "no ads" only in About, Membership small print, Privacy short version and one sentence in the story's pricing slide
 
 ## Phase 10: Scaling, strings, accessibility, device pass
 - [~] Orbits take a scale already (OrbitMap); missing clamp 0.8-1.25 + list fallback, screenshot tests 320/360/390/430 x themes x font 1.0/2.0

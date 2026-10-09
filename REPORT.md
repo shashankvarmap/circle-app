@@ -306,3 +306,55 @@ fake fails (Phase 11 adds the switch to make it fail).
   Membership's small print, the privacy summary and the onboarding pricing slide). The rest of the owner's text is unchanged.
 - The Home empty state's outlined "Invite a friend" comes with the invite sheet in Phase 9.
 - New permission: ACCESS_NETWORK_STATE, only for the offline banner.
+
+---
+
+## Phase 9: Getting in (ACCESS_AND_LAUNCH 1-4)
+
+**Works now**
+- **Create account:** Welcome > Your number > Enter the code > Set up your profile > Age and agreement > Find your friends >
+  the story > the **empty** Home (a new account has no friends, chats, groups or demo feed; people already on Circle can be
+  found). **Log in:** Welcome > Your number > Enter the code > Home (the demo account), never the story. Every step has a back
+  button; system back goes one step. Verified end to end on the emulator.
+- **Your number:** the code is typed (prefilled from the SIM, then the network, then the device region), the country it
+  belongs to is shown in accent ("India"; "United States / Canada and 23 more" for +1), an unknown code says so, "Choose from a
+  list" opens every country, searchable by name or code. libphonenumber validates per country and the number is kept as E.164;
+  spaces, dashes and a leading zero are fine. Send code is enabled only for a valid number.
+- **Enter the code:** six boxes over one hidden numeric field; verifies at six digits; "Send a new code" after a 30-second
+  countdown; a wrong code shakes the boxes once and says "That code isn't right."; five wrong tries lock for five minutes (any
+  six digits work in the fake, so the lock logic is unit-tested in `CodeGate`).
+- **Profile:** photo from the system picker, name (30), handle (lowercase letters, numbers, dots, underscores; 3-20) with the
+  live messages and a repository availability check after a 400ms pause, pinned thought (140 with counter). Continue only when
+  the name is set and the handle is valid and free.
+- **Age:** DD / MM / YYYY, 18+ by the real calendar (18 today is fine, 18 tomorrow isn't), the refusal line, the agreement
+  checkbox and "Read the short version". The date isn't stored or sent.
+- **Find your friends:** the new copy; READ_CONTACTS is asked only on "Connect contacts"; numbers are normalised and SHA-256
+  hashed on the phone and only hashes reach the repository; nothing is kept or logged.
+- **Invite sheet** (empty Home, Settings): the link with Copy ("Link copied"), Messages / WhatsApp / Mail / More (real
+  intents; More is the system share sheet), FROM YOUR CONTACTS with Invite opening your SMS app (you press send; it then shows
+  "Invited ✓"), and a count of shares shown only to you. **App Link:** `https://circle.app/i/{handle}` (placeholder domain,
+  `autoVerify`) opens that person's Limited profile with Add friend; `design-handoff/assetlinks.json` is the template for the site.
+- **Membership:** plan cards with the price strings from a `MembershipBilling` interface (placeholder €1 / €12 from a fake
+  "store"), what it pays for, the CTA following the plan, the small print, then "You're a member." and Manage in Google Play.
+- **Your data:** Request a download (recorded in an audit log the user sees); DANGER ZONE > Delete my account, which needs
+  DELETE typed (any case), then "Your account is deleted." and Back to the start (Welcome).
+- **Terms / Privacy / Company:** three tabs, a placeholder notice, the prototype's short-version bullets, the provider block.
+- **CLAIMS.md** lists every promise with what makes it true now and what the backend must keep true.
+- **"No ads" (0.3):** now only in About (last point), Membership small print, the Privacy short version, and one sentence in the
+  story's pricing slide (whose "If the app is free, you're the product", "Nothing about you to sell" and hard-coded "€1" were
+  removed; the slide now says "Circle is paid for by the people who use it." / "A small membership keeps it running, in your own
+  currency" / "No ads.").
+- Tests: `SignupRulesTest` (codes to countries, E.164 validation, search, hashing, age by calendar incl. 29 Feb, handles, code
+  gate) and `GettingInTest` (codes, taken handles, new account starts empty, log in, invite link to Limited profile, contact
+  matching, export log).
+
+**Stubs (need the backend or accounts):** real SMS sending and verification, SMS one-time-code autofill (needs the SMS
+Retriever hash from the server), email sign-in ("coming soon" toast as the doc asks), Play Billing products, preparing and
+delivering the data export, server-side contact matching, deferred App Link after install (Play Install Referrer), the real
+invite domain and its assetlinks.json.
+
+**Decisions**
+- A 29 February birthday counts from 1 March in non-leap years (the later, safer reading). Confirm with the lawyer.
+- New dependency: libphonenumber (the document asks for it: real country list, validation, E.164).
+- New permission: READ_CONTACTS, requested only on "Connect contacts" or "Show my contacts here", after the explanation.
+- Log in replaces local state with the demo account; Create account starts a fresh, empty one.

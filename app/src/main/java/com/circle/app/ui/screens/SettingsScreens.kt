@@ -96,6 +96,8 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
     val context = LocalContext.current
     var confirmLogout by rememberSaveable { mutableStateOf(false) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    var inviting by rememberSaveable { mutableStateOf(false) }
+    if (inviting) com.circle.app.ui.components.InviteSheet { inviting = false }
     val vm = circleViewModel { SettingsViewModel(it) }
     val privacy by vm.privacy.collectAsStateWithLifecycle()
     val notif by vm.notifications.collectAsStateWithLifecycle()
@@ -146,6 +148,9 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
             item { NavRow("Your circle", "${circle.friendCount} friends · ${circle.innerCount} inner circle") { nav.navigate(Routes.YOUR_CIRCLE) } }
             item { NavRow("Blocked users", countLabel(blockedList.size, "person", "people", "Nobody")) { nav.navigate(Routes.peopleList("blocked")) } }
             item { NavRow("Muted friends", countLabel(mutedList.size, "friend", "friends", "Nobody")) { nav.navigate(Routes.peopleList("muted")) } }
+            item { NavRow(stringResource(R.string.settings_your_data), stringResource(R.string.settings_your_data_sub)) { nav.navigate(Routes.YOUR_DATA) } }
+            item { NavRow(stringResource(R.string.settings_membership), stringResource(R.string.settings_membership_sub)) { nav.navigate(Routes.MEMBERSHIP) } }
+            item { NavRow(stringResource(R.string.settings_invite), null) { inviting = true } }
 
             item { SectionHeading("Privacy") }
             item {
@@ -176,7 +181,7 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
                 }
             }
             item { AlwaysPrivateBox() }
-            item { InfoRow("Download my data", "Coming with the backend") }
+
 
             item { SectionHeading("Notifications") }
             item {
@@ -196,15 +201,13 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
             item { SectionHeading("About") }
             item { NavRow("About Circle", null) { nav.navigate(Routes.info("about")) } }
             item { NavRow("Why I built it", null) { nav.navigate(Routes.info("why")) } }
-            item { InfoRow("Membership", stringResource(R.string.settings_membership_sub)) }
-            item { NavRow("Privacy policy", null) { nav.navigate(Routes.info("privacy")) } }
-            item { NavRow("Terms", null) { nav.navigate(Routes.info("terms")) } }
+            item { NavRow(stringResource(R.string.settings_legal), null) { nav.navigate(Routes.LEGAL) } }
             item { NavRow("Open-source licenses", "Fraunces and Public Sans (SIL Open Font License)") { nav.navigate(Routes.info("licenses")) } }
             item { InfoRow("Version", version) }
 
             item { Spacer(Modifier.height(20.dp)) }
             item { ActionRow("Log out", colors.text) { confirmLogout = true } }
-            item { ActionRow("Delete account", colors.alertDot, weight = FontWeight.Normal) { confirmDelete = true } }
+            item { ActionRow("Delete account", colors.alertDot, weight = FontWeight.Normal) { nav.navigate(Routes.DELETE_ACCOUNT) } }
         }
     }
 }

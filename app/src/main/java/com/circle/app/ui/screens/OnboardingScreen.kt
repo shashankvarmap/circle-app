@@ -90,18 +90,16 @@ private fun SlideIntro() {
 private fun SlidePricing() {
     Text("\u201C", fontFamily = Display, fontSize = 40.sp, color = CircleTheme.colors.accent)
     Text(
-        "If the app is free, you're the product.",
+        androidx.compose.ui.res.stringResource(com.circle.app.R.string.story_pricing_quote),
         fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 21.sp,
         fontStyle = FontStyle.Italic, textAlign = TextAlign.Center, color = CircleTheme.colors.text, lineHeight = 28.sp
     )
     Spacer(Modifier.height(18.dp))
-    Text("So this one isn't free.", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = CircleTheme.colors.text)
-    Spacer(Modifier.height(10.dp))
+    // ACCESS_AND_LAUNCH 0.3: one sentence about ads here at most; the price comes from Google Play, never hard-coded.
     BulletList(
         listOf(
-            "About €1 a month — just enough to cover the servers",
-            "No ads, ever",
-            "Nothing about you to sell to anyone"
+            androidx.compose.ui.res.stringResource(com.circle.app.R.string.story_pricing_1),
+            androidx.compose.ui.res.stringResource(com.circle.app.R.string.story_pricing_2),
         )
     )
 }

@@ -50,6 +50,8 @@ class HomeViewModel(repo: CircleRepository) : RepoViewModel(repo) {
 fun HomeScreen(nav: NavHostController) {
     var feed by rememberSaveable { mutableStateOf(Feed.FRIENDS) }
     var refresh by remember { mutableStateOf(Refresh.IDLE) }
+    var inviting by rememberSaveable { mutableStateOf(false) }
+    if (inviting) InviteSheet { inviting = false }
     val vm = circleViewModel { HomeViewModel(it) }
     val friendLoad by vm.friends.collectAsStateWithLifecycle()
     val friendFeed = (friendLoad as? Load.Ready)?.value.orEmpty()
@@ -120,7 +122,8 @@ fun HomeScreen(nav: NavHostController) {
                         is Load.Ready -> if (friendFeed.isEmpty()) item(key = "empty") {
                             EmptyState(
                                 EmptyKind.HOME,
-                                action = stringResource(R.string.empty_home_action), onAction = { nav.navigate(Routes.EXPLORE_SEARCH) },
+                                action = stringResource(R.string.empty_home_action), onAction = { nav.navigate(Routes.CONTACTS_SYNC) },
+                                secondary = stringResource(R.string.empty_home_invite), onSecondary = { inviting = true },
                             )
                         } else {
                             items(friendFeed, key = { it.id }) { post -> FeedCard(nav, post) }

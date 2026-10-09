@@ -43,8 +43,9 @@ fun MeAvatar(
     uri: String? = LocalMe.current?.avatarUri,
     fill: Color = LocalMe.current?.person?.color ?: AvatarSlate,
     textColor: Color = avatarTextColor(fill),
+    initialOverride: String? = null,
 ) {
-    val initial = LocalMe.current?.person?.initials.orEmpty()
+    val initial = initialOverride ?: LocalMe.current?.person?.initials.orEmpty()
     val bitmap = rememberUriBitmap(uri, size * 3)
     Box(
         modifier = modifier.size(size.dp).clip(CircleShape).background(fill),

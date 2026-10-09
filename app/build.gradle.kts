@@ -63,6 +63,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.core:core-splashscreen:1.0.1")
+    // Phone numbers: real country list, validation, formatting and E.164 (ACCESS_AND_LAUNCH 1).
+    implementation("com.googlecode.libphonenumber:libphonenumber:8.13.50")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

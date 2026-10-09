@@ -65,6 +65,10 @@ object CircleStore {
 
     val alerts = mutableStateListOf<Alert>()
 
+    /** Your data-export audit log, and how many invite links you've shared (shown to you only). */
+    val exportLog = mutableStateListOf<ExportEvent>()
+    var invitesShared by mutableStateOf(0)
+
     /** When you last opened Alerts or tapped "Mark all read"; anything newer is unread. */
     var alertsReadAt by mutableStateOf<java.time.Instant?>(null)
 
@@ -106,9 +110,26 @@ object CircleStore {
         chats.clear(); chats.addAll(ChatSeed.chats()); hiddenMessageIds.clear()
         alerts.clear(); alerts.addAll(Seed.alerts())
         invites.clear(); sentNotices.clear(); alertsReadAt = null
+        exportLog.clear(); invitesShared = 0
 
         profile = MyProfile(); theme = ThemeMode.SYSTEM
         privacy = PrivacyPrefs(); notifications = NotificationPrefs()
+    }
+
+    /**
+     * A brand-new account: the people already on Circle are still there to find, but you have no
+     * friends, chats, groups, seats or notes yet, so Home starts empty (ACCESS_AND_LAUNCH 1).
+     */
+    fun startFresh(p: MyProfile) {
+        reset()
+        friendIds.clear(); innerCircle.clear(); innerCirclesIAmIn.clear()
+        incomingRequests.clear(); requestStatus.clear()
+        posts.removeAll { it.authorId == ME }
+        likedPostIds.clear()
+        groups.forEach { g -> if (g.isMember) g.memberCount -= 1; g.isMember = false; g.joinRequested = false; g.hostIds.remove(ME) }
+        events.forEach { it.joined = false }
+        chats.clear(); alerts.clear()
+        profile = p
     }
 
     fun person(id: String): Person? = people[id]

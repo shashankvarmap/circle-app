@@ -17,6 +17,11 @@ object AppGraph {
     private var session: SessionStore? = null
     private var repo: CircleRepository? = null
     private var media: MediaStore? = null
+    private var billingImpl: com.circle.app.data.billing.MembershipBilling? = null
+
+    /** Membership billing (a fake with placeholder prices until Play Billing is set up). */
+    val billing: com.circle.app.data.billing.MembershipBilling
+        get() = billingImpl ?: com.circle.app.data.billing.FakeBilling().also { billingImpl = it }
 
     /** Where picked photos and videos go (the fake keeps their URIs). */
     val mediaStore: MediaStore get() = media ?: LocalMediaStore().also { media = it }

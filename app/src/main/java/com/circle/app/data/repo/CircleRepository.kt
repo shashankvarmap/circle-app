@@ -18,6 +18,30 @@ import kotlinx.coroutines.flow.Flow
  */
 interface CircleRepository {
 
+    // ---- Getting in (the fake accepts any 6-digit code) ----
+    suspend fun requestCode(e164: String): Outcome<Unit>
+    suspend fun verifyCode(e164: String, code: String): Outcome<Unit>
+    /** Whether a handle is free (yours counts as free). */
+    suspend fun isHandleFree(handle: String): Boolean
+    /** A new account: starts empty (no demo feed). */
+    suspend fun createAccount(name: String, handle: String, pinnedThought: String, avatarUri: String?): Outcome<Unit>
+    /** An existing account (the demo one). */
+    suspend fun logIn(e164: String): Outcome<Unit>
+    /**
+     * Contacts matching: only SHA-256 hashes of E.164 numbers are sent; the server matches them,
+     * returns the people found (Limited information) and deletes the hashes at once.
+     */
+    suspend fun matchContacts(hashes: List<String>): Outcome<List<PersonResult>>
+    /** Your invite link (placeholder domain until the real one is chosen). */
+    fun inviteLink(): Flow<String>
+    /** How many invites you've shared: shown to you only. */
+    fun invitesShared(): Flow<Int>
+    suspend fun recordInviteShared()
+    /** The person behind an invite link's handle, for the App Link (Limited profile + Add friend). */
+    suspend fun personByHandle(handle: String): Outcome<String>
+    fun exportLog(): Flow<List<com.circle.app.data.ExportEvent>>
+    suspend fun requestDataExport(): Outcome<Unit>
+
     // ---- You & settings ----
     fun me(): Flow<MeView>
     fun theme(): Flow<ThemeMode>

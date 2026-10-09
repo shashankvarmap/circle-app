@@ -429,6 +429,62 @@ class FakeCircleRepository(
         return Outcome.Success(Unit)
     }
 
+    // =========================================================================== getting in
+
+    /** Handles already used in the demo (the prototype's list plus everyone in the seed). */
+    private val reservedHandles = setOf("amara", "priya", "jonah", "circle", "admin", "tomas", "elena", "support", "help")
+
+    override suspend fun requestCode(e164: String): Outcome<Unit> =
+        if (e164.startsWith("+") && e164.length >= 8) Outcome.Success(Unit) else Outcome.Error("invalid number")
+
+    override suspend fun verifyCode(e164: String, code: String): Outcome<Unit> =
+        if (code.length == 6 && code.all(Char::isDigit)) Outcome.Success(Unit) else Outcome.Error("wrong code")
+
+    override suspend fun isHandleFree(handle: String): Boolean {
+        val h = handle.lowercase()
+        if (h == store.profile.handle) return true
+        return h !in reservedHandles && store.people.values.none { it.id != ME && it.handle == h }
+    }
+
+    override suspend fun createAccount(name: String, handle: String, pinnedThought: String, avatarUri: String?): Outcome<Unit> {
+        val n = name.trim().take(30)
+        if (n.isEmpty()) return Outcome.Error("Add your name")
+        if (com.circle.app.data.signup.SignupHandle.problem(handle) != null || !isHandleFree(handle)) return Outcome.Error("handle")
+        cache.clear()
+        store.startFresh(MyProfile(n, handle, pinnedThought.trim().take(140), avatarUri))
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun logIn(e164: String): Outcome<Unit> {
+        cache.clear()
+        store.reset() // the demo account
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun matchContacts(hashes: List<String>): Outcome<List<PersonResult>> {
+        // The fake has no phone numbers on file, so it can't match; it returns the demo's "people you may know"
+        // and keeps nothing. The real server matches the hashes and deletes them at once.
+        return Outcome.Success(listOf("PK", "JL", "AO", "LB").mapNotNull { id -> store.person(id)?.takeIf { !hiddenFromMe(id) }?.let { result(it) } })
+    }
+
+    override fun inviteLink(): Flow<String> = observe { "circle.app/i/${store.profile.handle}" }
+    override fun invitesShared(): Flow<Int> = observe { store.invitesShared }
+    override suspend fun recordInviteShared() { store.invitesShared += 1 }
+
+    override suspend fun personByHandle(handle: String): Outcome<String> {
+        val p = store.people.values.firstOrNull { it.handle == handle.lowercase() && it.id != ME } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (hiddenFromMe(p.id)) return Outcome.Denied(DenyReason.NOT_FOUND)
+        return Outcome.Success(p.id)
+    }
+
+    override fun exportLog(): Flow<List<ExportEvent>> = observe { store.exportLog.toList() }
+
+    override suspend fun requestDataExport(): Outcome<Unit> {
+        // The export is prepared by an automated job on the server; the fake can only record the request.
+        if (store.exportLog.none { it.kind == ExportStep.REQUESTED }) store.exportLog.add(ExportEvent(ExportStep.REQUESTED, Clock.now()))
+        return Outcome.Success(Unit)
+    }
+
     // =========================================================================== you & circle
 
     override fun me(): Flow<MeView> = observe {

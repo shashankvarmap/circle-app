@@ -152,6 +152,11 @@ class EventInfo(
     val comments: SnapshotStateList<Comment> = mutableStateListOf<Comment>().apply { addAll(comments) }
 }
 
+/** One step of a data export, shown to you as an audit log ("Requested 9 Oct"). */
+data class ExportEvent(val kind: ExportStep, val at: Instant)
+
+enum class ExportStep { REQUESTED, READY, DOWNLOADED }
+
 /** An invitation you sent to a friend (to a group or an event). With a backend it lands in their Alerts. */
 data class Invite(val toPersonId: String, val groupId: String?, val eventId: String?, val at: Instant)
 

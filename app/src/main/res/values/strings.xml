@@ -403,4 +403,164 @@
     <string name="why_p2">If you want a bigger circle, make an event, go outside and meet someone. Then come back and tell your friends about it.</string>
     <string name="why_p3">Thank you for being here.</string>
     <string name="why_signature" translatable="false">Shashank</string>
+
+    <!-- Getting in (ACCESS_AND_LAUNCH 1) -->
+    <string name="signup_phone_title">What\'s your number?</string>
+    <string name="signup_phone_explainer">Type your country code and your number. We\'ll text you a code. We never share your number. We only use it to find your friends, and only if you allow it.</string>
+    <string name="signup_country_code">Code</string>
+    <string name="signup_your_number">Your number</string>
+    <string name="signup_type_code">Type your country code</string>
+    <string name="signup_unknown_code">We don\'t know that code. Check it or choose from the list.</string>
+    <string name="signup_choose_list">Choose from a list</string>
+    <string name="signup_choose_country">Choose your country</string>
+    <string name="signup_country_search">Search by country or code</string>
+    <string name="signup_number_invalid">That number doesn\'t look right for this country yet.</string>
+    <string name="signup_use_email">Use email instead</string>
+    <string name="signup_email_soon">Email sign-in is coming soon</string>
+    <string name="signup_send_code">Send code</string>
+    <string name="signup_code_title">Enter the code</string>
+    <string name="signup_code_explainer">We sent a 6-digit code to %1$s.</string>
+    <string name="signup_code_wrong">That code isn\'t right.</string>
+    <string name="signup_code_locked">Too many tries. Wait 5 minutes, then ask for a new code.</string>
+    <string name="signup_resend">Send a new code</string>
+    <string name="signup_resend_in">Send a new code in %1$ds</string>
+    <string name="signup_profile_title">Set up your profile</string>
+    <string name="signup_add_photo">Add a photo</string>
+    <string name="signup_change_photo">Change photo</string>
+    <string name="signup_name_caps">NAME</string>
+    <string name="signup_name_hint">Your name</string>
+    <string name="signup_handle_caps">HANDLE</string>
+    <string name="signup_handle_hint">yourname</string>
+    <string name="signup_handle_rules">Letters, numbers, dots and underscores. 3 to 20 characters.</string>
+    <string name="signup_handle_short">Too short. Use at least 3 characters.</string>
+    <string name="signup_handle_checking">Checking…</string>
+    <string name="signup_handle_taken">@%1$s is taken. Try another.</string>
+    <string name="signup_handle_free">@%1$s is available</string>
+    <string name="signup_pinned_caps">PINNED THOUGHT (OPTIONAL)</string>
+    <string name="signup_pinned_hint">A line about you</string>
+    <string name="signup_pinned_note">This and your photo are the only things people who aren\'t your friends can see.</string>
+    <string name="signup_continue">Continue</string>
+    <string name="signup_age_title">One quick thing</string>
+    <string name="signup_age_explainer">Circle is for people 18 and over. Your date of birth is used only to check this, and isn\'t shown to anyone.</string>
+    <string name="signup_dob_caps">DATE OF BIRTH</string>
+    <string name="signup_dd">DD</string>
+    <string name="signup_mm">MM</string>
+    <string name="signup_yyyy">YYYY</string>
+    <string name="signup_under_18">Sorry, Circle is for people 18 and over, so we can\'t create your account.</string>
+    <string name="signup_agree">I agree to the Terms and the Privacy Policy.</string>
+    <string name="signup_short_version">Read the short version</string>
+
+    <!-- Legal (placeholders; a lawyer writes the real ones) -->
+    <string name="legal_title">Terms, privacy, company</string>
+    <string name="legal_terms">Terms</string>
+    <string name="legal_privacy">Privacy</string>
+    <string name="legal_company">Company</string>
+    <string name="legal_placeholder_notice">Placeholder text for design. It is not legal advice. A lawyer has to write the real documents before launch.</string>
+    <string name="legal_short_caps">THE SHORT VERSION</string>
+    <string name="terms_1_lead">Be kind.</string>
+    <string name="terms_1">No harassment, hate, threats, or anything that exploits or sexualises minors.</string>
+    <string name="terms_2_lead">Be yourself.</string>
+    <string name="terms_2">One account per person, with your own details.</string>
+    <string name="terms_3_lead">Your notes are yours.</string>
+    <string name="terms_3">You let Circle show them to the people you choose.</string>
+    <string name="terms_4_lead">We can remove content</string>
+    <string name="terms_4">that breaks these rules, and accounts that keep breaking them.</string>
+    <string name="terms_5_lead">Membership.</string>
+    <string name="terms_5">A small monthly or yearly membership. You can cancel any time in Google Play.</string>
+    <string name="terms_full">Full terms: to be written.</string>
+    <string name="privacy_1_lead">What we store:</string>
+    <string name="privacy_1">your number, name, handle, photo, notes, messages and who your friends are. Circle can\'t work without them.</string>
+    <string name="privacy_2_lead">Who can read it:</string>
+    <string name="privacy_2">only the people you\'ve shared it with. Nobody at Circle browses your notes or chats. We look at something only if it\'s reported or the law requires it, and we record every time.</string>
+    <string name="privacy_3_lead">What we never do:</string>
+    <string name="privacy_3">sell your data, show ads, or build an advertising profile of you.</string>
+    <string name="privacy_4_lead">Companies that help us:</string>
+    <string name="privacy_4">a few providers run parts of Circle for us, like servers and text messages. They can only use your data to do that job.</string>
+    <string name="privacy_5_lead">Your rights:</string>
+    <string name="privacy_5">see it, fix it, download it, or delete it, in Settings, Your data.</string>
+    <string name="privacy_full">Contact for privacy questions: to be added. Full policy: to be written.</string>
+    <string name="company_provider_caps">PROVIDER</string>
+    <string name="company_name">[Full name]</string>
+    <string name="company_street">[Street and number]</string>
+    <string name="company_city">[Postcode and city], [Country]</string>
+    <string name="company_email">[Email address]</string>
+    <string name="company_note">Who runs Circle and how to reach them. Some countries, including Germany where the provider is based, require specific details here. A lawyer will confirm what has to be on this page.</string>
+
+    <!-- Membership (prices come from Google Play; these are placeholders) -->
+    <string name="membership_title">Membership</string>
+    <string name="membership_kicker">MEMBERSHIP</string>
+    <string name="membership_headline">Circle is for you and your friends. A small membership keeps it that way.</string>
+    <string name="membership_monthly">MONTHLY</string>
+    <string name="membership_yearly">YEARLY</string>
+    <string name="membership_per_month">a month</string>
+    <string name="membership_per_year">a year, just a twelfth of that each month</string>
+    <string name="membership_pays_caps">WHAT IT PAYS FOR</string>
+    <string name="membership_pays_1_lead">Servers and storage.</string>
+    <string name="membership_pays_1">So your friends\' notes and photos are always there when you open Circle.</string>
+    <string name="membership_pays_2_lead">Safety and support.</string>
+    <string name="membership_pays_2">Reports, blocking and a real person to write to.</string>
+    <string name="membership_cta_year">Start membership, %1$s a year</string>
+    <string name="membership_cta_month">Start membership, %1$s a month</string>
+    <string name="membership_small_print">Circle runs on memberships, so there are no ads. Billed through Google Play in your own currency. Cancel any time in the Play Store.</string>
+    <string name="membership_member">You\'re a member.</string>
+    <string name="membership_thanks">Thank you. Circle is yours and your friends\'.</string>
+    <string name="membership_manage">Manage in Google Play</string>
+
+    <!-- Your data -->
+    <string name="data_title">Your data</string>
+    <string name="data_download_title">Download my data</string>
+    <string name="data_download_body">A copy of what you\'ve put into Circle: your profile, notes, photos, chats and friends. We prepare it automatically. Nobody at Circle opens it.</string>
+    <string name="data_request">Request a download</string>
+    <string name="data_requested">Requested. When it\'s ready we\'ll tell you, and you download it here in the app. It\'s only for you, and it expires after 7 days.</string>
+    <string name="data_log_caps">HISTORY</string>
+    <string name="data_log_requested">Requested %1$s</string>
+    <string name="data_log_ready">Ready %1$s</string>
+    <string name="data_log_downloaded">Downloaded %1$s</string>
+    <string name="data_danger_caps">DANGER ZONE</string>
+    <string name="data_delete">Delete my account</string>
+    <string name="data_delete_sub">Permanently removes everything</string>
+    <string name="delete_cant_undo">This can\'t be undone.</string>
+    <string name="delete_body">It permanently removes your profile, your notes and photos, your chats, and your place in groups and events. Backups are cleared within 30 days. Your friends aren\'t told why.</string>
+    <string name="delete_membership_note">If you have a membership, cancel it in Google Play first.</string>
+    <string name="delete_type_caps">TYPE DELETE TO CONFIRM</string>
+    <string name="delete_type_hint">DELETE</string>
+    <string name="delete_done_title">Your account is deleted.</string>
+    <string name="delete_done_body">Thank you for being here.</string>
+    <string name="delete_back_to_start">Back to the start</string>
+
+    <!-- Invite a friend (ACCESS_AND_LAUNCH 2) -->
+    <string name="invite_title">Invite a friend</string>
+    <string name="invite_body">They\'ll see your name and photo, and can ask to be your friend. Nobody is added without saying yes.</string>
+    <string name="invite_copy">Copy</string>
+    <string name="invite_copied">Link copied</string>
+    <string name="invite_messages">Messages</string>
+    <string name="invite_whatsapp">WhatsApp</string>
+    <string name="invite_mail">Mail</string>
+    <string name="invite_more">More</string>
+    <string name="invite_mail_subject">Join me on Circle</string>
+    <string name="invite_message">I\'m on Circle, a small place for the people you actually know. Find me here: %1$s</string>
+    <string name="invite_contacts_caps">FROM YOUR CONTACTS</string>
+    <string name="invite_connect_contacts">Show my contacts here</string>
+    <string name="invite_no_contacts">No contacts with a phone number.</string>
+    <string name="invite_invite">Invite</string>
+    <string name="invite_invited">Invited ✓</string>
+    <string name="settings_invite">Invite a friend</string>
+    <string name="settings_your_data">Your data</string>
+    <string name="settings_your_data_sub">Download your data, or delete your account</string>
+    <string name="settings_legal">Terms, privacy and company info</string>
+    <string name="settings_membership">Membership</string>
+
+    <!-- Find your friends -->
+    <string name="find_title">See who\'s already here</string>
+    <string name="find_body">Circle can find friends by comparing scrambled versions of the phone numbers in your contacts. It doesn\'t keep them and never shows them to anyone. You can skip this and add friends one by one.</string>
+    <string name="find_connect">Connect contacts</string>
+    <string name="find_skip">Skip for now</string>
+    <string name="find_matching">Looking for friends…</string>
+    <string name="find_denied">Contacts weren\'t connected. You can still add friends one by one.</string>
+    <string name="find_results_note">Send a request now. A request is never instant: they say yes first.</string>
+
+    <!-- The story, pricing slide (one sentence about ads at most) -->
+    <string name="story_pricing_quote">Circle is paid for by the people who use it.</string>
+    <string name="story_pricing_1">A small membership keeps it running, in your own currency</string>
+    <string name="story_pricing_2">No ads.</string>
 </resources>

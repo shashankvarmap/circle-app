@@ -7,12 +7,27 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
+import androidx.lifecycle.createSavedStateHandle
+import androidx.navigation.compose.navigation
+import androidx.compose.runtime.remember
 import com.circle.app.data.session.Destination
 import com.circle.app.ui.launch.SessionViewModel
 import com.circle.app.ui.screens.*
 
 object Routes {
     const val WELCOME = "welcome"
+    const val SIGNUP = "signup/{mode}"
+    fun signup(creating: Boolean) = if (creating) "signup/create" else "signup/login"
+    const val SIGNUP_PHONE = "signup_phone"
+    const val SIGNUP_CODE = "signup_code"
+    const val SIGNUP_PROFILE = "signup_profile"
+    const val SIGNUP_AGE = "signup_age"
+    const val LEGAL = "legal"
+    const val MEMBERSHIP = "membership"
+    const val YOUR_DATA = "your_data"
+    const val DELETE_ACCOUNT = "delete_account"
+    /** An invite link, e.g. https://circle.app/i/shashank (placeholder domain): opens that person's profile. */
+    const val INVITE_LINK = "invite/{handle}"
     /** The 4-slide story: only reached right after creating an account. */
     const val STORY = "story"
     const val CONTACTS_SYNC = "contacts_sync"
@@ -81,11 +96,55 @@ fun CircleNavGraph(
         composable(Routes.WELCOME) {
             WelcomeScreen(
                 session,
-                onCreateAccount = { session.createAccount { navController.resetTo(it) } },
-                onLogIn = { session.logIn { navController.resetTo(it) } },
-                onLegal = { navController.navigate(Routes.info("terms")) }
+                onCreateAccount = { navController.navigate(Routes.signup(creating = true)) },
+                onLogIn = { navController.navigate(Routes.signup(creating = false)) },
+                onLegal = { navController.navigate(Routes.LEGAL) }
             )
         }
+        // Create account: number > code > profile > age > (find friends > story > Home).
+        // Log in: number > code > Home. One SignupViewModel for the whole flow, scoped to this graph.
+        navigation(startDestination = Routes.SIGNUP_PHONE, route = Routes.SIGNUP) {
+            @Composable
+            fun signupVm(entry: androidx.navigation.NavBackStackEntry): com.circle.app.ui.signup.SignupViewModel {
+                val parent = remember(entry) { navController.getBackStackEntry(Routes.SIGNUP) }
+                val creating = parent.arguments?.getString("mode") != "login"
+                return androidx.lifecycle.viewmodel.compose.viewModel(parent) {
+                    com.circle.app.ui.signup.SignupViewModel(com.circle.app.AppGraph.repository, createSavedStateHandle(), creating)
+                }
+            }
+            composable(Routes.SIGNUP_PHONE) { entry ->
+                val vm = signupVm(entry)
+                com.circle.app.ui.signup.PhoneStep(vm, onBack = { navController.popBackStack() }, onCodeSent = { navController.navigate(Routes.SIGNUP_CODE) })
+            }
+            composable(Routes.SIGNUP_CODE) { entry ->
+                val vm = signupVm(entry)
+                com.circle.app.ui.signup.CodeStep(vm, onBack = { navController.popBackStack() }, onVerified = {
+                    if (vm.creating) navController.navigate(Routes.SIGNUP_PROFILE)
+                    else vm.logIn { session.logIn { navController.resetTo(it) } }
+                })
+            }
+            composable(Routes.SIGNUP_PROFILE) { entry ->
+                val vm = signupVm(entry)
+                com.circle.app.ui.signup.ProfileStep(vm, onBack = { navController.popBackStack() }, onContinue = { navController.navigate(Routes.SIGNUP_AGE) })
+            }
+            composable(Routes.SIGNUP_AGE) { entry ->
+                val vm = signupVm(entry)
+                com.circle.app.ui.signup.AgeStep(
+                    vm, onBack = { navController.popBackStack() }, onLegal = { navController.navigate(Routes.LEGAL) },
+                    onCreated = { session.createAccount { navController.resetTo(it) } }
+                )
+            }
+        }
+        composable(Routes.LEGAL) { LegalScreen(navController) }
+        composable(Routes.MEMBERSHIP) { MembershipScreen(navController) }
+        composable(Routes.YOUR_DATA) { YourDataScreen(navController) }
+        composable(Routes.DELETE_ACCOUNT) {
+            DeleteAccountScreen(navController, onDeleted = { session.accountDeleted { navController.resetTo(it) } })
+        }
+        composable(
+            Routes.INVITE_LINK,
+            deepLinks = listOf(navDeepLink { uriPattern = "https://$INVITE_HOST/i/{handle}" })
+        ) { entry -> InviteLinkScreen(navController, entry.arguments?.getString("handle").orEmpty()) }
         composable(Routes.STORY) { OnboardingScreen(onDone = { session.storyDone { navController.resetTo(it) } }) }
         composable(Routes.CONTACTS_SYNC) { ContactsSyncScreen(onDone = { session.findFriendsDone { navController.resetTo(it) } }) }
         composable(Routes.HOME) { HomeScreen(navController) }
@@ -151,3 +210,6 @@ fun NavHostController.openPerson(personId: String) {
 
 /** Deep links (and notification taps) use the same routes, so they pass the same checks. */
 const val DEEP_LINK_BASE = "circle://app"
+
+/** Placeholder until the real domain is chosen (also in AndroidManifest.xml and the assetlinks.json template). */
+const val INVITE_HOST = "circle.app"

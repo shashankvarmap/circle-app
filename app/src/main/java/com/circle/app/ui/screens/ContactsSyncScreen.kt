@@ -1,134 +1,145 @@
 package com.circle.app.ui.screens
 
+import android.Manifest
+import android.content.Context
+import android.provider.ContactsContract
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.People
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewModelScope
+import com.circle.app.R
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.Outcome
+import com.circle.app.data.repo.PersonResult
+import com.circle.app.data.signup.PhoneRules
 import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.components.FriendRequestButton
 import com.circle.app.ui.components.PrimaryButton
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.circle.app.data.access.Relationship
-import com.circle.app.data.repo.CircleRepository
+import com.circle.app.ui.signup.StepButton
+import com.circle.app.ui.theme.*
 import com.circle.app.ui.vm.RepoViewModel
 import com.circle.app.ui.vm.circleViewModel
-import com.circle.app.ui.theme.*
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-private enum class Stage { PROMPT, LOADING, RESULTS }
+private enum class Stage { PROMPT, LOADING, RESULTS, DENIED }
 
-/** Phone contacts who are already on Circle (matched by the repository; Limited information only). */
+/**
+ * Contacts matching: numbers are read and normalised on the phone, hashed (SHA-256 of E.164),
+ * and only the hashes are sent. Nothing is kept on the phone or logged.
+ */
 class ContactsViewModel(repo: CircleRepository) : RepoViewModel(repo) {
-    val matches = repo.contactMatches().state(emptyList())
+    var matches by mutableStateOf<List<PersonResult>>(emptyList())
+        private set
+
+    fun match(context: Context, region: String, then: () -> Unit) {
+        viewModelScope.launch {
+            val hashes = withContext(Dispatchers.IO) { readHashes(context, region) }
+            val result = repo.matchContacts(hashes)
+            if (result is Outcome.Success) matches = result.value
+            then()
+        }
+    }
+
+    private fun readHashes(context: Context, region: String): List<String> = runCatching {
+        context.contentResolver.query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI, arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER), null, null, null
+        )?.use { c ->
+            buildList { while (c.moveToNext()) c.getString(0)?.let { PhoneRules.normalise(it, region) }?.let { add(PhoneRules.hash(it)) } }.distinct()
+        }.orEmpty()
+    }.getOrDefault(emptyList())
 }
 
+/** Find your friends: one screen after sign-up (and from the empty Home). Connect contacts or skip. */
 @Composable
 fun ContactsSyncScreen(onDone: () -> Unit) {
-    var stage by remember { mutableStateOf(Stage.PROMPT) }
+    val colors = CircleTheme.colors
+    val context = LocalContext.current
+    var stage by rememberSaveable { mutableStateOf(Stage.PROMPT) }
     val vm = circleViewModel { ContactsViewModel(it) }
-    val matches by vm.matches.collectAsStateWithLifecycle()
-    val scope = rememberCoroutineScope()
+    val region = remember { java.util.Locale.getDefault().country.ifBlank { "US" } }
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) { stage = Stage.LOADING; vm.match(context, region) { stage = Stage.RESULTS } } else stage = Stage.DENIED
+    }
 
-    Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 18.dp),
-            horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically
-        ) {
+    Column(modifier = Modifier.fillMaxSize().background(colors.background).systemBarsPadding()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.End) {
             Text(
-                "Skip for now", color = CircleTheme.colors.muted, fontSize = 13.sp,
-                modifier = Modifier.clickable(onClick = onDone).padding(vertical = 12.dp)
+                stringResource(R.string.find_skip), color = colors.muted, fontSize = 13.sp,
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onDone).padding(14.dp)
             )
         }
-
         when (stage) {
-            Stage.PROMPT -> Column(
-                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 32.dp),
+            Stage.PROMPT, Stage.DENIED -> Column(
+                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
             ) {
-                Box(
-                    modifier = Modifier.size(64.dp).background(CircleTheme.colors.surface, RoundedCornerShape(20.dp)),
-                    contentAlignment = Alignment.Center
-                ) { Icon(Icons.Outlined.People, contentDescription = null, tint = CircleTheme.colors.accent) }
-                Spacer(Modifier.height(22.dp))
-                Text("Find your circle", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, color = CircleTheme.colors.text)
-                Spacer(Modifier.height(10.dp))
+                Canvas(Modifier.size(120.dp)) {
+                    val r = size.minDimension / 2 - 2.dp.toPx()
+                    drawCircle(colors.border, r, style = Stroke(1.4.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 6.dp.toPx()))))
+                    drawCircle(colors.border, r * 0.62f, style = Stroke(1.2.dp.toPx()))
+                    drawCircle(colors.accent, 5.dp.toPx(), center = Offset(center.x, center.y - r))
+                }
+                Text(stringResource(R.string.find_title), fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 26.sp, color = colors.text, modifier = Modifier.padding(top = 18.dp).semantics { heading() })
                 Text(
-                    "See which of your contacts are already here, so you're not starting from zero.",
-                    color = CircleTheme.colors.body, fontSize = 14.sp, textAlign = TextAlign.Center, lineHeight = 22.sp
+                    stringResource(R.string.find_body), color = colors.body, fontSize = 14.sp, lineHeight = 21.sp, textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 10.dp)
                 )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "We only check for matches — your contacts are never stored or shared.",
-                    color = CircleTheme.colors.muted, fontSize = 11.5.sp, textAlign = TextAlign.Center, lineHeight = 18.sp
-                )
-                Spacer(Modifier.height(22.dp))
-                PrimaryButton("Connect contacts", modifier = Modifier.fillMaxWidth()) {
-                    stage = Stage.LOADING
-                    scope.launch { delay(900); stage = Stage.RESULTS }
+                if (stage == Stage.DENIED) {
+                    Text(stringResource(R.string.find_denied), color = colors.muted, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
                 }
             }
-
-            Stage.LOADING -> Column(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
-            ) {
-                CircularProgressIndicator(color = CircleTheme.colors.accent, strokeWidth = 2.5.dp, modifier = Modifier.size(26.dp))
-                Spacer(Modifier.height(16.dp))
-                Text("Looking for matches…", color = CircleTheme.colors.body, fontSize = 13.5.sp)
+            Stage.LOADING -> Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                CircularProgressIndicator(color = colors.accent, strokeWidth = 2.5.dp, modifier = Modifier.size(26.dp))
+                Text(stringResource(R.string.find_matching), color = colors.body, fontSize = 13.5.sp, modifier = Modifier.padding(top = 16.dp))
             }
-
-            Stage.RESULTS -> Column(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp)) {
-                Spacer(Modifier.height(8.dp))
-                Text("${matches.size} people you know", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, color = CircleTheme.colors.text)
-                Spacer(Modifier.height(2.dp))
+            Stage.RESULTS -> Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
                 Text(
-                    "Send a friend request now — decide who goes in your Inner Circle later from their profile.",
-                    color = CircleTheme.colors.muted, fontSize = 12.5.sp, lineHeight = 18.sp
+                    androidx.compose.ui.res.pluralStringResource(R.plurals.find_found, vm.matches.size, vm.matches.size),
+                    fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, color = colors.text
                 )
-                Spacer(Modifier.height(14.dp))
-
-                matches.forEach { m ->
-                    val c = m.person
-                    val s = m.relationship
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Avatar(c.initials, c.color, size = 42)
+                Text(stringResource(R.string.find_results_note), color = colors.muted, fontSize = 12.5.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
+                vm.matches.forEach { m ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Avatar(m.person.initials, m.person.color, size = 42)
                         Spacer(Modifier.width(11.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(c.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-                            val subtitle = when (s) {
-                                Relationship.REQUEST_SENT -> "Request sent"
-                                Relationship.REQUEST_RECEIVED -> "Wants to be friends"
-                                Relationship.FRIEND -> "Already in your circle"
-                                else -> "In your phone contacts"
-                            }
-                            Text(subtitle, color = CircleTheme.colors.muted, fontSize = 11.5.sp)
+                        Column(Modifier.weight(1f)) {
+                            Text(m.person.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                            Text("@${m.handle}", color = colors.muted, fontSize = 11.5.sp)
                         }
-                        FriendRequestButton(c.id, s, addLabel = "Add")
+                        FriendRequestButton(m.person.id, m.relationship, addLabel = stringResource(R.string.profile_add_friend))
                     }
                 }
-
-                Spacer(Modifier.weight(1f))
-                PrimaryButton("Continue", modifier = Modifier.fillMaxWidth().padding(bottom = 18.dp), onClick = onDone)
             }
+        }
+        Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = 20.dp)) {
+            if (stage == Stage.RESULTS) StepButton(stringResource(R.string.signup_continue), enabled = true, onClick = onDone)
+            else if (stage != Stage.LOADING) StepButton(stringResource(R.string.find_connect), enabled = true) { ask.launch(Manifest.permission.READ_CONTACTS) }
         }
     }
 }
-
