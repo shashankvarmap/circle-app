@@ -47,6 +47,14 @@ data class Person(
 
 enum class RequestStatus { PENDING, ACCEPTED, DECLINED }
 
+/** What a report is about. */
+enum class ReportKind { PERSON, NOTE, COMMENT, GROUP, EVENT, MESSAGE }
+
+enum class ReportReason { SPAM, HARASSMENT, HATE, SEXUAL, VIOLENCE, SELF_HARM, IMPERSONATION, OTHER }
+
+/** A report you filed. Moderation (who reviews it, how fast) comes with the backend. */
+data class Report(val kind: ReportKind, val targetId: String, val reason: ReportReason, val note: String, val at: java.time.Instant)
+
 /** An incoming friend request. Its status lives in [CircleStore.requestStatus]. */
 data class FriendRequest(val personId: String, val receivedAt: Instant)
 

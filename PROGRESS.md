@@ -60,11 +60,12 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] Quote cause recorded in REPORT.md
 
 ## Phase 5: Profiles and the friend graph (F2)
-- [~] Person profile by relationship exists (d5e7ac4); must be driven by `ProfileView`, no mutual count
-- [x] Add friend / Requested / Cancel / Accept / Decline / Unfriend / Block / Mute / Report entries
+- [x] One profile screen driven by `ProfileView` (Full / Limited / NotFound), no mutual count (Phase 2)
+- [x] Add friend / Requested / Cancel / Accept / Decline / Unfriend / Block / Mute / Report
 - [x] Edit profile inside Settings
 - [x] Profile tabs filter; All friends searchable list in Your circle
-- [ ] Report flow (reason list, note, thanks) used from profiles
+- [x] Report flow (reason list, optional note, "Thanks. We'll look at this.") from profiles, notes and comments
+- [x] My Profile PHOTOS shows your real photo notes (opens the viewer) instead of placeholder boxes
 
 ## Phase 6: Messages and chat (MESSAGES_AND_SETTINGS_V2)
 - [~] List: missing "+" New chat, search, Pinned / All chats, unread tint, swipe Pin/Mute/Delete, "Groups" tab rename, footer, empty state
@@ -84,7 +85,8 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] Settings list, Edit profile, Blocked / Muted lists, theme switch live
 - [ ] Notifications as ONE row -> Notifications screen (switches, pause, quiet hours)
 - [ ] About Circle / Why I built it: tinted cards + the new connection-first text
-- [ ] Report flow; Alerts tap opens target; Mark all read; red dot only when unread
+- [x] Report flow (done in Phase 5)
+- [ ] Alerts tap opens target; Mark all read; red dot only when unread
 - [ ] Empty / offline / error states + skeletons (one component)
 
 ## Phase 9: Getting in (ACCESS_AND_LAUNCH 1-4)

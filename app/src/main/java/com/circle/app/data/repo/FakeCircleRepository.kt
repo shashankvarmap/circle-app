@@ -424,8 +424,8 @@ class FakeCircleRepository(
         return Outcome.Success(Unit)
     }
 
-    override suspend fun report(kind: String, targetId: String): Outcome<Unit> {
-        store.reports.add(kind to targetId)
+    override suspend fun report(kind: ReportKind, targetId: String, reason: ReportReason, note: String): Outcome<Unit> {
+        store.reports.add(Report(kind, targetId, reason, note.trim().take(500), Clock.now()))
         return Outcome.Success(Unit)
     }
 

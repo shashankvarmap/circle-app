@@ -218,4 +218,21 @@
     <string name="home_nothing_below">Nothing below this line.</string>
     <string name="home_new_pill">New</string>
     <string name="home_new_pill_label">Show the new notes at the top</string>
+
+    <!-- Report flow -->
+    <string name="report_title">What\'s wrong?</string>
+    <string name="report_subtitle">Nobody is told who reported them.</string>
+    <string name="report_reason_spam">Spam or a scam</string>
+    <string name="report_reason_harassment">Harassment or bullying</string>
+    <string name="report_reason_hate">Hate</string>
+    <string name="report_reason_sexual">Nudity or sexual content</string>
+    <string name="report_reason_violence">Violence or threats</string>
+    <string name="report_reason_self_harm">Someone may hurt themselves</string>
+    <string name="report_reason_impersonation">Pretending to be someone else</string>
+    <string name="report_reason_other">Something else</string>
+    <string name="report_note_hint">Anything else we should know? (optional)</string>
+    <string name="report_send">Send report</string>
+    <string name="report_thanks">Thanks. We\'ll look at this.</string>
+    <string name="report_thanks_body">Your report is recorded. You can also block them at any time.</string>
+    <string name="report_done">Done</string>
 </resources>

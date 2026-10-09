@@ -46,7 +46,7 @@ class NoteMenuViewModel(repo: CircleRepository) : RepoViewModel(repo) {
     fun share(noteId: String, friendId: String, then: (Outcome<String>) -> Unit) = run({ shareNoteWithFriend(noteId, friendId) }, then)
     fun mute(personId: String, then: (Outcome<Unit>) -> Unit) = run({ mute(personId) }, then)
     fun block(personId: String, then: (Outcome<Unit>) -> Unit) = run({ block(personId) }, then)
-    fun report(noteId: String, then: (Outcome<Unit>) -> Unit) = run({ report("note", noteId) }, then)
+
     fun delete(noteId: String) = run({ deleteNote(noteId) })
     fun setAudience(noteId: String, audience: Audience) = run({ setAudience(noteId, audience) })
 }
@@ -99,13 +99,7 @@ fun NoteMenuButton(nav: NavHostController, note: Note) {
             stringResource(R.string.note_delete_title), stringResource(R.string.note_delete_body), stringResource(R.string.note_delete),
             destructive = true, onDismiss = { dialog = null }
         ) { vm.delete(note.id) }
-        NoteDialog.REPORT -> ConfirmDialog(
-            stringResource(R.string.note_report_title), stringResource(R.string.note_report_body, first), stringResource(R.string.profile_report),
-            destructive = false, onDismiss = { dialog = null }
-        ) {
-            val thanks = context.getString(R.string.toast_reported)
-            vm.report(note.id) { if (it is Outcome.Success) toast(thanks) }
-        }
+        NoteDialog.REPORT -> ReportSheet(com.circle.app.data.ReportKind.NOTE, note.id, onDone = { dialog = null })
         NoteDialog.BLOCK -> ConfirmDialog(
             stringResource(R.string.profile_block_title, first), stringResource(R.string.profile_block_body), stringResource(R.string.profile_block),
             destructive = true, onDismiss = { dialog = null }

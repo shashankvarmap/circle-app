@@ -43,8 +43,8 @@ object CircleStore {
     /** Friends you muted: their notes are hidden from your Home, nobody is told. */
     val mutedIds = mutableStateListOf<String>()
 
-    /** Reports you filed: (kind, target id). Moderation comes with the backend. */
-    val reports = mutableStateListOf<Pair<String, String>>()
+    /** Reports you filed. Moderation comes with the backend. */
+    val reports = mutableStateListOf<Report>()
 
     // ---- Content ----
 

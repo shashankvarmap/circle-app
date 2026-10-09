@@ -112,4 +112,12 @@ class PostsAndThreadsTest {
         assertTrue(repo.note("elena-forum").first() is NoteView.Snippet) // snippet: no media field at all
         assertEquals(ME, (repo.note("you-media").first() as NoteView.Full).note.author.id)
     }
+
+    @Test fun `a report records the reason and note`() = runTest {
+        repo.report(com.circle.app.data.ReportKind.PERSON, "EV", com.circle.app.data.ReportReason.SPAM, "  sells things ")
+        val r = CircleStore.reports.single()
+        assertEquals(com.circle.app.data.ReportReason.SPAM, r.reason)
+        assertEquals("sells things", r.note)
+        assertEquals("EV", r.targetId)
+    }
 }

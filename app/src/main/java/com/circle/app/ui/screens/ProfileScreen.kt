@@ -108,18 +108,25 @@ fun ProfileScreen(nav: NavHostController) {
                 }
             }
             items(visiblePosts, key = { it.id }) { post -> FeedCard(nav, post) }
-            item {
+            // Your photo notes, newest first (no grid at all when there are none).
+            val photoNotes = mine.filter { it.hasMedia && !it.isRepost }
+            if (photoNotes.isNotEmpty()) item(key = "photos") {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SectionLabel("PHOTOS")
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
-                        modifier = Modifier.height(210.dp),
-                        userScrollEnabled = false,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        gridItems(List(6) { it }) {
-                            Box(modifier = Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(12.dp)).background(CircleTheme.colors.track))
+                    photoNotes.take(9).chunked(3).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            row.forEach { n ->
+                                Box(
+                                    Modifier.weight(1f).height(100.dp).clip(RoundedCornerShape(12.dp)).background(CircleTheme.colors.track)
+                                        .clickable(onClickLabel = "Open photo") { nav.navigate(Routes.viewer(n.id)) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val first = n.media.firstOrNull()
+                                    if (first != null) MediaThumb(first)
+                                    else Icon(Icons.Outlined.Image, contentDescription = null, tint = CircleTheme.colors.muted)
+                                }
+                            }
+                            repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                 }

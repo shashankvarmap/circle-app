@@ -193,3 +193,25 @@ confirm until the reason-list flow in Phase 8.
 **Decisions**
 - Group posts get Report / Block only in the ⋯ menu (no "Send in a message": they stay in the group).
 - "Mute this friend" appears on personal notes only (their authors are your friends by the rules); group-post authors may not be.
+
+---
+
+## Phase 5: Profiles and the friend graph (F2)
+
+**Works now** (most of F2 landed with the privacy core): one profile screen rendered from `ProfileView`; friends get
+Message, ✓ Friends, their notes (inner-circle ones only if you're in their inner circle) and Mute / Unfriend / Block /
+Report; everyone else gets the Limited profile with Add friend / Requested + Cancel request / Accept + Decline and Report /
+Block. Unfriend leaves Your circle and the counts; Block hides the person everywhere. Added now:
+- **Report flow** (one `ReportSheet` for people, notes and comments): a reason (spam, harassment, hate, sexual content,
+  violence, self-harm, impersonation, something else), an optional note, then "Thanks. We'll look at this." Recorded in the
+  store as a typed `Report` (kind, target, reason, note, time). It says only what is true ("Your report is recorded"),
+  per ACCESS_AND_LAUNCH 0.2, until moderation exists.
+- My Profile's PHOTOS grid shows your own photo notes (tap opens the viewer) instead of six placeholder boxes; it is
+  hidden when you have none.
+
+**Decisions**
+- The report confirmation does not promise human review: there is no moderation yet (BACKEND_READINESS / LAUNCH_CHECKLIST
+  will list it).
+
+**Note:** a scripted edit briefly corrupted ProfileScreen.kt (an empty match inserted text between every character) and hung
+the Kotlin compiler; the file was restored from git before the edit was redone. Nothing broken was committed.

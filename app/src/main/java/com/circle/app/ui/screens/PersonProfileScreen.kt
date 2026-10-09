@@ -70,7 +70,7 @@ class PersonProfileViewModel(repo: CircleRepository, private val personId: Strin
     fun block(then: (Outcome<Unit>) -> Unit) = run({ block(personId) }, then)
     fun mute(then: (Outcome<Unit>) -> Unit) = run({ mute(personId) }, then)
     fun unmute(then: (Outcome<Unit>) -> Unit) = run({ unmute(personId) }, then)
-    fun report(then: (Outcome<Unit>) -> Unit) = run({ report("person", personId) }, then)
+
     fun message(then: (Outcome<String>) -> Unit) = run({ openDirectChat(personId) }, then)
 }
 
@@ -113,7 +113,10 @@ fun PersonProfileScreen(nav: NavHostController, personId: String) {
     val first = name.substringBefore(" ")
     val isMuted = (view as? ProfileView.Full)?.isMuted == true
 
-    confirm?.let { kind ->
+    if (confirm == "report") {
+        com.circle.app.ui.components.ReportSheet(com.circle.app.data.ReportKind.PERSON, personId, onDone = { confirm = null })
+    }
+    confirm?.takeIf { it != "report" }?.let { kind ->
         val (title, body, action) = when (kind) {
             "unfriend" -> Triple(stringResource(R.string.profile_unfriend_title, first), stringResource(R.string.profile_unfriend_body, first), stringResource(R.string.profile_unfriend))
             "block" -> Triple(stringResource(R.string.profile_block_title, first), stringResource(R.string.profile_block_body), stringResource(R.string.profile_block))
@@ -128,8 +131,7 @@ fun PersonProfileScreen(nav: NavHostController, personId: String) {
                     confirm = null
                     when (kind) {
                         "unfriend" -> vm.unfriend { if (it.isSuccess) toast(R.string.toast_unfriended) }
-                        "block" -> vm.block { if (it.isSuccess) { toast(R.string.toast_blocked); nav.popBackStack() } }
-                        else -> vm.report { if (it.isSuccess) toast(R.string.toast_reported) }
+                        else -> vm.block { if (it.isSuccess) { toast(R.string.toast_blocked); nav.popBackStack() } }
                     }
                 }) { Text(action, color = if (kind == "report") colors.accent else colors.alertDot) }
             },

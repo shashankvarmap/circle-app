@@ -63,7 +63,7 @@ class ThreadViewModel(repo: CircleRepository, noteId: String) : RepoViewModel(re
     fun reply(text: String, replyTo: String?, then: (Outcome<Unit>) -> Unit) = run({ addComment(id, text, replyTo) }, then)
     fun likeComment(commentId: String) = run({ toggleCommentLike(id, commentId) })
     fun deleteComment(commentId: String) = run({ deleteComment(id, commentId) })
-    fun reportComment(commentId: String, then: (Outcome<Unit>) -> Unit) = run({ report("comment", commentId) }, then)
+
 }
 
 /** A post's thread: the root post, then its top-level comments (always visible). */
@@ -79,7 +79,8 @@ fun ThreadScreen(nav: NavHostController, postId: String) {
     var expanded by rememberSaveable { mutableStateOf(setOf<String>()) }
     var replyTo by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmDelete by rememberSaveable { mutableStateOf<String?>(null) }
-    val thanks = stringResource(R.string.toast_reported)
+    var reporting by rememberSaveable { mutableStateOf<String?>(null) }
+    reporting?.let { id -> ReportSheet(com.circle.app.data.ReportKind.COMMENT, id, onDone = { reporting = null }) }
 
     confirmDelete?.let { id ->
         androidx.compose.material3.AlertDialog(
@@ -138,9 +139,7 @@ fun ThreadScreen(nav: NavHostController, postId: String) {
                         override fun like(comment: CommentView) = vm.likeComment(comment.id)
                         override fun reply(comment: CommentView) { replyTo = comment.id }
                         override fun delete(comment: CommentView) { confirmDelete = comment.id }
-                        override fun report(comment: CommentView) = vm.reportComment(comment.id) {
-                            if (it is Outcome.Success) Toast.makeText(context, thanks, Toast.LENGTH_SHORT).show()
-                        }
+                        override fun report(comment: CommentView) { reporting = comment.id }
                     }
                     items(thread.comments, key = { it.id }) { comment ->
                         ThreadComment(

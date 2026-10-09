@@ -54,7 +54,13 @@ interface CircleRepository {
     suspend fun unblock(personId: String): Outcome<Unit>
     suspend fun mute(personId: String): Outcome<Unit>
     suspend fun unmute(personId: String): Outcome<Unit>
-    suspend fun report(kind: String, targetId: String): Outcome<Unit>
+    /** Files a report (reason and an optional note). The reported person isn't told who reported them. */
+    suspend fun report(
+        kind: com.circle.app.data.ReportKind,
+        targetId: String,
+        reason: com.circle.app.data.ReportReason,
+        note: String = "",
+    ): Outcome<Unit>
 
     // ---- Notes & threads ----
     fun homeFeed(): Flow<List<Note>>
