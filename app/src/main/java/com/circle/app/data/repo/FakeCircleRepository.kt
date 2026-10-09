@@ -929,13 +929,41 @@ class FakeCircleRepository(
         val actor = ref(a.actorId) ?: return null
         // A quoted comment only travels to someone who may read that thread.
         val readable = a.postId?.let { store.post(it) }?.let { decide(it, NoteAction.READ_COMMENTS).allowed } ?: false
-        return AlertView(a.id, actor, a.kind, a.createdAt, a.quote?.takeIf { readable }, a.postId, a.aboutId?.let { ref(it) })
+        val read = store.alertsReadAt
+        return AlertView(
+            a.id, actor, a.kind, a.createdAt, a.quote?.takeIf { readable }, a.postId, a.aboutId?.let { ref(it) },
+            unread = read == null || a.createdAt.isAfter(read),
+        )
+    }
+
+    /** Your notification switches decide which quiet alerts you get. */
+    private fun wanted(a: Alert): Boolean {
+        val prefs = store.notifications
+        return when (a.kind) {
+            AlertKind.LIKED_YOUR_NOTE -> prefs.likes
+            AlertKind.COMMENTED_ON_YOUR_NOTE, AlertKind.QUOTED_YOUR_NOTE, AlertKind.REPOSTED_YOUR_NOTE -> prefs.comments
+            AlertKind.FRIEND_COMMENTED, AlertKind.FRIEND_REPOSTED -> true
+        }
+    }
+
+    override fun hasUnreadAlerts(): Flow<Boolean> = observe {
+        val read = store.alertsReadAt
+        val alertUnread = store.alerts.any { it.kind in aimedAtYou && wanted(it) && !hiddenFromMe(it.actorId) && (read == null || it.createdAt.isAfter(read)) }
+        val requestUnread = store.notifications.friendRequests && store.incomingRequests.any {
+            store.requestStatus[it.personId] == RequestStatus.PENDING && !hiddenFromMe(it.personId) && (read == null || it.receivedAt.isAfter(read))
+        }
+        alertUnread || requestUnread
+    }
+
+    override suspend fun markAllAlertsRead(): Outcome<Unit> {
+        store.alertsReadAt = Clock.now()
+        return Outcome.Success(Unit)
     }
 
     private val aimedAtYou = setOf(AlertKind.LIKED_YOUR_NOTE, AlertKind.COMMENTED_ON_YOUR_NOTE, AlertKind.REPOSTED_YOUR_NOTE, AlertKind.QUOTED_YOUR_NOTE)
 
     override fun alerts(): Flow<List<AlertView>> = observe {
-        store.alerts.filter { it.kind in aimedAtYou }.mapNotNull { alertView(it) }
+        store.alerts.filter { it.kind in aimedAtYou && wanted(it) }.mapNotNull { alertView(it) }
     }
 
     override fun activity(): Flow<List<AlertView>> = observe {

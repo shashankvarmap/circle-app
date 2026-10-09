@@ -98,13 +98,11 @@ fun ProfileScreen(nav: NavHostController) {
             }
             if (visiblePosts.isEmpty()) {
                 item {
-                    Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Nothing here yet.", color = CircleTheme.colors.muted, fontSize = 13.sp)
-                        Text(
-                            "Write a note", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                            modifier = Modifier.clickable { nav.navigate(Routes.COMPOSE_POST) }.padding(8.dp)
-                        )
-                    }
+                    EmptyState(
+                        EmptyKind.PROFILE,
+                        action = androidx.compose.ui.res.stringResource(com.circle.app.R.string.empty_profile_action),
+                        onAction = { nav.navigate(Routes.COMPOSE_POST) }
+                    )
                 }
             }
             items(visiblePosts, key = { it.id }) { post -> FeedCard(nav, post) }

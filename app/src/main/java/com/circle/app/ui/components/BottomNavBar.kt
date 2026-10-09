@@ -15,6 +15,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
@@ -48,6 +50,9 @@ fun CircleBottomNav(
     active: NavTab,
     onHomeIconHold: (() -> Unit)? = null
 ) {
+    // The dot shows only when something in Alerts is unread.
+    val unreadVm = com.circle.app.ui.vm.circleViewModel { NavViewModel(it) }
+    val hasUnread by unreadVm.hasUnread.collectAsStateWithLifecycle()
     val colors = CircleTheme.colors
     val scope = rememberCoroutineScope()
     val rotation = remember { Animatable(0f) }
@@ -123,7 +128,7 @@ fun CircleBottomNav(
             NavIcon(Icons.Outlined.FavoriteBorder, "Alerts", active == NavTab.NOTIFICATIONS) {
                 nav.navigate(Routes.NOTIFICATIONS)
             }
-            if (active != NavTab.NOTIFICATIONS) {
+            if (active != NavTab.NOTIFICATIONS && hasUnread) {
                 Box(
                     modifier = Modifier
                         .size(11.dp) // 8dp dot + 1.5dp background halo, as in the prototype
@@ -160,4 +165,8 @@ private fun NavIcon(icon: ImageVector, label: String, isActive: Boolean, onClick
         tint = if (isActive) CircleTheme.colors.accent else CircleTheme.colors.navIdle,
         modifier = Modifier.size(24.dp).clickable(onClick = onClick)
     )
+}
+
+class NavViewModel(repo: com.circle.app.data.repo.CircleRepository) : com.circle.app.ui.vm.RepoViewModel(repo) {
+    val hasUnread = repo.hasUnreadAlerts().state(false)
 }

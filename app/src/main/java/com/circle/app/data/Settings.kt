@@ -27,7 +27,14 @@ data class NotificationPrefs(
     val groups: Boolean = true,
     val messages: Boolean = true,
     val pause: PauseAll = PauseAll.OFF,
-)
+    /** Quiet hours: no alerts between [quietStart] and [quietEnd] (minutes after midnight, local). */
+    val quietHours: Boolean = false,
+    val quietStart: Int = 22 * 60,
+    val quietEnd: Int = 7 * 60,
+) {
+    /** How many of the six alert switches are on ("5 of 6 on"). */
+    val onCount: Int get() = listOf(likes, comments, friendRequests, events, groups, messages).count { it }
+}
 
 data class PrivacyPrefs(
     val findableByName: Boolean = true,

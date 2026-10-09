@@ -274,3 +274,35 @@ are shown in the viewer's zone).
 **Decisions**
 - Group join requests and their Approve/Decline live in the People tab's "Asked to join" list (also under the map view).
 - A cancelled event is removed (not shown as "cancelled") because nothing in the documents describes a cancelled state.
+
+---
+
+## Phase 8: Settings, safety, states (F5)
+
+**Works now**
+- **Notifications** is one Settings row ("5 of 6 on", or "Paused") that opens its own screen: the helper line, six switches
+  with the prototype's descriptions, Pause all (Off / 1 hour / Until tomorrow) and quiet hours (on/off, tap the times for
+  pickers). The switches decide which quiet alerts appear (likes off hides like alerts; friend requests off stops them
+  lighting the dot).
+- **About Circle** and **Why I built it** use the SETTINGS_AND_POLISH text in the V2 tinted cards (accent 8% fill, 30% border,
+  18dp radius; accent dots, Fraunces, the accent full stop, the large opening quote, the rule and the signature). No
+  gradients or motion.
+- **Alerts:** "Mark all read" in the header; the bottom bar's red dot shows only while something is unread; unread rows have
+  a faint tint; tapping a row opens its thread (or the person).
+- **States:** one `EmptyState` (120dp ring with a dashed outer ring and accent dot, Fraunces title, muted body, one action)
+  with the nine kinds and copy of ACCESS_AND_LAUNCH 3, used on Home (no friends; Groups tab), Messages, Explore, Alerts,
+  Your circle (no inner circle: "Choose people" opens the list), Profile (no notes). Loading skeletons (a calm pulse, still
+  when animations are removed), a live offline banner (system connectivity), and an error state with Try again on Home,
+  Messages and Alerts through a `Load` wrapper that re-subscribes.
+- The report flow landed in Phase 5. Membership's sub-label is now "Keeps Circle running".
+- Tests: `AlertsTest` (dot and Mark all read, switches hide alerts, quiet hours stored). Verified on the emulator:
+  Notifications screen, About Circle, Why I built it.
+
+**Stubs:** no push notifications yet, so Pause and quiet hours only shape in-app alerts. The error state appears only when the
+fake fails (Phase 11 adds the switch to make it fail).
+
+**Decisions**
+- "Why I built it" drops "No ads," from "No ads, no tricks to keep me there" (ACCESS_AND_LAUNCH 0.3 allows "no ads" only in About,
+  Membership's small print, the privacy summary and the onboarding pricing slide). The rest of the owner's text is unchanged.
+- The Home empty state's outlined "Invite a friend" comes with the invite sheet in Phase 9.
+- New permission: ACCESS_NETWORK_STATE, only for the offline banner.

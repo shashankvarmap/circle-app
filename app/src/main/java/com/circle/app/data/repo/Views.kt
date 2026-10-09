@@ -286,4 +286,5 @@ data class AlertView(
     val quote: String?,
     val postId: String?,
     val about: PersonRef?,
+    val unread: Boolean = false,
 )

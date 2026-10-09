@@ -104,7 +104,15 @@ fun ExploreScreen(nav: NavHostController) {
         ExploreHeader(nav)
 
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            if (showMap) {
+            if (events.isEmpty() && groups.isEmpty()) {
+                item(key = "empty") {
+                    EmptyState(
+                        EmptyKind.EXPLORE,
+                        action = androidx.compose.ui.res.stringResource(com.circle.app.R.string.empty_explore_action),
+                        onAction = { nav.navigate(Routes.CREATE_EVENT) }
+                    )
+                }
+            } else if (showMap) {
                 item(key = "map") {
                     Box {
                         ExploreMap(onMap, selected?.key) { selectedKey = it.key }

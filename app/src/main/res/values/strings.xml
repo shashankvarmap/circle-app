@@ -319,4 +319,88 @@
     <!-- Create event -->
     <string name="event_in_past">That time has already passed. Pick a time ahead.</string>
     <string name="event_topic_note">Events this week sit on the Explore map by topic; later ones are in the list.</string>
+
+    <!-- Empty, offline and error states (ACCESS_AND_LAUNCH 3) -->
+    <string name="empty_home_title">Your circle is empty</string>
+    <string name="empty_home_body">Circle works with friends. Add your first one, or invite someone.</string>
+    <string name="empty_home_action">Find friends</string>
+    <string name="empty_home_invite">Invite a friend</string>
+    <string name="empty_messages_title">No chats yet</string>
+    <string name="empty_messages_body">Start one with a friend. Only friends can message you.</string>
+    <string name="empty_explore_title">Nothing nearby yet</string>
+    <string name="empty_explore_body">Be the first. Make an event or start a group near you.</string>
+    <string name="empty_explore_action">Create an event</string>
+    <string name="empty_alerts_title">You\'re all caught up</string>
+    <string name="empty_alerts_body">Quiet alerts show up here. Likes stay private.</string>
+    <string name="empty_circle_title">No inner circle yet</string>
+    <string name="empty_circle_body">Pick the few people you\'d tell first. They\'re never told.</string>
+    <string name="empty_circle_action">Choose people</string>
+    <string name="empty_groups_title">No groups yet</string>
+    <string name="empty_groups_body">Join one from Explore, or start your own.</string>
+    <string name="empty_groups_action">Explore groups</string>
+    <string name="empty_profile_title">Nothing here yet</string>
+    <string name="empty_profile_body">Your notes will live here.</string>
+    <string name="empty_profile_action">Write a note</string>
+    <string name="empty_offline_title">You\'re offline</string>
+    <string name="empty_offline_body">Showing what we have. We\'ll catch up when you\'re back.</string>
+    <string name="empty_error_title">Couldn\'t load this</string>
+    <string name="empty_error_body">Something went wrong on our side. Your notes are still there.</string>
+    <string name="state_try_again">Try again</string>
+    <string name="state_offline_banner">You\'re offline. Showing what we have.</string>
+
+    <string name="alerts_mark_all_read">Mark all read</string>
+
+    <!-- Notifications screen (V2 4) -->
+    <string name="notif_title">Notifications</string>
+    <string name="notif_helper">Likes are always private. These only decide which quiet alerts you get.</string>
+    <string name="notif_alert_me_caps">ALERT ME ABOUT</string>
+    <string name="notif_likes">Likes</string>
+    <string name="notif_likes_sub">A quiet alert when someone likes your note</string>
+    <string name="notif_comments">Comments and replies</string>
+    <string name="notif_comments_sub">On your notes and in threads you joined</string>
+    <string name="notif_requests">Friend requests</string>
+    <string name="notif_requests_sub">When someone asks to be your friend</string>
+    <string name="notif_events">Event updates</string>
+    <string name="notif_events_sub">Seats, changes and cancellations</string>
+    <string name="notif_groups">Group activity</string>
+    <string name="notif_groups_sub">New posts and join requests</string>
+    <string name="notif_messages">Messages</string>
+    <string name="notif_messages_sub">New messages in your chats</string>
+    <string name="notif_pause_caps">PAUSE ALL</string>
+    <string name="notif_pause_off">Off</string>
+    <string name="notif_pause_hour">1 hour</string>
+    <string name="notif_pause_tomorrow">Until tomorrow</string>
+    <string name="notif_quiet_caps">QUIET HOURS</string>
+    <string name="notif_quiet_range">%1$s to %2$s</string>
+    <string name="notif_quiet_from">Quiet from</string>
+    <string name="notif_quiet_until">Quiet until</string>
+    <string name="notif_quiet_note">Tap the times to change them.</string>
+    <string name="settings_notifications_paused">Paused</string>
+    <string name="settings_notifications_summary">%1$d of 6 on</string>
+    <string name="settings_membership_sub">Keeps Circle running</string>
+
+    <!-- About Circle (SETTINGS_AND_POLISH 4, styled per V2 5) -->
+    <string name="about_kicker">WHAT IT IS</string>
+    <string name="about_headline">A small place for the people you actually know.</string>
+    <string name="about_how_caps">HOW IT\'S DIFFERENT</string>
+    <string name="about_p1_lead">Just your friends.</string>
+    <string name="about_p1">You ask, they accept. No followers, and no strangers in your feed.</string>
+    <string name="about_p2_lead">See what they\'re up to.</string>
+    <string name="about_p2">Newest first, in the order it happened. Nothing is ranked or pushed at you.</string>
+    <string name="about_p3_lead">It ends.</string>
+    <string name="about_p3">Circle tells you when you\'re caught up, so you can close it and go and see them.</string>
+    <string name="about_p4_lead">Quiet likes.</string>
+    <string name="about_p4">Only the person you liked sees it. Nobody is performing for a score.</string>
+    <string name="about_p5_lead">Made for real life.</string>
+    <string name="about_p5">Events and groups take you out of the house and back to real people.</string>
+    <string name="about_p6_lead">No ads.</string>
+    <string name="about_p6">Circle runs on a small membership, and your data is never sold.</string>
+    <string name="about_why_caps">WHY \"CIRCLE\"?</string>
+    <string name="about_why_body">It\'s your circle of friends. And a circle closes: when you\'ve seen everyone\'s day, the circle is closed, and you\'re done. (That\'s why the name ends with a full stop.)</string>
+
+    <!-- Why I built it -->
+    <string name="why_p1">I built Circle because the apps I used to love for keeping up with friends turned into endless scrolling. I wanted a place where I open the app, see what my friends are up to, and close it again. No tricks to keep me there.</string>
+    <string name="why_p2">If you want a bigger circle, make an event, go outside and meet someone. Then come back and tell your friends about it.</string>
+    <string name="why_p3">Thank you for being here.</string>
+    <string name="why_signature" translatable="false">Shashank</string>
 </resources>

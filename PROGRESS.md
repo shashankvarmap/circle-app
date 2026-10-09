@@ -86,11 +86,11 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 
 ## Phase 8: Settings, safety, states (F5)
 - [x] Settings list, Edit profile, Blocked / Muted lists, theme switch live
-- [ ] Notifications as ONE row -> Notifications screen (switches, pause, quiet hours)
-- [ ] About Circle / Why I built it: tinted cards + the new connection-first text
+- [x] Notifications as ONE row ("5 of 6 on" / "Paused") -> Notifications screen (six switches with descriptions, Pause all, quiet hours with time pickers); switches decide which alerts you get
+- [x] About Circle / Why I built it: tinted cards + the new connection-first text ("no ads" only as About's last point)
 - [x] Report flow (done in Phase 5)
-- [ ] Alerts tap opens target; Mark all read; red dot only when unread
-- [ ] Empty / offline / error states + skeletons (one component)
+- [x] Alerts tap opens target (thread or profile); Mark all read; red dot only when unread; unread rows tinted
+- [x] Empty / offline / error states (one `EmptyState`, nine kinds), skeletons, live offline banner, error + Try again on Home, Messages, Alerts
 
 ## Phase 9: Getting in (ACCESS_AND_LAUNCH 1-4)
 - [ ] Welcome, Your number (libphonenumber, typed code, searchable list, E.164), Code, Profile setup, Age 18+, Agreement, Find friends copy

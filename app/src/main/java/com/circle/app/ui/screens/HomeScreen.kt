@@ -28,6 +28,7 @@ import com.circle.app.navigation.Routes
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.circle.app.data.repo.CircleRepository
 import com.circle.app.data.repo.GroupRef
+import com.circle.app.ui.vm.Load
 import com.circle.app.ui.vm.RepoViewModel
 import com.circle.app.ui.vm.circleViewModel
 import com.circle.app.ui.components.*
@@ -39,7 +40,7 @@ private enum class Feed { FRIENDS, GROUPS }
 private enum class Refresh { IDLE, CHECKING, DONE }
 
 class HomeViewModel(repo: CircleRepository) : RepoViewModel(repo) {
-    val friends = repo.homeFeed().state(emptyList())
+    val friends = repo.homeFeed().load()
     val groups = repo.groupFeed().state(emptyList())
     val memberGroups = repo.memberGroups().state(emptyList())
 }
@@ -50,7 +51,8 @@ fun HomeScreen(nav: NavHostController) {
     var feed by rememberSaveable { mutableStateOf(Feed.FRIENDS) }
     var refresh by remember { mutableStateOf(Refresh.IDLE) }
     val vm = circleViewModel { HomeViewModel(it) }
-    val friendFeed by vm.friends.collectAsStateWithLifecycle()
+    val friendLoad by vm.friends.collectAsStateWithLifecycle()
+    val friendFeed = (friendLoad as? Load.Ready)?.value.orEmpty()
     val groupPosts by vm.groups.collectAsStateWithLifecycle()
     val memberGroups by vm.memberGroups.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
@@ -80,6 +82,7 @@ fun HomeScreen(nav: NavHostController) {
     }
 
     Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
+        OfflineBanner()
         CollapsingHeaderLayout(
             state = header,
             modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -111,8 +114,19 @@ fun HomeScreen(nav: NavHostController) {
                         }
                     }
                     item(key = "compose") { ComposeRow(nav) }
-                    items(friendFeed, key = { it.id }) { post -> FeedCard(nav, post) }
-                    item(key = "caught-up") { CaughtUp() }
+                    when (friendLoad) {
+                        Load.Loading -> item(key = "loading") { SkeletonList() }
+                        Load.Failed -> item(key = "error") { ErrorState(onRetry = vm::retry) }
+                        is Load.Ready -> if (friendFeed.isEmpty()) item(key = "empty") {
+                            EmptyState(
+                                EmptyKind.HOME,
+                                action = stringResource(R.string.empty_home_action), onAction = { nav.navigate(Routes.EXPLORE_SEARCH) },
+                            )
+                        } else {
+                            items(friendFeed, key = { it.id }) { post -> FeedCard(nav, post) }
+                            item(key = "caught-up") { CaughtUp() }
+                        }
+                    }
                 } else {
                     if (memberGroups.isNotEmpty()) item(key = "chips") { GroupsChipRow(nav, memberGroups) }
                     item(key = "note") {
@@ -123,16 +137,7 @@ fun HomeScreen(nav: NavHostController) {
                     }
                     if (groupPosts.isEmpty()) {
                         item(key = "empty") {
-                            Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    if (memberGroups.isEmpty()) "You're not in any groups yet." else "Nothing new in your groups.",
-                                    color = CircleTheme.colors.muted, fontSize = 13.sp
-                                )
-                                Text(
-                                    "Find a group in Explore", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                                    modifier = Modifier.clickable { nav.navigate(Routes.EXPLORE) }.padding(8.dp)
-                                )
-                            }
+                            EmptyState(EmptyKind.GROUPS, action = stringResource(R.string.empty_groups_action), onAction = { nav.navigate(Routes.EXPLORE) })
                         }
                     }
                     items(groupPosts, key = { it.id }) { post -> GroupPostCard(nav, post, showGroup = true) }

@@ -155,4 +155,7 @@ interface CircleRepository {
     // ---- Alerts ----
     fun alerts(): Flow<List<AlertView>>
     fun activity(): Flow<List<AlertView>>
+    /** True when anything in Alerts is unread (the dot on the bottom bar). */
+    fun hasUnreadAlerts(): Flow<Boolean>
+    suspend fun markAllAlertsRead(): Outcome<Unit>
 }

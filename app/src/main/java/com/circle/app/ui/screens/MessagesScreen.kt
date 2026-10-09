@@ -66,7 +66,7 @@ import kotlin.math.roundToInt
 private enum class MTab { DIRECT, GROUP }
 
 class MessagesViewModel(repo: CircleRepository) : RepoViewModel(repo) {
-    val chats = repo.chats().state(emptyList())
+    val chats = repo.chats().load()
     fun pin(id: String, pinned: Boolean) = run({ setChatPinned(id, pinned) })
     fun mute(id: String, muted: Boolean) = run({ setChatMuted(id, muted) })
     fun delete(id: String) = run({ deleteChat(id) })
@@ -84,7 +84,8 @@ fun MessagesScreen(nav: NavHostController) {
     var query by rememberSaveable { mutableStateOf("") }
     var confirmDelete by rememberSaveable { mutableStateOf<String?>(null) }
     val vm = circleViewModel { MessagesViewModel(it) }
-    val chats by vm.chats.collectAsStateWithLifecycle()
+    val chatsLoad by vm.chats.collectAsStateWithLifecycle()
+    val chats = (chatsLoad as? com.circle.app.ui.vm.Load.Ready)?.value.orEmpty()
     val listState = rememberLazyListState()
     val header = rememberCollapsingHeaderState { listState.canScrollForward || listState.canScrollBackward }
 
@@ -102,6 +103,7 @@ fun MessagesScreen(nav: NavHostController) {
     }
 
     Column(modifier = Modifier.fillMaxSize().background(colors.background)) {
+        OfflineBanner()
         CollapsingHeaderLayout(
             state = header,
             modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -136,23 +138,14 @@ fun MessagesScreen(nav: NavHostController) {
                 if (tab == MTab.GROUP) item(key = "group-note") {
                     Text(stringResource(R.string.messages_groups_note), color = colors.muted, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 }
-                if (inTab.isEmpty()) {
+                if (chatsLoad is com.circle.app.ui.vm.Load.Loading) {
+                    item(key = "loading") { SkeletonList() }
+                } else if (chatsLoad is com.circle.app.ui.vm.Load.Failed) {
+                    item(key = "error") { ErrorState(onRetry = vm::retry) }
+                } else if (inTab.isEmpty()) {
                     item(key = "empty") {
-                        Column(Modifier.fillMaxWidth().padding(vertical = 40.dp, horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                stringResource(if (tab == MTab.GROUP) R.string.messages_empty_groups else R.string.messages_empty),
-                                fontFamily = Display, fontSize = 20.sp, color = colors.text, textAlign = TextAlign.Center
-                            )
-                            if (tab == MTab.DIRECT) {
-                                Spacer(Modifier.height(14.dp))
-                                PrimaryButton(stringResource(R.string.messages_start_chat), Modifier.widthIn(min = 180.dp).padding(horizontal = 24.dp)) { nav.navigate(Routes.NEW_CHAT) }
-                            } else {
-                                Text(
-                                    stringResource(R.string.messages_explore_groups), color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { nav.navigate(Routes.EXPLORE) }.padding(12.dp)
-                                )
-                            }
-                        }
+                        if (tab == MTab.DIRECT) EmptyState(EmptyKind.MESSAGES, action = stringResource(R.string.messages_start_chat), onAction = { nav.navigate(Routes.NEW_CHAT) })
+                        else EmptyState(EmptyKind.GROUPS, action = stringResource(R.string.empty_groups_action), onAction = { nav.navigate(Routes.EXPLORE) })
                     }
                 } else if (shown.isEmpty()) {
                     item(key = "nomatch") {

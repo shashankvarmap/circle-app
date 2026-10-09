@@ -40,10 +40,12 @@ private enum class NTab { NOTIFICATIONS, ACTIVITY }
 
 class AlertsViewModel(repo: CircleRepository) : RepoViewModel(repo) {
     val requests = repo.incomingRequests().state(emptyList())
-    val alerts = repo.alerts().state(emptyList())
+    val alerts = repo.alerts().load()
     val activity = repo.activity().state(emptyList())
+    val hasUnread = repo.hasUnreadAlerts().state(false)
     fun accept(id: String) = run({ acceptRequest(id) })
     fun decline(id: String) = run({ declineRequest(id) })
+    fun markAllRead() = run({ markAllAlertsRead() })
 }
 
 @Composable
@@ -51,7 +53,9 @@ fun NotificationsScreen(nav: NavHostController) {
     var tab by rememberSaveable { mutableStateOf(NTab.NOTIFICATIONS) }
     val vm = circleViewModel { AlertsViewModel(it) }
     val requests by vm.requests.collectAsStateWithLifecycle()
-    val alerts by vm.alerts.collectAsStateWithLifecycle()
+    val alertsLoad by vm.alerts.collectAsStateWithLifecycle()
+    val alerts = (alertsLoad as? com.circle.app.ui.vm.Load.Ready)?.value.orEmpty()
+    val hasUnread by vm.hasUnread.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     val header = rememberCollapsingHeaderState { listState.canScrollForward || listState.canScrollBackward }
@@ -61,6 +65,7 @@ fun NotificationsScreen(nav: NavHostController) {
     }
 
     Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
+        OfflineBanner()
         CollapsingHeaderLayout(
             state = header,
             modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -69,12 +74,27 @@ fun NotificationsScreen(nav: NavHostController) {
                     title = stringResource(R.string.alerts_title),
                     tabs = listOf(stringResource(R.string.alerts_tab_notifications), stringResource(R.string.alerts_tab_activity)),
                     selected = tab.ordinal,
-                    onSelect = { tab = NTab.entries[it] }
+                    onSelect = { tab = NTab.entries[it] },
+                    action = {
+                        Text(
+                            stringResource(R.string.alerts_mark_all_read),
+                            color = if (hasUnread) CircleTheme.colors.accent else CircleTheme.colors.muted,
+                            fontWeight = FontWeight.Bold, fontSize = 12.5.sp,
+                            modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = hasUnread) { vm.markAllRead() }
+                                .heightIn(min = 48.dp).padding(horizontal = 10.dp, vertical = 14.dp)
+                        )
+                    }
                 )
             }
         ) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (tab == NTab.NOTIFICATIONS) {
+                if (tab == NTab.NOTIFICATIONS && alertsLoad is com.circle.app.ui.vm.Load.Loading) {
+                    item(key = "loading") { SkeletonList() }
+                } else if (tab == NTab.NOTIFICATIONS && alertsLoad is com.circle.app.ui.vm.Load.Failed) {
+                    item(key = "error") { ErrorState(onRetry = vm::retry) }
+                } else if (tab == NTab.NOTIFICATIONS && requests.isEmpty() && alerts.isEmpty()) {
+                    item(key = "empty") { EmptyState(EmptyKind.ALERTS) }
+                } else if (tab == NTab.NOTIFICATIONS) {
                     item { SectionLabel(stringResource(R.string.alerts_friend_requests_caps)) }
                     if (requests.isEmpty()) {
                         item { Text(stringResource(R.string.alerts_no_requests), color = CircleTheme.colors.muted, fontSize = 12.5.sp, modifier = Modifier.padding(vertical = 8.dp)) }
@@ -90,6 +110,7 @@ fun NotificationsScreen(nav: NavHostController) {
                     item { Spacer(Modifier.height(4.dp)); SectionLabel(stringResource(R.string.alerts_recent_caps)) }
                     items(alerts, key = { it.id }) { a -> ActivityRow(a) { open(a) } }
                 } else {
+                    if (activity.isEmpty()) item(key = "empty-activity") { EmptyState(EmptyKind.ALERTS) }
                     items(activity, key = { it.id }) { a -> ActivityRow(a) { open(a) } }
                 }
             }
@@ -156,7 +177,8 @@ private fun ActivityRow(a: AlertView, onOpen: () -> Unit) {
     val action = alertText(a)
     Row(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onOpen).padding(vertical = 10.dp)
+            .background(if (a.unread) CircleTheme.colors.accent.copy(alpha = 0.08f) else androidx.compose.ui.graphics.Color.Transparent)
+            .clickable(onClick = onOpen).padding(vertical = 10.dp, horizontal = 6.dp)
     ) {
         Avatar(a.actor.initials, a.actor.color, size = 38)
         Spacer(Modifier.width(11.dp))

@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
+import com.circle.app.R
 import com.circle.app.data.HandleRules
 import com.circle.app.data.InvitesFrom
 import com.circle.app.data.NotificationPrefs
@@ -177,16 +179,11 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
             item { InfoRow("Download my data", "Coming with the backend") }
 
             item { SectionHeading("Notifications") }
-            item { ToggleRow("Likes", null, notif.likes) { vm.setNotifications(notif.copy(likes = it)) } }
-            item { ToggleRow("Comments and replies", null, notif.comments) { vm.setNotifications(notif.copy(comments = it)) } }
-            item { ToggleRow("Friend requests", null, notif.friendRequests) { vm.setNotifications(notif.copy(friendRequests = it)) } }
-            item { ToggleRow("Event updates", null, notif.events) { vm.setNotifications(notif.copy(events = it)) } }
-            item { ToggleRow("Group activity", null, notif.groups) { vm.setNotifications(notif.copy(groups = it)) } }
-            item { ToggleRow("Messages", null, notif.messages) { vm.setNotifications(notif.copy(messages = it)) } }
             item {
-                SegmentedRow("Pause all", PauseAll.entries, notif.pause, { it.label }) {
-                    vm.setNotifications(notif.copy(pause = it))
-                }
+                // One row; the switches, pause and quiet hours live on their own screen (V2 4).
+                val summary = if (notif.pause != PauseAll.OFF) stringResource(R.string.settings_notifications_paused)
+                else stringResource(R.string.settings_notifications_summary, notif.onCount)
+                NavRow(stringResource(R.string.notif_title), summary) { nav.navigate(Routes.NOTIFICATION_SETTINGS) }
             }
 
             item { SectionHeading("Appearance") }
@@ -199,7 +196,7 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
             item { SectionHeading("About") }
             item { NavRow("About Circle", null) { nav.navigate(Routes.info("about")) } }
             item { NavRow("Why I built it", null) { nav.navigate(Routes.info("why")) } }
-            item { InfoRow("Membership", "About €1 a month, just for the servers. No ads. Nothing about you to sell. Payment comes later.") }
+            item { InfoRow("Membership", stringResource(R.string.settings_membership_sub)) }
             item { NavRow("Privacy policy", null) { nav.navigate(Routes.info("privacy")) } }
             item { NavRow("Terms", null) { nav.navigate(Routes.info("terms")) } }
             item { NavRow("Open-source licenses", "Fraunces and Public Sans (SIL Open Font License)") { nav.navigate(Routes.info("licenses")) } }
@@ -415,40 +412,85 @@ fun InfoScreen(nav: NavHostController, page: String) {
     }
 }
 
+/** A subtle tinted card (V2 5): accent at 8% fill, accent at 30% border, 18dp radius. No gradient, glow or motion. */
 @Composable
-private fun AboutCircle() {
-    Text(
-        "A small place for the people you actually know.",
-        fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp, color = CircleTheme.colors.text
-    )
-    Paragraph("What makes it different:")
-    Bullet("No ads, ever.", "You pay about €1 a month for the servers. You are not the product.")
-    Bullet("No algorithm.", "Newest first. Nothing is ranked, boosted or pushed at you.")
-    Bullet("No public numbers.", "Likes are private. Your friends list is private. Nobody is performing for a score.")
-    Bullet("Mutual friends only.", "You ask, they accept. No followers.")
-    Bullet("It ends.", "Circle tells you when you're caught up, so you can close it and get on with your day.")
-    Bullet("It gets you outside.", "Events and groups are there to take you out of the house and back to real people.")
-    Text(
-        buildAnnotatedString {
-            withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = CircleTheme.colors.text)) { append("Why \"Circle\"? ") }
-            append(
-                "It's your circle of friends. And a circle closes: when you've seen everyone's day, the circle is closed, " +
-                    "and you're done. (That's why the name ends with a full stop.)"
-            )
-        },
-        color = CircleTheme.colors.body, fontSize = 15.sp, lineHeight = 23.sp
+private fun TintedCard(content: @Composable ColumnScope.() -> Unit) {
+    val colors = CircleTheme.colors
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(colors.accent.copy(alpha = 0.08f))
+            .border(1.dp, colors.accent.copy(alpha = 0.30f), RoundedCornerShape(18.dp)).padding(18.dp),
+        content = content
     )
 }
 
 @Composable
-private fun WhyIBuiltIt() {
-    Paragraph(
-        "I built Circle because the apps I used to love for keeping up with friends turned into endless scrolling. I wanted a " +
-            "place where I open the app, see what my friends are up to, and close it again. No ads, no tricks to keep me there."
+private fun Kicker(text: String, accent: Boolean) {
+    Text(
+        text, color = if (accent) CircleTheme.colors.accent else CircleTheme.colors.muted,
+        fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp, modifier = Modifier.semantics { heading() }
     )
-    Paragraph("If you want a bigger circle, make an event, go outside and meet someone. Then come back and tell your friends about it.")
-    Paragraph("Thank you for being here.")
-    Text("Shashank", fontFamily = Display, fontStyle = FontStyle.Italic, fontSize = 20.sp, color = CircleTheme.colors.text)
+}
+
+@Composable
+private fun AboutCircle() {
+    val colors = CircleTheme.colors
+    TintedCard {
+        Kicker(stringResource(R.string.about_kicker), accent = true)
+        Text(
+            stringResource(R.string.about_headline), fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 25.sp,
+            lineHeight = 31.sp, color = colors.text, modifier = Modifier.padding(top = 8.dp)
+        )
+    }
+    Kicker(stringResource(R.string.about_how_caps), accent = false)
+    val points = listOf(
+        R.string.about_p1_lead to R.string.about_p1, R.string.about_p2_lead to R.string.about_p2, R.string.about_p3_lead to R.string.about_p3,
+        R.string.about_p4_lead to R.string.about_p4, R.string.about_p5_lead to R.string.about_p5, R.string.about_p6_lead to R.string.about_p6,
+    )
+    Column {
+        points.forEachIndexed { i, (lead, rest) ->
+            if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(colors.border))
+            Row(Modifier.padding(vertical = 12.dp)) {
+                Box(Modifier.padding(top = 8.dp, end = 12.dp).size(7.dp).background(colors.accent, CircleShape))
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = colors.text)) { append(stringResource(lead)) }
+                        append(" "); append(stringResource(rest))
+                    },
+                    color = colors.body, fontSize = 15.sp, lineHeight = 23.sp
+                )
+            }
+        }
+    }
+    TintedCard {
+        Kicker(stringResource(R.string.about_why_caps), accent = true)
+        Text(
+            buildAnnotatedString {
+                append(stringResource(R.string.wordmark_name))
+                withStyle(SpanStyle(color = colors.accent, fontWeight = FontWeight.Bold)) { append(stringResource(R.string.wordmark_stop)) }
+            },
+            fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 24.sp, color = colors.text, modifier = Modifier.padding(top = 8.dp)
+        )
+        Text(stringResource(R.string.about_why_body), color = colors.body, fontSize = 15.sp, lineHeight = 23.sp, modifier = Modifier.padding(top = 6.dp))
+    }
+}
+
+@Composable
+private fun WhyIBuiltIt() {
+    val colors = CircleTheme.colors
+    TintedCard {
+        Text("“", fontFamily = Display, fontSize = 64.sp, lineHeight = 64.sp, color = colors.accent.copy(alpha = 0.55f))
+        listOf(R.string.why_p1, R.string.why_p2, R.string.why_p3).forEach {
+            Text(
+                stringResource(it), fontFamily = Display, fontSize = 17.5.sp, lineHeight = 27.sp, color = colors.text,
+                modifier = Modifier.padding(bottom = 14.dp)
+            )
+        }
+        Box(Modifier.size(36.dp, 2.dp).background(colors.accent))
+        Text(
+            stringResource(R.string.why_signature), fontFamily = Display, fontStyle = FontStyle.Italic, fontSize = 20.sp,
+            color = colors.accent, modifier = Modifier.padding(top = 10.dp)
+        )
+    }
 }
 
 @Composable

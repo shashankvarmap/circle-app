@@ -50,6 +50,7 @@ object Routes {
     }
 
     const val NEW_CHAT = "new_chat"
+    const val NOTIFICATION_SETTINGS = "settings/notifications"
     const val CHAT_VIEWER = "chatviewer/{chatId}/{messageId}"
     fun chatViewer(chatId: String, messageId: String) = "chatviewer/$chatId/$messageId"
     const val VIEWER = "viewer/{noteId}?index={index}"
@@ -103,6 +104,7 @@ fun CircleNavGraph(
             ComposePostScreen(navController, entry.arguments?.getString("quote"), entry.arguments?.getString("group"), entry.arguments?.getString("edit"))
         }
         composable(Routes.NEW_CHAT) { NewChatScreen(navController) }
+        composable(Routes.NOTIFICATION_SETTINGS) { NotificationSettingsScreen(navController) }
         composable(Routes.CHAT_VIEWER) { entry ->
             ChatMediaViewerScreen(navController, entry.arguments?.getString("chatId").orEmpty(), entry.arguments?.getString("messageId").orEmpty())
         }

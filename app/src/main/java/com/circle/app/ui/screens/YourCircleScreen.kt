@@ -43,6 +43,8 @@ import com.circle.app.data.repo.CircleRepository
 import com.circle.app.data.repo.CircleSummary
 import com.circle.app.data.repo.FriendView
 import com.circle.app.ui.components.MeAvatar
+import com.circle.app.ui.components.EmptyState
+import com.circle.app.ui.components.EmptyKind
 import com.circle.app.ui.vm.RepoViewModel
 import com.circle.app.ui.vm.circleViewModel
 import com.circle.app.ui.a11y.rememberReduceMotion
@@ -137,6 +139,15 @@ fun YourCircleScreen(nav: NavHostController) {
             item(key = "toggle") {
                 Box(Modifier.fillMaxWidth().padding(top = 10.dp, end = 14.dp), contentAlignment = Alignment.CenterEnd) {
                     MapListToggle(showMap, { showMap = it })
+                }
+            }
+            if (showMap && friends.isNotEmpty() && friends.none { it.isInner }) {
+                item(key = "no-inner") {
+                    EmptyState(
+                        EmptyKind.YOUR_CIRCLE,
+                        action = androidx.compose.ui.res.stringResource(com.circle.app.R.string.empty_circle_action),
+                        onAction = { showMap = false }
+                    )
                 }
             }
             if (showMap && selected != null) {

@@ -20,6 +20,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /** Failed actions, app-wide. The root shows each one as a short message, so no tap fails silently. */
@@ -31,8 +34,28 @@ object UiMessages {
     }
 }
 
+/** A list that loads from the network: loading (skeleton), ready, or failed (error state with Try again). */
+sealed interface Load<out T> {
+    data object Loading : Load<Nothing>
+    data class Ready<T>(val value: T) : Load<T>
+    data object Failed : Load<Nothing>
+}
+
 /** Base for screen ViewModels: they read the repository as state and run its actions. */
 abstract class RepoViewModel(protected val repo: CircleRepository) : ViewModel() {
+
+    private val retries = kotlinx.coroutines.flow.MutableStateFlow(0)
+
+    /** Try again after a failure: every [load]ed list re-subscribes. */
+    fun retry() { retries.value++ }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    protected fun <T> Flow<T>.load(): StateFlow<Load<T>> {
+        val source = this
+        return retries.flatMapLatest {
+            source.map<T, Load<T>> { Load.Ready(it) }.catch { emit(Load.Failed) }
+        }.state(Load.Loading)
+    }
 
     protected fun <T> Flow<T>.state(initial: T): StateFlow<T> =
         stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initial)
