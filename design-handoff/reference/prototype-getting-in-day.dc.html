@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Getting in</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; outline: none; padding: 0; color: inherit; }
+a { text-decoration: none; color: inherit; }
+::-webkit-scrollbar { width: 0; height: 0; }
+
+</style>
+</helmet>
+<div style="width:390px;height:844px;background:#F3EDE2;color:#1F1B16;font-family:'Public Sans',sans-serif;display:flex;flex-direction:column;overflow:hidden;position:relative;">
+  <div style="flex-grow:1;position:relative;overflow:hidden;min-height:0;">
+<sc-if value="{{isWelcome}}" hint-placeholder-val="{{true}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+<div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 28px;position:relative;">
+  <svg width="300" height="300" viewBox="0 0 300 300" style="position:absolute;top:70px;pointer-events:none;"><circle cx="150" cy="150" r="140" fill="none" stroke="#D9CFBD" stroke-width="1.4" stroke-dasharray="2 8" stroke-linecap="round"/><circle cx="150" cy="150" r="92" fill="none" stroke="#D9CFBD" stroke-width="1.2"/></svg>
+  <div style="font-family:Fraunces,serif;font-size:58px;font-weight:600;letter-spacing:-.03em;line-height:1;position:relative;">Circle<span style="color:#B5482A;">.</span></div>
+  <div style="font-family:Fraunces,serif;font-style:italic;font-size:18px;line-height:1.35;color:#6B6256;text-align:center;margin-top:14px;position:relative;max-width:270px;">A small place for the people you actually know.</div>
+  <div style="font-size:14px;color:#6B6256;text-align:center;margin-top:10px;position:relative;">See what your friends are up to.</div>
+</div>
+<div style="flex-shrink:0;padding:0 24px 30px;display:flex;flex-direction:column;gap:10px;"><button onClick="{{toSignup}}" style="width:100%;padding:15px 0;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:15px;font-weight:700;">Create account</button><button onClick="{{toLogin}}" style="width:100%;padding:14px 0;border-radius:999px;border:1.5px solid #D9CFBD;font-size:15px;font-weight:600;">Log in</button>
+  <div style="text-align:center;font-size:11.5px;color:#6B6256;line-height:1.5;margin-top:6px;">By continuing you agree to the <button onClick="{{openLegal}}" style="color:#1F1B16;text-decoration:underline;font-size:11.5px;">Terms and Privacy Policy</button>.</div></div>
+</div>
+</sc-if>
+<sc-if value="{{isPhone}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+<div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:38px 16px 8px;min-height:72px;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:21px;font-weight:600;"></div></div><div style="flex-grow:1;padding:6px 24px 0;position:relative;">
+  <div style="font-family:Fraunces,serif;font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.15;">What's your number?</div>
+  <div style="font-size:13.5px;line-height:1.5;color:#6B6256;margin-top:8px;">Type your country code and your number. We'll text you a code. We never share your number. We only use it to find your friends, and only if you allow it.</div>
+  <div style="display:flex;gap:10px;margin-top:22px;align-items:center;">
+    <div style="display:flex;align-items:center;width:92px;height:50px;border-radius:12px;border:1px solid #D9CFBD;background:#FAF6EE;padding:0 10px 0 14px;flex-shrink:0;box-sizing:border-box;"><span style="font-size:15px;font-weight:700;color:#6B6256;">+</span><input type="text" inputmode="numeric" aria-label="Country code" value="{{cc}}" onChange="{{onCc}}" style="width:100%;border:none;outline:none;background:transparent;color:#1F1B16;font-size:15px;font-weight:700;padding:0 0 0 2px;"/></div>
+    <input type="text" inputmode="numeric" placeholder="Your number" value="{{phone}}" onChange="{{onPhone}}" style="height:50px;border-radius:12px;border:1px solid #D9CFBD;background:#FAF6EE;color:#1F1B16;padding:0 14px;font-size:15px;outline:none;width:100%;box-sizing:border-box;"/></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;"><span style="font-size:12.5px;font-weight:600;color:{{ccColor}};">{{ccName}}</span><button onClick="{{openCc}}" style="font-size:12.5px;font-weight:700;color:#B5482A;">Choose from a list</button></div>
+  <button onClick="{{emailAlt}}" style="margin-top:16px;font-size:13px;font-weight:600;color:#B5482A;">Use email instead</button>
+  <sc-if value="{{ccOpen}}" hint-placeholder-val="{{false}}">
+    <button aria-label="Close" onClick="{{closeCc}}" style="position:absolute;left:-24px;top:-72px;width:390px;height:844px;background:rgba(0,0,0,0.42);z-index:20;"></button>
+    <div style="position:absolute;left:-24px;bottom:-60px;width:390px;height:520px;background:#FAF6EE;border-radius:22px 22px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,0.3);z-index:21;padding:12px 16px 0;box-sizing:border-box;display:flex;flex-direction:column;">
+      <div style="width:40px;height:4px;border-radius:2px;background:#D9CFBD;margin:0 auto 12px;"></div>
+      <div style="font-family:Fraunces,serif;font-size:21px;font-weight:600;margin-bottom:10px;">Choose your country</div>
+      <input type="text" placeholder="Search" value="{{ccQ}}" onChange="{{onCcQ}}" style="height:50px;border-radius:12px;border:1px solid #D9CFBD;background:#FAF6EE;color:#1F1B16;padding:0 14px;font-size:15px;outline:none;width:100%;box-sizing:border-box;"/>
+      <div style="flex-grow:1;overflow-y:auto;min-height:0;margin-top:8px;">
+        <sc-for list="{{ccList}}" as="k" hint-placeholder-count="8"><button onClick="{{k.pick}}" style="width:100%;display:flex;align-items:center;padding:13px 4px;text-align:left;border-bottom:1px solid #D9CFBD;"><span style="flex-grow:1;font-size:14.5px;font-weight:600;">{{k.name}}</span><span style="font-size:13.5px;color:#6B6256;font-weight:600;">{{k.code}}</span></button></sc-for>
+      </div>
+    </div>
+  </sc-if>
+</div>
+<div style="flex-shrink:0;padding:0 24px 30px;"><button onClick="{{sendCode}}" style="width:100%;padding:15px 0;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:15px;font-weight:700;opacity:{{sendO}};">Send code</button></div>
+</div>
+</sc-if>
+<sc-if value="{{isCode}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+<div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:38px 16px 8px;min-height:72px;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:21px;font-weight:600;"></div></div><div style="flex-grow:1;padding:6px 24px 0;">
+  <div style="font-family:Fraunces,serif;font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.15;">Enter the code</div>
+  <div style="font-size:13.5px;line-height:1.5;color:#6B6256;margin-top:8px;">We sent a 6-digit code to <span style="color:#1F1B16;font-weight:600;">{{phoneShown}}</span>. In this prototype any 6 digits work.</div>
+  <div style="position:relative;margin-top:24px;">
+    <div style="display:flex;gap:9px;">
+      <sc-for list="{{boxes}}" as="b" hint-placeholder-count="6"><span style="flex:1;height:58px;border-radius:12px;border:{{b.bw}} solid {{b.bd}};background:#FAF6EE;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;">{{b.d}}</span></sc-for>
+    </div>
+    <input type="text" inputmode="numeric" aria-label="Code" value="{{code}}" onChange="{{onCode}}" style="position:absolute;left:0;top:0;width:100%;height:58px;opacity:0.02;font-size:20px;"/>
+  </div>
+  <button onClick="{{resend}}" style="margin-top:18px;font-size:13px;font-weight:600;color:#B5482A;">Send a new code</button>
+</div>
+<div style="flex-shrink:0;padding:0 24px 30px;"><button onClick="{{verify}}" style="width:100%;padding:15px 0;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:15px;font-weight:700;opacity:{{verO}};">Verify</button></div>
+</div>
+</sc-if>
+<sc-if value="{{isProfile}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+<div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:38px 16px 8px;min-height:72px;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:21px;font-weight:600;">Set up your profile</div></div><div style="flex-grow:1;overflow-y:auto;min-height:0;padding:6px 24px 0;">
+  <div style="display:flex;align-items:center;gap:16px;">
+    <span style="width:84px;height:84px;border-radius:50%;background:{{photoBg}};color:#F1F0EC;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700;flex-shrink:0;">{{initial}}</span>
+    <button onClick="{{togglePhoto}}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;border:1.5px solid #B5482A;color:#B5482A;font-size:13.5px;font-weight:700;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3v11H4V8Z"/><circle cx="12" cy="13" r="3.4"/></svg>{{photoLabel}}</button>
+  </div>
+  <div style="font-size:11px;font-weight:700;letter-spacing:.12em;color:#6B6256;margin:20px 0 6px;">NAME</div>
+  <input type="text" placeholder="Your name" value="{{name}}" onChange="{{onName}}" style="height:50px;border-radius:12px;border:1px solid #D9CFBD;background:#FAF6EE;color:#1F1B16;padding:0 14px;font-size:15px;outline:none;width:100%;box-sizing:border-box;"/>
+  <div style="font-size:11px;font-weight:700;letter-spacing:.12em;color:#6B6256;margin:16px 0 6px;">HANDLE</div>
+  <input type="text" placeholder="@yourhandle" value="{{handle}}" onChange="{{onHandle}}" style="height:50px;border-radius:12px;border:1px solid #D9CFBD;background:#FAF6EE;color:#1F1B16;padding:0 14px;font-size:15px;outline:none;width:100%;box-sizing:border-box;"/>
+  <div style="font-size:12px;margin-top:6px;color:{{handleColor}};">{{handleMsg}}</div>
+  <div style="display:flex;justify-content:space-between;margin:16px 0 6px;"><span style="font-size:11px;font-weight:700;letter-spacing:.12em;color:#6B6256;">PINNED THOUGHT (OPTIONAL)</span><span style="font-size:11px;color:#6B6256;">{{pinnedCount}}</span></div>
+  <input type="text" placeholder="One line about you" value="{{pinned}}" onChange="{{onPinned}}" style="height:50px;border-radius:12px;border:1px solid #D9CFBD;background:#FAF6EE;color:#1F1B16;padding:0 14px;font-size:15px;outline:none;width:100%;box-sizing:border-box;"/>
+  <div style="font-size:12px;line-height:1.5;color:#6B6256;margin-top:8px;">This and your photo are the only things people who aren't your friends can see.</div>
+</div>
+<div style="flex-shrink:0;padding:10px 24px 30px;"><button onClick="{{toAge}}" style="width:100%;padding:15px 0;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:15px;font-weight:700;opacity:{{profO}};">Continue</button></div>
+</div>
+</sc-if>
+<sc-if value="{{isAge}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+<div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:38px 16px 8px;min-height:72px;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:21px;font-weight:600;">One quick thing</div></div><div style="flex-grow:1;overflow-y:auto;min-height:0;padding:6px 24px 0;">
+  <div style="font-size:13.5px;line-height:1.5;color:#6B6256;">Circle is for people 18 and over. Your date of birth is used only to check this, and isn't shown to anyone.</div>
+  <div style="font-size:11px;font-weight:700;letter-spacing:.12em;color:#6B6256;margin:20px 0 6px;">DATE OF BIRTH</div>
+  <div style="display:flex;gap:10px;">
+    <input type="text" inputmode="numeric" placeholder="DD" value="{{dd}}" onChange="{{onDd}}" style="height:50px;border-radius:12px;border:1px solid #D9CFBD;background:#FAF6EE;color:#1F1B16;padding:0 14px;font-size:15px;outline:none;width:100%;box-sizing:border-box;text-align:center;"/>
+    <input type="text" inputmode="numeric" placeholder="MM" value="{{mm}}" onChange="{{onMm}}" style="height:50px;border-radius:12px;border:1px solid #D9CFBD;background:#FAF6EE;color:#1F1B16;padding:0 14px;font-size:15px;outline:none;width:100%;box-sizing:border-box;text-align:center;"/>
+    <input type="text" inputmode="numeric" placeholder="YYYY" value="{{yy}}" onChange="{{onYy}}" style="height:50px;border-radius:12px;border:1px solid #D9CFBD;background:#FAF6EE;color:#1F1B16;padding:0 14px;font-size:15px;outline:none;width:100%;box-sizing:border-box;text-align:center;flex:1.6;"/>
+  </div>
+  <sc-if value="{{tooYoung}}" hint-placeholder-val="{{false}}"><div style="margin-top:14px;padding:14px;border-radius:12px;border:1.5px solid #B5482A;font-size:13px;line-height:1.5;">Sorry, Circle is for people 18 and over, so we can't create your account.</div></sc-if>
+  <button onClick="{{toggleAgree}}" style="margin-top:22px;width:100%;display:flex;gap:12px;align-items:flex-start;text-align:left;">
+    <span style="width:24px;height:24px;border-radius:7px;border:1.5px solid {{agreeBd}};background:{{agreeBg}};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFF8F0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span>
+    <span style="font-size:13.5px;line-height:1.5;">I agree to the Terms and the Privacy Policy.</span></button>
+  <button onClick="{{openLegal}}" style="margin:8px 0 0 36px;font-size:12.5px;font-weight:600;color:#B5482A;">Read the short version</button>
+</div>
+<div style="flex-shrink:0;padding:10px 24px 30px;"><button onClick="{{createAccount}}" style="width:100%;padding:15px 0;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:15px;font-weight:700;opacity:{{createO}};">Create account</button></div>
+</div>
+</sc-if>
+<sc-if value="{{isFind}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+<div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:38px 16px 8px;min-height:72px;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:21px;font-weight:600;">Find your friends</div></div><div style="flex-grow:1;padding:10px 24px 0;display:flex;flex-direction:column;align-items:center;text-align:center;">
+  <div style="margin-top:14px;"><svg width="140" height="140" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#D9CFBD" stroke-width="1.6" stroke-dasharray="2 7" stroke-linecap="round"/><circle cx="60" cy="60" r="31" fill="#FAF6EE" stroke="#D9CFBD" stroke-width="1.4"/><circle cx="60" cy="8" r="5.5" fill="#B5482A"/><svg x="46" y="46" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.3" r="3.4"/><path d="M5.2 20c0-4 3-6.6 6.8-6.6s6.8 2.6 6.8 6.6"/></svg></svg></div>
+  <div style="font-family:Fraunces,serif;font-size:26px;font-weight:600;letter-spacing:-.015em;line-height:1.2;margin-top:20px;">See who's already here</div>
+  <div style="font-size:13.5px;line-height:1.55;color:#6B6256;margin-top:10px;">Circle can find friends by comparing scrambled versions of the phone numbers in your contacts. It doesn't keep them and never shows them to anyone. You can skip this and add friends one by one.</div>
+</div>
+<div style="flex-shrink:0;padding:0 24px 30px;display:flex;flex-direction:column;gap:8px;"><button onClick="{{connect}}" style="width:100%;padding:15px 0;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:15px;font-weight:700;">Connect contacts</button><button onClick="{{skipFind}}" style="padding:12px 0;font-size:14px;font-weight:600;color:#6B6256;">Skip for now</button></div>
+</div>
+</sc-if>
+<sc-if value="{{isHomeEmpty}}" hint-placeholder-val="{{true}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+<div style="flex-shrink:0;text-align:center;padding:38px 0 6px;"><div style="font-size:9.5px;font-weight:700;letter-spacing:.2em;color:#6B6256;">FRIDAY &middot; 9 OCTOBER</div><div style="font-family:Fraunces,serif;font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.15;">Circle<span style="color:#B5482A;">.</span></div></div>
+<div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px 40px;text-align:center;">
+  <svg width="130" height="130" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#D9CFBD" stroke-width="1.6" stroke-dasharray="2 7" stroke-linecap="round"/><circle cx="60" cy="60" r="31" fill="#FAF6EE" stroke="#D9CFBD" stroke-width="1.4"/><circle cx="60" cy="8" r="5.5" fill="#B5482A"/><svg x="46" y="46" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/></svg></svg>
+  <div style="font-family:Fraunces,serif;font-size:26px;font-weight:600;letter-spacing:-.015em;margin-top:18px;">Your circle is empty</div>
+  <div style="font-size:14px;line-height:1.55;color:#6B6256;margin-top:8px;">Circle works with friends. Add your first one, or invite someone.</div>
+  <div style="width:100%;margin-top:22px;display:flex;flex-direction:column;gap:10px;"><button onClick="{{findFriends}}" style="width:100%;padding:15px 0;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:15px;font-weight:700;">Find friends</button><button onClick="{{openInvite}}" style="width:100%;padding:14px 0;border-radius:999px;border:1.5px solid #D9CFBD;font-size:15px;font-weight:600;">Invite a friend</button></div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{isSettings}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+<div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:38px 16px 8px;min-height:72px;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:21px;font-weight:600;">Settings</div></div><div style="flex-grow:1;overflow-y:auto;min-height:0;">
+  <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#6B6256;padding:14px 16px 6px;">ACCOUNT</div>
+  <div style="background:#FAF6EE;border-top:1px solid #D9CFBD;">
+    <button onClick="{{goData}}" style="width:100%;display:flex;align-items:center;padding:15px 16px;text-align:left;border-bottom:1px solid #D9CFBD;min-height:56px;"><span style="flex-grow:1;font-size:14.5px;font-weight:600;">Your data</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6256" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+    <button onClick="{{goMembership}}" style="width:100%;display:flex;align-items:center;padding:15px 16px;text-align:left;border-bottom:1px solid #D9CFBD;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Membership</span><span style="display:block;font-size:11.5px;color:#6B6256;margin-top:1px;">Keeps Circle running</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6256" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+  </div>
+  <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#6B6256;padding:18px 16px 6px;">ABOUT</div>
+  <div style="background:#FAF6EE;border-top:1px solid #D9CFBD;">
+    <button onClick="{{goLegal}}" style="width:100%;display:flex;align-items:center;padding:15px 16px;text-align:left;border-bottom:1px solid #D9CFBD;min-height:56px;"><span style="flex-grow:1;font-size:14.5px;font-weight:600;">Terms, privacy and company info</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6256" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+    <button onClick="{{goEmpties}}" style="width:100%;display:flex;align-items:center;padding:15px 16px;text-align:left;border-bottom:1px solid #D9CFBD;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Empty and error states</span><span style="display:block;font-size:11.5px;color:#6B6256;margin-top:1px;">Design review only. Not a real setting.</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6256" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+  </div>
+  <div style="margin:22px 16px 0;"><button onClick="{{logout}}" style="width:100%;padding:13px 0;border-radius:999px;border:1px solid #D9CFBD;font-size:14px;font-weight:600;">Log out</button></div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{isMembership}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+<div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:38px 16px 8px;min-height:72px;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:21px;font-weight:600;">Membership</div></div><div style="flex-grow:1;overflow-y:auto;min-height:0;padding:8px 16px 20px;">
+  <div style="padding:20px 18px;border-radius:18px;background:#B5482A14;border:1px solid #B5482A4D;">
+    <div style="font-size:10px;font-weight:700;letter-spacing:.18em;color:#B5482A;">MEMBERSHIP</div>
+    <div style="font-family:Fraunces,serif;font-size:24px;font-weight:600;line-height:1.2;letter-spacing:-.015em;margin-top:8px;">Circle is for you and your friends. A small membership keeps it that way.
+  </div>
+  </div>
+  <sc-if value="{{memberOff}}" hint-placeholder-val="{{true}}">
+  <div style="display:flex;gap:10px;margin-top:18px;">
+    <button onClick="{{pickM}}" style="flex:1;padding:16px 12px;border-radius:16px;border:1.5px solid {{pmBd}};background:{{pmBg}};text-align:left;"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:#6B6256;">MONTHLY</div><div style="font-family:Fraunces,serif;font-size:26px;font-weight:600;margin-top:6px;">&euro;1</div><div style="font-size:12px;color:#6B6256;">a month</div></button>
+    <button onClick="{{pickY}}" style="flex:1;padding:16px 12px;border-radius:16px;border:1.5px solid {{pyBd}};background:{{pyBg}};text-align:left;"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:#B5482A;">YEARLY</div><div style="font-family:Fraunces,serif;font-size:26px;font-weight:600;margin-top:6px;">&euro;12</div><div style="font-size:12px;color:#6B6256;">a year, just &euro;1 a month</div></button>
+  </div>
+  <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#6B6256;padding:22px 2px 4px;">WHAT IT PAYS FOR</div>
+  <div style="display:flex;gap:12px;padding:10px 2px;border-bottom:1px solid #D9CFBD;"><span style="width:7px;height:7px;border-radius:50%;background:#B5482A;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">Servers and storage.</span> <span style="color:#2B2620;">So your friends' notes and photos are always there when you open Circle.</span></div></div>
+  <div style="display:flex;gap:12px;padding:10px 2px;"><span style="width:7px;height:7px;border-radius:50%;background:#B5482A;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">Safety and support.</span> <span style="color:#2B2620;">Reports, blocking and a real person to write to.</span></div></div>
+  <div style="margin-top:20px;"><button onClick="{{startMember}}" style="width:100%;padding:15px 0;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:15px;font-weight:700;">{{{{ctaLabel}}}}</button></div>
+  <div style="font-size:11.5px;line-height:1.5;color:#6B6256;text-align:center;margin-top:10px;">Circle runs on memberships, so there are no ads. Billed through Google Play in your own currency. Cancel any time in the Play Store. Placeholder design: the real prices, any trial and the tax wording need checking.</div>
+  </sc-if>
+  <sc-if value="{{memberOn}}" hint-placeholder-val="{{false}}"><div style="margin-top:18px;padding:18px;border-radius:16px;border:1px solid #D9CFBD;background:#FAF6EE;text-align:center;"><div style="font-family:Fraunces,serif;font-size:22px;font-weight:600;color:#B5482A;">You're a member.</div><div style="font-size:13.5px;line-height:1.5;color:#6B6256;margin-top:6px;">Thank you. Circle is yours and your friends'.</div></div><div style="text-align:center;font-size:13px;font-weight:600;color:#B5482A;margin-top:14px;">Manage in Google Play</div></sc-if>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{isData}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+<div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:38px 16px 8px;min-height:72px;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:21px;font-weight:600;">Your data</div></div><div style="flex-grow:1;overflow-y:auto;min-height:0;padding:8px 16px 20px;">
+  <div style="padding:16px;border-radius:16px;background:#FAF6EE;border:1px solid #D9CFBD;box-shadow:0 6px 16px rgba(60,40,20,0.10);">
+    <div style="font-size:15px;font-weight:700;">Download my data</div>
+    <div style="font-size:13px;line-height:1.5;color:#6B6256;margin-top:4px;">A copy of what you've put into Circle: your profile, notes, photos, chats and friends. We prepare it automatically. Nobody at Circle opens it.</div>
+    <sc-if value="{{dataNotReq}}" hint-placeholder-val="{{true}}"><button onClick="{{reqData}}" style="margin-top:12px;padding:11px 20px;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:13.5px;font-weight:700;">Request a download</button></sc-if>
+    <sc-if value="{{dataReq}}" hint-placeholder-val="{{false}}"><div style="margin-top:12px;font-size:13px;font-weight:700;color:#B5482A;">Requested. When it's ready we'll tell you, and you download it here in the app. It's only for you, and it expires after 7 days.</div></sc-if>
+  </div>
+  <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#6B6256;padding:22px 2px 6px;">DANGER ZONE</div>
+  <button onClick="{{goDelete}}" style="width:100%;display:flex;align-items:center;padding:15px 16px;text-align:left;border-radius:16px;border:1.5px solid #D9CFBD;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:700;color:#B5482A;">Delete my account</span><span style="display:block;font-size:11.5px;color:#6B6256;margin-top:1px;">Permanently removes everything</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6256" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{isDelete}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+<div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:38px 16px 8px;min-height:72px;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:21px;font-weight:600;">Delete account</div></div><div style="flex-grow:1;overflow-y:auto;min-height:0;padding:8px 16px 20px;">
+  <div style="padding:16px;border-radius:16px;border:1.5px solid #B5482A;"><div style="font-size:15px;font-weight:700;">This can't be undone.</div><div style="font-size:13.5px;line-height:1.55;color:#2B2620;margin-top:6px;">It permanently removes your profile, your notes and photos, your chats, and your place in groups and events. Backups are cleared within 30 days. Your friends aren't told why.</div></div>
+  <div style="font-size:12.5px;line-height:1.5;color:#6B6256;margin-top:12px;">If you have a membership, cancel it in Google Play first.</div>
+  <div style="font-size:11px;font-weight:700;letter-spacing:.12em;color:#6B6256;margin:20px 0 6px;">TYPE DELETE TO CONFIRM</div>
+  <input type="text" placeholder="DELETE" value="{{delText}}" onChange="{{onDel}}" style="height:50px;border-radius:12px;border:1px solid #D9CFBD;background:#FAF6EE;color:#1F1B16;padding:0 14px;font-size:15px;outline:none;width:100%;box-sizing:border-box;"/>
+</div>
+<div style="flex-shrink:0;padding:10px 16px 30px;"><button onClick="{{doDelete}}" style="width:100%;padding:15px 0;border-radius:999px;background:#B5482A;color:#FFFFFF;font-size:15px;font-weight:700;opacity:{{delO}};">Delete my account</button></div>
+</div>
+</sc-if>
+<sc-if value="{{isDeleted}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+<div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px;text-align:center;"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#D9CFBD" stroke-width="1.6" stroke-dasharray="2 7" stroke-linecap="round"/><circle cx="60" cy="60" r="31" fill="#FAF6EE" stroke="#D9CFBD" stroke-width="1.4"/><circle cx="60" cy="8" r="5.5" fill="#B5482A"/><svg x="46" y="46" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></svg><div style="font-family:Fraunces,serif;font-size:26px;font-weight:600;margin-top:18px;">Your account is deleted.</div><div style="font-size:14px;line-height:1.55;color:#6B6256;margin-top:8px;">Thank you for being here. You're welcome back any time.</div></div><div style="flex-shrink:0;padding:0 24px 30px;"><button onClick="{{restart}}" style="width:100%;padding:14px 0;border-radius:999px;border:1.5px solid #D9CFBD;font-size:15px;font-weight:600;">Back to the start</button></div>
+</div>
+</sc-if>
+<sc-if value="{{isLegal}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+<div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:38px 16px 8px;min-height:72px;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:21px;font-weight:600;">Terms, privacy, company</div></div><div style="flex-shrink:0;display:flex;gap:22px;padding:2px 16px 0;">
+  <button onClick="{{lt0}}" style="padding:6px 1px 8px;border-bottom:1.5px solid {{lt0Line}};font-size:13.5px;font-weight:600;color:{{lt0Col}};">Terms</button>
+  <button onClick="{{lt1}}" style="padding:6px 1px 8px;border-bottom:1.5px solid {{lt1Line}};font-size:13.5px;font-weight:600;color:{{lt1Col}};">Privacy</button>
+  <button onClick="{{lt2}}" style="padding:6px 1px 8px;border-bottom:1.5px solid {{lt2Line}};font-size:13.5px;font-weight:600;color:{{lt2Col}};">Company</button></div>
+<div style="flex-grow:1;overflow-y:auto;min-height:0;padding:12px 16px 24px;">
+  <div style="padding:10px 12px;border-radius:12px;background:#B5482A14;border:1px solid #B5482A4D;font-size:11.5px;line-height:1.5;color:#2B2620;">Placeholder text for design. It is not legal advice. A lawyer has to write the real documents before launch.</div>
+  <sc-if value="{{ltTerms}}" hint-placeholder-val="{{true}}"><div style="font-size:10px;font-weight:700;letter-spacing:.18em;color:#B5482A;margin:18px 2px 2px;">THE SHORT VERSION</div><div style="display:flex;gap:12px;padding:11px 2px;border-bottom:1px solid #D9CFBD;"><span style="width:7px;height:7px;border-radius:50%;background:#B5482A;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">Be kind.</span> <span style="color:#2B2620;">No harassment, hate, threats, or anything that exploits or sexualises minors.</span></div></div><div style="display:flex;gap:12px;padding:11px 2px;border-bottom:1px solid #D9CFBD;"><span style="width:7px;height:7px;border-radius:50%;background:#B5482A;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">Be yourself.</span> <span style="color:#2B2620;">One account per person, with your own details.</span></div></div><div style="display:flex;gap:12px;padding:11px 2px;border-bottom:1px solid #D9CFBD;"><span style="width:7px;height:7px;border-radius:50%;background:#B5482A;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">Your notes are yours.</span> <span style="color:#2B2620;">You let Circle show them to the people you choose.</span></div></div><div style="display:flex;gap:12px;padding:11px 2px;border-bottom:1px solid #D9CFBD;"><span style="width:7px;height:7px;border-radius:50%;background:#B5482A;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">We can remove content</span> <span style="color:#2B2620;">that breaks these rules, and accounts that keep breaking them.</span></div></div><div style="display:flex;gap:12px;padding:11px 2px;border-bottom:1px solid #D9CFBD;"><span style="width:7px;height:7px;border-radius:50%;background:#B5482A;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">Membership.</span> <span style="color:#2B2620;">About €1 a month. You can cancel any time in Google Play.</span></div></div><div style="font-size:12px;color:#6B6256;margin-top:12px;">Full terms: to be written.</div></sc-if>
+  <sc-if value="{{ltPriv}}" hint-placeholder-val="{{false}}"><div style="font-size:10px;font-weight:700;letter-spacing:.18em;color:#B5482A;margin:18px 2px 2px;">THE SHORT VERSION</div><div style="display:flex;gap:12px;padding:11px 2px;border-bottom:1px solid #D9CFBD;"><span style="width:7px;height:7px;border-radius:50%;background:#B5482A;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">What we store:</span> <span style="color:#2B2620;">your number, name, handle, photo, notes, messages and who your friends are. Circle can't work without them.</span></div></div><div style="display:flex;gap:12px;padding:11px 2px;border-bottom:1px solid #D9CFBD;"><span style="width:7px;height:7px;border-radius:50%;background:#B5482A;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">Who can read it:</span> <span style="color:#2B2620;">only the people you've shared it with. Nobody at Circle browses your notes or chats. We look at something only if it's reported or the law requires it, and we record every time.</span></div></div><div style="display:flex;gap:12px;padding:11px 2px;border-bottom:1px solid #D9CFBD;"><span style="width:7px;height:7px;border-radius:50%;background:#B5482A;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">What we never do:</span> <span style="color:#2B2620;">sell your data, show ads, or build an advertising profile of you.</span></div></div><div style="display:flex;gap:12px;padding:11px 2px;border-bottom:1px solid #D9CFBD;"><span style="width:7px;height:7px;border-radius:50%;background:#B5482A;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">Companies that help us:</span> <span style="color:#2B2620;">a few providers run parts of Circle for us, like servers and text messages. They can only use your data to do that job.</span></div></div><div style="display:flex;gap:12px;padding:11px 2px;border-bottom:1px solid #D9CFBD;"><span style="width:7px;height:7px;border-radius:50%;background:#B5482A;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">Your rights:</span> <span style="color:#2B2620;">see it, fix it, download it, or delete it, in Settings, Your data.</span></div></div><div style="font-size:12px;color:#6B6256;margin-top:12px;">Contact for privacy questions: to be added. Full policy: to be written.</div></sc-if>
+  <sc-if value="{{ltImp}}" hint-placeholder-val="{{false}}"><div style="font-size:10px;font-weight:700;letter-spacing:.18em;color:#B5482A;margin:18px 2px 8px;">PROVIDER</div><div style="padding:14px 16px;border-radius:14px;background:#FAF6EE;border:1px solid #D9CFBD;font-size:14px;line-height:1.7;color:#2B2620;">[Full name]<br>[Street and number]<br>[Postcode and city], [Country]<br>[Email address]</div><div style="font-size:12px;line-height:1.5;color:#6B6256;margin-top:12px;">Who runs Circle and how to reach them. Some countries, including Germany where the provider is based, require specific details here. A lawyer will confirm what has to be on this page.</div></sc-if>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{isEmpties}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+<div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:38px 16px 8px;min-height:72px;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F1B16" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:21px;font-weight:600;">Empty and error states</div></div><div style="flex-shrink:0;overflow-x:auto;white-space:nowrap;padding:2px 16px 8px;">
+  <sc-for list="{{empChips}}" as="c" hint-placeholder-count="9"><button onClick="{{c.tap}}" style="display:inline-block;margin-right:8px;padding:8px 14px;border-radius:999px;background:{{c.bg}};color:{{c.fg}};border:1.5px solid {{c.bd}};font-size:12.5px;font-weight:700;">{{c.label}}</button></sc-for></div>
+<div style="flex-grow:1;display:flex;align-items:center;justify-content:center;padding-bottom:60px;"><sc-if value="{{e0}}" hint-placeholder-val="{{true}}"><div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px;"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#D9CFBD" stroke-width="1.6" stroke-dasharray="2 7" stroke-linecap="round"/><circle cx="60" cy="60" r="31" fill="#FAF6EE" stroke="#D9CFBD" stroke-width="1.4"/><circle cx="60" cy="8" r="5.5" fill="#B5482A"/><svg x="46" y="46" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/></svg></svg><div style="font-family:Fraunces,serif;font-size:24px;font-weight:600;letter-spacing:-.015em;margin-top:16px;">Your circle is empty</div><div style="font-size:14px;line-height:1.55;color:#6B6256;margin-top:7px;max-width:270px;">Circle works with friends. Add your first one, or invite someone.</div><button onClick="{{emptyAct}}" style="margin-top:20px;padding:13px 28px;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:14px;font-weight:700;">Find friends</button></div></sc-if><sc-if value="{{e1}}" hint-placeholder-val="{{false}}"><div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px;"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#D9CFBD" stroke-width="1.6" stroke-dasharray="2 7" stroke-linecap="round"/><circle cx="60" cy="60" r="31" fill="#FAF6EE" stroke="#D9CFBD" stroke-width="1.4"/><circle cx="60" cy="8" r="5.5" fill="#B5482A"/><svg x="46" y="46" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 5 18 7-18 7 4-7-4-7Z"/></svg></svg><div style="font-family:Fraunces,serif;font-size:24px;font-weight:600;letter-spacing:-.015em;margin-top:16px;">No chats yet</div><div style="font-size:14px;line-height:1.55;color:#6B6256;margin-top:7px;max-width:270px;">Start one with a friend. Only friends can message you.</div><button onClick="{{emptyAct}}" style="margin-top:20px;padding:13px 28px;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:14px;font-weight:700;">Start a chat</button></div></sc-if><sc-if value="{{e2}}" hint-placeholder-val="{{false}}"><div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px;"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#D9CFBD" stroke-width="1.6" stroke-dasharray="2 7" stroke-linecap="round"/><circle cx="60" cy="60" r="31" fill="#FAF6EE" stroke="#D9CFBD" stroke-width="1.4"/><circle cx="60" cy="8" r="5.5" fill="#B5482A"/><svg x="46" y="46" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15 9-4 2-2 4 4-2 2-4Z"/></svg></svg><div style="font-family:Fraunces,serif;font-size:24px;font-weight:600;letter-spacing:-.015em;margin-top:16px;">Nothing nearby yet</div><div style="font-size:14px;line-height:1.55;color:#6B6256;margin-top:7px;max-width:270px;">Be the first. Make an event or start a group near you.</div><button onClick="{{emptyAct}}" style="margin-top:20px;padding:13px 28px;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:14px;font-weight:700;">Create an event</button></div></sc-if><sc-if value="{{e3}}" hint-placeholder-val="{{false}}"><div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px;"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#D9CFBD" stroke-width="1.6" stroke-dasharray="2 7" stroke-linecap="round"/><circle cx="60" cy="60" r="31" fill="#FAF6EE" stroke="#D9CFBD" stroke-width="1.4"/><circle cx="60" cy="8" r="5.5" fill="#B5482A"/><svg x="46" y="46" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.2-9.3-8.3C1.2 8.5 2.6 5.2 6 5.2c1.9 0 3.2 1 3.9 2.1.7-1.1 2-2.1 3.9-2.1 3.4 0 4.8 3.3 3.3 6.5C19 15.8 12 20 12 20Z"/></svg></svg><div style="font-family:Fraunces,serif;font-size:24px;font-weight:600;letter-spacing:-.015em;margin-top:16px;">You're all caught up</div><div style="font-size:14px;line-height:1.55;color:#6B6256;margin-top:7px;max-width:270px;">Quiet alerts show up here. Likes stay private.</div></div></sc-if><sc-if value="{{e4}}" hint-placeholder-val="{{false}}"><div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px;"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#D9CFBD" stroke-width="1.6" stroke-dasharray="2 7" stroke-linecap="round"/><circle cx="60" cy="60" r="31" fill="#FAF6EE" stroke="#D9CFBD" stroke-width="1.4"/><circle cx="60" cy="8" r="5.5" fill="#B5482A"/><svg x="46" y="46" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.3" r="3.4"/><path d="M5.2 20c0-4 3-6.6 6.8-6.6s6.8 2.6 6.8 6.6"/></svg></svg><div style="font-family:Fraunces,serif;font-size:24px;font-weight:600;letter-spacing:-.015em;margin-top:16px;">No inner circle yet</div><div style="font-size:14px;line-height:1.55;color:#6B6256;margin-top:7px;max-width:270px;">Pick the few people you'd tell first. They're never told.</div><button onClick="{{emptyAct}}" style="margin-top:20px;padding:13px 28px;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:14px;font-weight:700;">Choose people</button></div></sc-if><sc-if value="{{e5}}" hint-placeholder-val="{{false}}"><div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px;"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#D9CFBD" stroke-width="1.6" stroke-dasharray="2 7" stroke-linecap="round"/><circle cx="60" cy="60" r="31" fill="#FAF6EE" stroke="#D9CFBD" stroke-width="1.4"/><circle cx="60" cy="8" r="5.5" fill="#B5482A"/><svg x="46" y="46" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15 9-4 2-2 4 4-2 2-4Z"/></svg></svg><div style="font-family:Fraunces,serif;font-size:24px;font-weight:600;letter-spacing:-.015em;margin-top:16px;">No groups yet</div><div style="font-size:14px;line-height:1.55;color:#6B6256;margin-top:7px;max-width:270px;">Join one from Explore, or start your own.</div><button onClick="{{emptyAct}}" style="margin-top:20px;padding:13px 28px;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:14px;font-weight:700;">Explore groups</button></div></sc-if><sc-if value="{{e6}}" hint-placeholder-val="{{false}}"><div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px;"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#D9CFBD" stroke-width="1.6" stroke-dasharray="2 7" stroke-linecap="round"/><circle cx="60" cy="60" r="31" fill="#FAF6EE" stroke="#D9CFBD" stroke-width="1.4"/><circle cx="60" cy="8" r="5.5" fill="#B5482A"/><svg x="46" y="46" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.3" r="3.4"/><path d="M5.2 20c0-4 3-6.6 6.8-6.6s6.8 2.6 6.8 6.6"/></svg></svg><div style="font-family:Fraunces,serif;font-size:24px;font-weight:600;letter-spacing:-.015em;margin-top:16px;">Nothing here yet</div><div style="font-size:14px;line-height:1.55;color:#6B6256;margin-top:7px;max-width:270px;">Your notes will live here.</div><button onClick="{{emptyAct}}" style="margin-top:20px;padding:13px 28px;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:14px;font-weight:700;">Write a note</button></div></sc-if><sc-if value="{{e7}}" hint-placeholder-val="{{false}}"><div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px;"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#D9CFBD" stroke-width="1.6" stroke-dasharray="2 7" stroke-linecap="round"/><circle cx="60" cy="60" r="31" fill="#FAF6EE" stroke="#D9CFBD" stroke-width="1.4"/><circle cx="60" cy="8" r="5.5" fill="#B5482A"/><svg x="46" y="46" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01M3 3l18 18"/></svg></svg><div style="font-family:Fraunces,serif;font-size:24px;font-weight:600;letter-spacing:-.015em;margin-top:16px;">You're offline</div><div style="font-size:14px;line-height:1.55;color:#6B6256;margin-top:7px;max-width:270px;">Showing what we have. We'll catch up when you're back.</div><button onClick="{{emptyAct}}" style="margin-top:20px;padding:13px 28px;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:14px;font-weight:700;">Try again</button></div></sc-if><sc-if value="{{e8}}" hint-placeholder-val="{{false}}"><div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px;"><svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#D9CFBD" stroke-width="1.6" stroke-dasharray="2 7" stroke-linecap="round"/><circle cx="60" cy="60" r="31" fill="#FAF6EE" stroke="#D9CFBD" stroke-width="1.4"/><circle cx="60" cy="8" r="5.5" fill="#B5482A"/><svg x="46" y="46" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></svg><div style="font-family:Fraunces,serif;font-size:24px;font-weight:600;letter-spacing:-.015em;margin-top:16px;">Couldn't load this</div><div style="font-size:14px;line-height:1.55;color:#6B6256;margin-top:7px;max-width:270px;">Something went wrong on our side. Your notes are still there.</div><button onClick="{{emptyAct}}" style="margin-top:20px;padding:13px 28px;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:14px;font-weight:700;">Try again</button></div></sc-if></div>
+</div>
+</sc-if>
+<sc-if value="{{invOpen}}" hint-placeholder-val="{{false}}">
+  <button aria-label="Close" onClick="{{closeInvite}}" style="position:absolute;left:0;top:0;width:390px;height:100%;background:rgba(0,0,0,0.42);z-index:20;"></button>
+  <div style="position:absolute;left:0;bottom:0;width:390px;padding:12px 18px 26px;background:#FAF6EE;border-radius:22px 22px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,0.3);z-index:21;box-sizing:border-box;">
+    <div style="width:40px;height:4px;border-radius:2px;background:#D9CFBD;margin:0 auto 14px;"></div>
+    <div style="font-family:Fraunces,serif;font-size:22px;font-weight:600;">Invite a friend</div>
+    <div style="font-size:12.5px;line-height:1.5;color:#6B6256;margin-top:4px;">They'll see your name and photo, and can ask to be your friend. Nobody is added without saying yes.</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 14px;border-radius:14px;background:#B5482A14;border:1px solid #B5482A4D;"><span style="flex-grow:1;font-size:14px;font-weight:600;">circle.app/i/shashank</span><button onClick="{{copyLink}}" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:#B5482A;color:#FFF8F0;font-size:12.5px;font-weight:700;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFF8F0" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copy</button></div>
+    <div style="display:flex;gap:10px;margin-top:12px;">
+      <button onClick="{{share1}}" style="flex:1;padding:11px 0;border-radius:12px;border:1px solid #D9CFBD;font-size:12.5px;font-weight:600;">Messages</button>
+      <button onClick="{{share2}}" style="flex:1;padding:11px 0;border-radius:12px;border:1px solid #D9CFBD;font-size:12.5px;font-weight:600;">WhatsApp</button>
+      <button onClick="{{share3}}" style="flex:1;padding:11px 0;border-radius:12px;border:1px solid #D9CFBD;font-size:12.5px;font-weight:600;">Mail</button>
+      <button onClick="{{share4}}" style="flex:1;padding:11px 0;border-radius:12px;border:1px solid #D9CFBD;font-size:12.5px;font-weight:600;">More</button></div>
+    <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#6B6256;margin:18px 0 4px;">FROM YOUR CONTACTS</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #D9CFBD;"><span style="width:38px;height:38px;border-radius:50%;background:#8DA6D9;color:#181310;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">JL</span><span style="flex-grow:1;font-size:14px;font-weight:600;">Jonah Lee</span><button onClick="{{inv0}}" style="padding:7px 15px;border-radius:999px;border:1.5px solid {{invBd0}};background:{{invBg0}};color:{{invFg0}};font-size:12.5px;font-weight:700;">{{invL0}}</button></div><div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #D9CFBD;"><span style="width:38px;height:38px;border-radius:50%;background:#7FA88C;color:#181310;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">PK</span><span style="flex-grow:1;font-size:14px;font-weight:600;">Priya Kapoor</span><button onClick="{{inv1}}" style="padding:7px 15px;border-radius:999px;border:1.5px solid {{invBd1}};background:{{invBg1}};color:{{invFg1}};font-size:12.5px;font-weight:700;">{{invL1}}</button></div><div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #D9CFBD;"><span style="width:38px;height:38px;border-radius:50%;background:#6FA8B5;color:#181310;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">MD</span><span style="flex-grow:1;font-size:14px;font-weight:600;">Marco Diaz</span><button onClick="{{inv2}}" style="padding:7px 15px;border-radius:999px;border:1.5px solid {{invBd2}};background:{{invBg2}};color:{{invFg2}};font-size:12.5px;font-weight:700;">{{invL2}}</button></div><div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #D9CFBD;"><span style="width:38px;height:38px;border-radius:50%;background:#E9C46A;color:#181310;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">SY</span><span style="flex-grow:1;font-size:14px;font-weight:600;">Sana Yildiz</span><button onClick="{{inv3}}" style="padding:7px 15px;border-radius:999px;border:1.5px solid {{invBd3}};background:{{invBg3}};color:{{invFg3}};font-size:12.5px;font-weight:700;">{{invL3}}</button></div>
+  </div>
+</sc-if>
+  </div>
+<sc-if value="{{isHomeEmpty}}" hint-placeholder-val="{{true}}">
+<nav style="flex-shrink:0;height:64px;position:relative;display:flex;align-items:center;justify-content:space-around;border-top:1px solid rgba(31,27,22,0.14);background:#F3EDE2;box-shadow:none;z-index:5;">
+  <span style="display:flex;padding:8px;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/></svg></span><span style="display:flex;padding:8px;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#6B6256" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 5 18 7-18 7 4-7-4-7Z"/></svg></span>
+  <span style="width:46px;height:46px;border-radius:50%;background:#F3EDE2;border:2px solid #B5482A;box-shadow:0 0 0 4px #F3EDE2;display:flex;align-items:center;justify-content:center;margin-top:-24px;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#B5482A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15 9-4 2-2 4 4-2 2-4Z"/></svg></span>
+  <span style="display:flex;padding:8px;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#6B6256" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.2-9.3-8.3C1.2 8.5 2.6 5.2 6 5.2c1.9 0 3.2 1 3.9 2.1.7-1.1 2-2.1 3.9-2.1 3.4 0 4.8 3.3 3.3 6.5C19 15.8 12 20 12 20Z"/></svg></span>
+  <button onClick="{{navSettings}}" style="display:flex;padding:8px;"><span style="width:24px;height:24px;border-radius:50%;background:#1F1B16;color:#F3EDE2;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">S</span></button>
+</nav>
+</sc-if>
+<button onClick="{{toggleMenu}}" style="position:absolute;right:10px;top:8px;z-index:60;padding:4px 10px;border-radius:999px;background:#E2D8C5;border:1px solid #D9CFBD;font-size:10.5px;font-weight:700;color:#6B6256;">Screens</button>
+<sc-if value="{{menuOpen}}" hint-placeholder-val="{{false}}"><div style="position:absolute;right:10px;top:34px;width:230px;max-height:560px;overflow-y:auto;z-index:61;background:#FAF6EE;border:1px solid #D9CFBD;border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,0.4);padding:6px;">
+<sc-for list="{{jumps}}" as="j" hint-placeholder-count="14"><button onClick="{{j.go}}" style="width:100%;text-align:left;padding:9px 10px;border-radius:9px;background:{{j.bg}};font-size:13px;font-weight:600;">{{j.label}}</button></sc-for></div></sc-if>
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}"><div style="position:absolute;left:0;right:0;bottom:84px;text-align:center;pointer-events:none;z-index:70;"><span style="display:inline-block;padding:8px 16px;border-radius:999px;background:#1F1B16;color:#F3EDE2;font-size:12.5px;font-weight:600;">{{toast}}</span></div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const ACC='#B5482A', ONACC='#FFF8F0', BG='#F3EDE2', SURF='#FAF6EE', TXT='#1F1B16', MUT='#6B6256', BRD='#D9CFBD', TRACK='#E2D8C5', DOT='#B5482A';
+const COUNTRIES = [['India','91'],['Germany','49'],['United States','1'],['Canada','1'],['United Kingdom','44'],['France','33'],['Spain','34'],['Italy','39'],['Netherlands','31'],['Switzerland','41'],['Austria','43'],['Poland','48'],['Sweden','46'],['Norway','47'],['Denmark','45'],['Ireland','353'],['Portugal','351'],['Belgium','32'],['Turkey','90'],['Brazil','55'],['Mexico','52'],['Argentina','54'],['Colombia','57'],['Chile','56'],['Australia','61'],['New Zealand','64'],['Japan','81'],['South Korea','82'],['China','86'],['Singapore','65'],['Malaysia','60'],['Indonesia','62'],['Philippines','63'],['Vietnam','84'],['Thailand','66'],['Pakistan','92'],['Bangladesh','880'],['Sri Lanka','94'],['Nepal','977'],['United Arab Emirates','971'],['Saudi Arabia','966'],['Israel','972'],['Egypt','20'],['Nigeria','234'],['Kenya','254'],['South Africa','27'],['Russia','7'],['Ukraine','380'],['Greece','30']];
+const TAKEN = ['amara','priya','jonah','shashank','circle','admin','tomas','elena'];
+const TODAY = { y:2026, m:10, d:9 };
+const SCREENS = [['welcome','Welcome'],['phone','Your number'],['code','Enter the code'],['profile','Set up your profile'],['age','Age and agreement'],['find','Find your friends'],['homeEmpty','Home, new user'],['invite','Invite a friend'],['empties','Empty and error states'],['settings','Settings (where these live)'],['membership','Membership'],['data','Your data'],['delete','Delete account'],['legal','Terms, privacy, imprint']];
+const EMPTIES = ['Home','Messages','Explore','Alerts','Your circle','Groups','Profile','Offline','Error'];
+const ageOf = (dd, mm, yy) => { let a = TODAY.y - yy; if (mm > TODAY.m || (mm === TODAY.m && dd > TODAY.d)) a -= 1; return a; };
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { screen:'welcome', mode:'signup', stack:[], phone:'', cc:'91', ccOpen:false, ccQ:'', code:'', name:'', handle:'', pinned:'', photo:false, dd:'', mm:'', yy:'', agree:false,
+      emp:0, invited:{}, plan:1, member:false, dataReq:false, delText:'', legalTab:0, menu:false, toast:'', invSheet:false };
+  }
+  go(screen) { this.setState({ screen, stack:this.state.stack.concat([this.state.screen]), menu:false, invSheet:false }); }
+  root(screen) { this.setState({ screen, stack:[], menu:false, invSheet:false }); }
+  back() { const st = this.state.stack.slice(); const p = st.pop() || 'welcome'; this.setState({ screen:p, stack:st, invSheet:false }); }
+  say(m) { clearTimeout(this._t); this.setState({ toast:m }); this._t = setTimeout(() => this.setState({ toast:'' }), 1800); }
+  renderVals() {
+    const s = this.state, sc = s.screen, v = {};
+    ['welcome','phone','code','profile','age','find','homeEmpty','settings','membership','data','delete','deleted','legal','empties'].forEach(k => { v['is' + k[0].toUpperCase() + k.slice(1)] = sc === k; });
+    v.back = () => this.back();
+    v.hasToast = !!s.toast; v.toast = s.toast;
+    // prototype jump menu
+    v.menuOpen = s.menu; v.toggleMenu = () => this.setState({ menu: !s.menu });
+    v.jumps = SCREENS.map(j => ({ label:j[1], on: sc === j[0], bg: sc === j[0] ? ACC + '22' : 'transparent', go: () => this.setState({ screen:j[0], stack:[], menu:false, invSheet:false }) }));
+    // welcome
+    v.toSignup = () => { this.setState({ mode:'signup' }); this.go('phone'); };
+    v.toLogin = () => { this.setState({ mode:'login' }); this.go('phone'); };
+    v.openLegal = () => this.go('legal');
+    // phone
+    v.isSignup = s.mode === 'signup';
+    v.phone = s.phone; v.onPhone = (e) => this.setState({ phone: e.target.value.replace(/[^0-9 ]/g, '').slice(0, 14) });
+    v.cc = s.cc; v.onCc = (e) => this.setState({ cc: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) });
+    const names = COUNTRIES.filter(c => c[1] === s.cc).map(c => c[0]);
+    v.ccKnown = names.length > 0;
+    v.ccName = s.cc.length === 0 ? 'Type your country code' : (names.length ? names.join(' / ') : 'We don\'t know that code. Check it or choose from the list.');
+    v.ccColor = names.length ? ACC : (s.cc.length ? DOT : MUT);
+    v.ccOpen = s.ccOpen; v.openCc = () => this.setState({ ccOpen:true, ccQ:'' }); v.closeCc = () => this.setState({ ccOpen:false });
+    v.ccQ = s.ccQ; v.onCcQ = (e) => this.setState({ ccQ: e.target.value });
+    const q = (s.ccQ || '').toLowerCase().replace('+', '');
+    v.ccList = COUNTRIES.filter(c => !q || c[0].toLowerCase().indexOf(q) >= 0 || c[1].indexOf(q) === 0).map(c => ({ name:c[0], code:'+' + c[1], pick: () => this.setState({ cc:c[1], ccOpen:false }) }));
+    const digits = s.phone.replace(/ /g, '');
+    v.canSend = v.ccKnown && digits.length >= 6 && digits.length <= 12; v.sendO = v.canSend ? 1 : 0.4;
+    v.sendCode = () => { if (v.canSend) { this.setState({ code:'' }); this.go('code'); } };
+    v.emailAlt = () => this.say('Email sign-in comes with the backend');
+    v.phoneShown = '+' + s.cc + (s.phone ? ' ' + s.phone : '');
+    // code
+    v.code = s.code;
+    v.onCode = (e) => { const c = e.target.value.replace(/[^0-9]/g, '').slice(0, 6); this.setState({ code:c }); if (c.length === 6) setTimeout(() => this.verify(), 350); };
+    v.boxes = [0,1,2,3,4,5].map(i => ({ d: s.code[i] || '', bd: i === s.code.length ? ACC : BRD, bw: i === s.code.length ? '2px' : '1px' }));
+    v.verify = () => this.verify();
+    v.canVerify = s.code.length === 6; v.verO = v.canVerify ? 1 : 0.4;
+    v.resend = () => this.say('New code sent');
+    // profile setup
+    v.name = s.name; v.onName = (e) => this.setState({ name: e.target.value.slice(0, 30) });
+    v.handle = s.handle; v.onHandle = (e) => this.setState({ handle: e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, '').slice(0, 20) });
+    v.pinned = s.pinned; v.onPinned = (e) => this.setState({ pinned: e.target.value.slice(0, 140) });
+    v.pinnedCount = s.pinned.length + ' / 140';
+    const h = s.handle; let hm = 'Letters, numbers, dots and underscores. 3 to 20 characters.', hc = MUT;
+    if (h.length > 0 && h.length < 3) { hm = 'Too short. Use at least 3 characters.'; hc = DOT; }
+    else if (h.length >= 3 && TAKEN.indexOf(h) >= 0) { hm = '@' + h + ' is taken. Try another.'; hc = DOT; }
+    else if (h.length >= 3) { hm = '@' + h + ' is available'; hc = ACC; }
+    v.handleMsg = hm; v.handleColor = hc;
+    const hOk = h.length >= 3 && TAKEN.indexOf(h) < 0;
+    v.canProfile = s.name.trim().length > 0 && hOk; v.profO = v.canProfile ? 1 : 0.4;
+    v.toAge = () => { if (v.canProfile) this.go('age'); };
+    v.initial = (s.name.trim()[0] || 'S').toUpperCase();
+    v.photoBg = s.photo ? '#7FA88C' : '#3B4351'; v.photoLabel = s.photo ? 'Change photo' : 'Add a photo'; v.togglePhoto = () => this.setState({ photo: !s.photo });
+    // age + agreement
+    v.dd = s.dd; v.mm = s.mm; v.yy = s.yy;
+    v.onDd = (e) => this.setState({ dd: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) });
+    v.onMm = (e) => this.setState({ mm: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) });
+    v.onYy = (e) => this.setState({ yy: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) });
+    const dd = parseInt(s.dd, 10), mm = parseInt(s.mm, 10), yy = parseInt(s.yy, 10);
+    const full = dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12 && s.yy.length === 4 && yy > 1900 && yy <= TODAY.y;
+    const age = full ? ageOf(dd, mm, yy) : null;
+    v.tooYoung = full && age < 18; v.ageOk = full && age >= 18;
+    v.agreeBg = s.agree ? ACC : 'transparent'; v.agreeBd = s.agree ? ACC : MUT; v.toggleAgree = () => this.setState({ agree: !s.agree });
+    v.canCreate = v.ageOk && s.agree; v.createO = v.canCreate ? 1 : 0.4;
+    v.createAccount = () => { if (v.canCreate) this.go('find'); };
+    // find friends
+    v.connect = () => { this.say('Contacts matched. Nothing kept.'); this.go('homeEmpty'); };
+    v.skipFind = () => this.go('homeEmpty');
+    // home empty
+    v.findFriends = () => this.go('find');
+    v.openInvite = () => this.setState({ invSheet:true });
+    v.closeInvite = () => this.setState({ invSheet:false });
+    v.invOpen = s.invSheet;
+    v.copyLink = () => this.say('Link copied');
+    v.shareVia = (e) => this.say('Opens the system share sheet');
+    v.share1 = () => this.say('Opens Messages'); v.share2 = () => this.say('Opens WhatsApp'); v.share3 = () => this.say('Opens Mail'); v.share4 = () => this.say('Opens the system share sheet');
+    ['Jonah Lee','Priya Kapoor','Marco Diaz','Sana Yildiz'].forEach((n, i) => { v['inv' + i] = () => { const t = Object.assign({}, s.invited); t[i] = true; this.setState({ invited:t }); this.say('Invitation sent to ' + n.split(' ')[0]); }; v['invL' + i] = s.invited[i] ? 'Invited \u2713' : 'Invite'; v['invBg' + i] = s.invited[i] ? 'transparent' : ACC; v['invFg' + i] = s.invited[i] ? MUT : ONACC; v['invBd' + i] = s.invited[i] ? BRD : ACC; });
+    v.navSettings = () => this.go('settings');
+    // empties
+    EMPTIES.forEach((n, i) => { v['e' + i] = s.emp === i; v['ep' + i] = () => this.setState({ emp:i }); });
+    v.empChips = EMPTIES.map((n, i) => ({ label:n, bg: s.emp === i ? ACC : 'transparent', fg: s.emp === i ? ONACC : TXT, bd: s.emp === i ? ACC : BRD, tap: () => this.setState({ emp:i }) }));
+    v.emptyAct = () => this.say('Opens the matching screen');
+    // settings
+    v.goMembership = () => this.go('membership'); v.goData = () => this.go('data'); v.goLegal = () => this.go('legal'); v.goEmpties = () => this.go('empties');
+    v.logout = () => this.root('welcome');
+    // membership
+    v.planM = s.plan === 0; v.planY = s.plan === 1;
+    v.pmBd = s.plan === 0 ? ACC : BRD; v.pyBd = s.plan === 1 ? ACC : BRD;
+    v.pmBg = s.plan === 0 ? ACC + '14' : SURF; v.pyBg = s.plan === 1 ? ACC + '14' : SURF;
+    v.pickM = () => this.setState({ plan:0 }); v.pickY = () => this.setState({ plan:1 });
+    v.memberOn = s.member; v.memberOff = !s.member;
+    v.startMember = () => { this.setState({ member:true }); this.say('Membership started (placeholder)'); };
+    v.ctaLabel = s.plan === 1 ? 'Start membership, \u20ac12 a year' : 'Start membership, \u20ac1 a month';
+    // data
+    v.dataReq = s.dataReq; v.dataNotReq = !s.dataReq;
+    v.reqData = () => { this.setState({ dataReq:true }); this.say('Request received'); };
+    v.goDelete = () => this.go('delete');
+    // delete
+    v.delText = s.delText; v.onDel = (e) => this.setState({ delText: e.target.value });
+    v.canDelete = s.delText.trim().toUpperCase() === 'DELETE'; v.delO = v.canDelete ? 1 : 0.4;
+    v.doDelete = () => { if (v.canDelete) this.setState({ screen:'deleted', stack:[], delText:'' }); };
+    v.restart = () => this.setState({ screen:'welcome', stack:[], phone:'', code:'', name:'', handle:'', agree:false, dd:'', mm:'', yy:'', member:false });
+    // legal
+    v.ltTerms = s.legalTab === 0; v.ltPriv = s.legalTab === 1; v.ltImp = s.legalTab === 2;
+    ['Terms','Privacy','Imprint'].forEach((n, i) => { v['lt' + i + 'Line'] = s.legalTab === i ? ACC : 'transparent'; v['lt' + i + 'Col'] = s.legalTab === i ? TXT : MUT; v['lt' + i] = () => this.setState({ legalTab:i }); });
+    return v;
+  }
+  verify() {
+    if (this.state.code.length !== 6) return;
+    if (this.state.mode === 'login') { this.setState({ screen:'homeEmpty', stack:[] }); this.say('Welcome back'); }
+    else this.go('profile');
+  }
+}
+
+</script>
+</body>
+</html>

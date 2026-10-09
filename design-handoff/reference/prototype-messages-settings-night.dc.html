@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Messages and settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; outline: none; padding: 0; color: inherit; }
+a { text-decoration: none; color: inherit; }
+::-webkit-scrollbar { width: 0; height: 0; }
+
+</style>
+</helmet>
+<div style="width:390px;height:844px;background:#12151A;color:#F1F0EC;font-family:'Public Sans',sans-serif;display:flex;flex-direction:column;overflow:hidden;position:relative;">
+  <div style="flex-grow:1;position:relative;overflow:hidden;min-height:0;">
+<sc-if value="{{isMessages}}" hint-placeholder-val="{{true}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+  <header style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;"><div style="font-family:Fraunces,serif;font-size:26px;font-weight:600;letter-spacing:-.02em;">Messages</div>
+    <button aria-label="New chat" style="width:42px;height:42px;border-radius:50%;border:1.5px solid #E8A87C;display:flex;align-items:center;justify-content:center;background:#E8A87C14;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A87C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button></header>
+  <div style="flex-shrink:0;padding:0 16px 4px;"><div style="display:flex;align-items:center;gap:9px;padding:10px 14px;border-radius:12px;background:#171B22;border:1px solid #21252E;font-size:13.5px;color:#7C828E;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.5-4.5"/></svg>Search chats</div></div>
+  <div style="flex-shrink:0;display:flex;gap:24px;padding:6px 16px 0;">
+    <button onClick="{{setMsg}}" style="padding:6px 1px 8px;border-bottom:1.5px solid {{mLine}};font-size:13.5px;font-weight:600;color:{{mColor}};">Messages</button>
+    <button onClick="{{setGrp}}" style="padding:6px 1px 8px;border-bottom:1.5px solid {{gLine}};font-size:13.5px;font-weight:600;color:{{gColor}};">Groups</button>
+  </div>
+  <div style="flex-grow:1;overflow-y:auto;min-height:0;">
+    <sc-if value="{{tMsg}}" hint-placeholder-val="{{true}}">
+      <sc-if value="{{hasPinned}}" hint-placeholder-val="{{true}}"><div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#7C828E;padding:12px 16px 4px;">PINNED</div></sc-if>
+      <sc-for list="{{pinnedRows}}" as="r" hint-placeholder-count="1"><button onClick="{{r.open}}" style="width:100%;display:flex;align-items:center;gap:13px;padding:12px 16px;background:{{r.bg}};text-align:left;border-bottom:1px solid #21252E;">
+  <span style="width:52px;height:52px;border-radius:{{r.rad}};background:{{r.col}};color:{{r.fg}};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;flex-shrink:0;">{{r.ini}}</span>
+  <span style="flex-grow:1;min-width:0;"><span style="display:flex;align-items:center;gap:6px;"><span style="font-size:15px;font-weight:{{r.nameW}};">{{r.name}}</span><sc-if value="{{r.pinned}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 5 3 3H7l3-3-1-5Z"/><path d="M12 12v8"/></svg></sc-if></span>
+    <span style="display:block;font-size:13px;color:{{r.prevColor}};font-weight:{{r.prevW}};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{r.prev}}</span></span>
+  <span style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;"><span style="font-size:11.5px;color:{{r.timeColor}};font-weight:600;">{{r.time}}</span><sc-if value="{{r.unread}}" hint-placeholder-val="{{false}}"><span style="width:10px;height:10px;border-radius:50%;background:#E8A87C;"></span></sc-if></span>
+</button></sc-for>
+      <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#7C828E;padding:12px 16px 4px;">ALL CHATS</div>
+      <sc-for list="{{dmRows}}" as="r" hint-placeholder-count="2"><button onClick="{{r.open}}" style="width:100%;display:flex;align-items:center;gap:13px;padding:12px 16px;background:{{r.bg}};text-align:left;border-bottom:1px solid #21252E;">
+  <span style="width:52px;height:52px;border-radius:{{r.rad}};background:{{r.col}};color:{{r.fg}};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;flex-shrink:0;">{{r.ini}}</span>
+  <span style="flex-grow:1;min-width:0;"><span style="display:flex;align-items:center;gap:6px;"><span style="font-size:15px;font-weight:{{r.nameW}};">{{r.name}}</span><sc-if value="{{r.pinned}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 5 3 3H7l3-3-1-5Z"/><path d="M12 12v8"/></svg></sc-if></span>
+    <span style="display:block;font-size:13px;color:{{r.prevColor}};font-weight:{{r.prevW}};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{r.prev}}</span></span>
+  <span style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;"><span style="font-size:11.5px;color:{{r.timeColor}};font-weight:600;">{{r.time}}</span><sc-if value="{{r.unread}}" hint-placeholder-val="{{false}}"><span style="width:10px;height:10px;border-radius:50%;background:#E8A87C;"></span></sc-if></span>
+</button></sc-for>
+      <div style="text-align:center;font-size:11.5px;color:#7C828E;padding:16px 24px;">Only people who are your friends. Nobody else can message you.</div>
+    </sc-if>
+    <sc-if value="{{tGrp}}" hint-placeholder-val="{{false}}">
+      <div style="font-size:11.5px;color:#7C828E;padding:10px 16px 4px;">Chats for the groups you've joined. They appear when you join, not when you ask.</div>
+      <sc-for list="{{grpRows}}" as="r" hint-placeholder-count="2"><button onClick="{{r.open}}" style="width:100%;display:flex;align-items:center;gap:13px;padding:12px 16px;background:{{r.bg}};text-align:left;border-bottom:1px solid #21252E;">
+  <span style="width:52px;height:52px;border-radius:{{r.rad}};background:{{r.col}};color:{{r.fg}};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;flex-shrink:0;">{{r.ini}}</span>
+  <span style="flex-grow:1;min-width:0;"><span style="display:flex;align-items:center;gap:6px;"><span style="font-size:15px;font-weight:{{r.nameW}};">{{r.name}}</span><sc-if value="{{r.pinned}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 5 3 3H7l3-3-1-5Z"/><path d="M12 12v8"/></svg></sc-if></span>
+    <span style="display:block;font-size:13px;color:{{r.prevColor}};font-weight:{{r.prevW}};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{r.prev}}</span></span>
+  <span style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;"><span style="font-size:11.5px;color:{{r.timeColor}};font-weight:600;">{{r.time}}</span><sc-if value="{{r.unread}}" hint-placeholder-val="{{false}}"><span style="width:10px;height:10px;border-radius:50%;background:#E8A87C;"></span></sc-if></span>
+</button></sc-for>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+<sc-if value="{{isChat}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+  <header style="flex-shrink:0;display:flex;align-items:center;gap:11px;padding:10px 14px;border-bottom:1px solid #21252E;background:#12151A;">
+    <button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F1F0EC" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
+    <span style="width:40px;height:40px;border-radius:{{cRad}};background:{{cCol}};color:{{cFg}};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;">{{cIni}}</span>
+    <span style="flex-grow:1;min-width:0;"><span style="display:block;font-size:15.5px;font-weight:700;">{{cTitle}}</span><span style="display:block;font-size:11.5px;color:#7C828E;">{{cSub}}</span></span>
+    <span style="display:flex;padding:6px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+  </header>
+  <div onClick="{{closeMenu}}" style="flex-grow:1;overflow-y:auto;min-height:0;padding:10px 14px 14px 30px;">
+    <div style="text-align:center;margin:4px 0 6px;"><span style="display:inline-block;padding:3px 12px;border-radius:999px;background:#262B35;font-size:10.5px;font-weight:700;letter-spacing:.1em;color:#7C828E;">TODAY</span></div>
+    <div style="text-align:center;font-size:11px;color:#7C828E;margin:2px 0 4px;">Swipe a message right to reply. Hold it for more.</div>
+    <sc-for list="{{msgs}}" as="m" hint-placeholder-count="4">
+      <div style="display:flex;flex-direction:column;align-items:{{m.align}};margin-top:{{m.mt}}px;">
+        <sc-if value="{{m.showWho}}" hint-placeholder-val="{{false}}"><button onClick="{{m.openAuthor}}" style="font-size:11px;font-weight:700;color:#7C828E;margin:0 0 3px 36px;">{{m.who}}</button></sc-if>
+        <div style="position:relative;display:flex;align-items:flex-end;gap:6px;max-width:100%;">
+          <sc-if value="{{m.avSpace}}" hint-placeholder-val="{{false}}"><span style="width:26px;flex-shrink:0;display:flex;"><sc-if value="{{m.avShow}}" hint-placeholder-val="{{false}}"><button aria-label="Open profile" onClick="{{m.openAuthor}}" style="width:26px;height:26px;border-radius:50%;background:{{m.avCol}};color:{{m.avFg}};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;">{{m.avIni}}</button></sc-if></span></sc-if>
+          <span style="position:absolute;left:4px;opacity:{{m.hint}};display:flex;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A87C" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8 4 12l5 4"/><path d="M4 12h9a6 6 0 0 1 6 6"/></svg></span>
+          <div onPointerDown="{{m.down}}" onPointerMove="{{m.move}}" onPointerUp="{{m.up}}" onPointerCancel="{{m.up}}" style="position:relative;max-width:276px;text-align:left;padding:{{m.pad}};border-radius:{{m.rad}};background:{{m.bg}};color:{{m.fg}};border:1px solid {{m.bd}};transform:translateX({{m.dx}}px);transition:{{m.tr}};touch-action:pan-y;user-select:none;-webkit-user-select:none;">
+            <sc-if value="{{m.hasReply}}" hint-placeholder-val="{{false}}"><div style="margin:0 0 6px;padding:6px 9px;border-radius:10px;background:#12151A55;"><div style="font-size:10.5px;font-weight:700;opacity:.85;">{{m.replyWho}}</div><div style="font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">{{m.replyText}}</div></div></sc-if>
+            <sc-if value="{{m.isText}}" hint-placeholder-val="{{true}}"><div style="font-size:14.5px;line-height:1.4;">{{m.t}}</div></sc-if>
+            <sc-if value="{{m.isPhoto}}" hint-placeholder-val="{{false}}"><div style="width:210px;height:140px;border-radius:16px;background:#262B35;display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m5 18 5-5 4 3 5-6v9"/></svg></div></sc-if>
+            <sc-if value="{{m.isPost}}" hint-placeholder-val="{{false}}"><div style="width:244px;padding:12px 13px;border-radius:16px;background:#171B22;border:1px solid #21252E;box-shadow:0 8px 20px rgba(0,0,0,0.28);color:#F1F0EC;"><div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#E8A87C;">SHARED NOTE</span><span style="display:flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E8A87C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span></div><div style="font-size:13px;font-weight:700;margin-top:4px;">{{m.who2}}</div><div style="font-family:'Public Sans',sans-serif;font-size:14px;line-height:1.4;color:#E7E5DF;margin-top:2px;">{{m.t}}</div><sc-if value="{{m.postOpen}}" hint-placeholder-val="{{true}}"><div style="font-size:11.5px;font-weight:700;color:#E8A87C;margin-top:8px;">Open the thread</div></sc-if><sc-if value="{{m.postLocked}}" hint-placeholder-val="{{false}}"><div style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#7C828E;margin-top:8px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Not friends yet</div></sc-if></div></sc-if>
+            <sc-if value="{{m.isEvent}}" hint-placeholder-val="{{false}}"><div style="width:244px;padding:12px 13px;border-radius:16px;background:#171B22;border:1px solid #21252E;box-shadow:0 8px 20px rgba(0,0,0,0.28);color:#F1F0EC;display:flex;gap:11px;align-items:center;"><span style="width:44px;height:44px;border-radius:50%;border:1.5px solid #E8A87C;display:flex;flex-direction:column;align-items:center;justify-content:center;"><span style="font-size:14px;font-weight:800;line-height:1;">18</span><span style="font-size:8px;font-weight:700;color:#E8A87C;">SEP</span></span><span style="flex-grow:1;"><span style="display:block;font-size:10px;font-weight:700;letter-spacing:.12em;color:#E8A87C;">EVENT INVITE</span><span style="display:block;font-size:14px;font-weight:700;margin-top:2px;">Board Game Night</span><span style="display:block;font-size:11.5px;color:#7C828E;">Fri 18 Sep, 18:00</span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E8A87C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></div></sc-if>
+          </div>
+        </div>
+        <sc-if value="{{m.hasMeta}}" hint-placeholder-val="{{true}}"><div style="font-size:10.5px;color:#7C828E;margin:3px 4px 0;">{{m.meta}}</div></sc-if>
+        <sc-if value="{{m.showMenu}}" hint-placeholder-val="{{false}}"><div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;justify-content:{{m.align}};"><button onClick="{{m.mCopy}}" style="padding:7px 14px;border-radius:999px;background:#171B22;border:1px solid #21252E;font-size:12.5px;font-weight:600;box-shadow:0 8px 20px rgba(0,0,0,0.28);">Copy</button><button onClick="{{m.mDelete}}" style="padding:7px 14px;border-radius:999px;background:#171B22;border:1px solid #21252E;font-size:12.5px;font-weight:600;box-shadow:0 8px 20px rgba(0,0,0,0.28);">Delete for me</button><sc-if value="{{m.canUnsend}}" hint-placeholder-val="{{false}}"><button onClick="{{m.mUnsend}}" style="padding:7px 14px;border-radius:999px;background:#171B22;border:1px solid #21252E;font-size:12.5px;font-weight:600;color:#E5484D;box-shadow:0 8px 20px rgba(0,0,0,0.28);">Unsend</button></sc-if></div></sc-if>
+      </div>
+    </sc-for>
+  </div>
+  <sc-if value="{{hasReplyTo}}" hint-placeholder-val="{{false}}"><div style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:8px 14px;background:#171B22;border-top:1px solid #21252E;"><div style="flex-grow:1;min-width:0;padding-left:10px;border-left:2.5px solid #E8A87C;"><div style="font-size:11px;font-weight:700;color:#E8A87C;">Replying to {{rtWho}}</div><div style="font-size:12.5px;color:#7C828E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{rtText}}</div></div><button aria-label="Cancel reply" onClick="{{clearReply}}" style="display:flex;padding:6px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div></sc-if>
+  <div style="flex-shrink:0;display:flex;gap:8px;align-items:flex-end;padding:10px 12px;background:#12151A;border-top:1px solid #21252E;">
+    <button aria-label="Add" onClick="{{openSheet}}" style="width:42px;height:42px;border-radius:50%;border:1.5px solid #21252E;background:#171B22;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A87C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <input type="text" placeholder="Message" value="{{draft}}" onChange="{{onDraft}}" style="flex-grow:1;height:42px;border-radius:999px;border:1px solid #21252E;background:#171B22;color:#F1F0EC;padding:0 16px;font-size:14.5px;outline:none;"/>
+    <button aria-label="Send" onClick="{{sendMsg}}" style="width:42px;height:42px;border-radius:50%;background:{{sendBg}};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{sendFg}}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="m3 5 18 7-18 7 4-7-4-7Z"/></svg></button>
+  </div>
+  <sc-if value="{{gateOpen}}" hint-placeholder-val="{{false}}">
+    <button aria-label="Close" onClick="{{gateClose}}" style="position:absolute;left:0;top:0;width:390px;height:100%;background:rgba(0,0,0,0.4);"></button>
+    <div style="position:absolute;left:0;bottom:0;width:390px;padding:12px 20px 26px;background:#171B22;border-radius:22px 22px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,0.3);">
+      <div style="width:40px;height:4px;border-radius:2px;background:#21252E;margin:0 auto 16px;"></div>
+      <div style="display:flex;justify-content:center;"><span style="width:52px;height:52px;border-radius:50%;background:#E8A87C18;border:1px solid #E8A87C4D;display:flex;align-items:center;justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E8A87C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span></div>
+      <div style="font-family:Fraunces,serif;font-size:21px;font-weight:600;text-align:center;margin-top:12px;">You're not friends with {{gateFirst}} yet</div>
+      <div style="font-size:13.5px;line-height:1.5;color:#7C828E;text-align:center;margin-top:6px;">Send a friend request to open this thread. You can still see who posted it.</div>
+      <button onClick="{{gateSend}}" style="margin-top:16px;width:100%;padding:13px 0;border-radius:999px;background:#E8A87C;color:#181310;font-size:14px;font-weight:700;">Send friend request</button>
+      <button onClick="{{gateView}}" style="margin-top:8px;width:100%;padding:12px 0;border-radius:999px;border:1.5px solid #21252E;font-size:14px;font-weight:600;">View {{gateFirst}}'s profile</button>
+      <button onClick="{{gateClose}}" style="margin-top:6px;width:100%;padding:10px 0;font-size:13px;color:#7C828E;">Not now</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}"><div style="position:absolute;left:0;right:0;bottom:78px;text-align:center;pointer-events:none;"><span style="display:inline-block;padding:7px 15px;border-radius:999px;background:#F1F0EC;color:#12151A;font-size:12.5px;font-weight:600;">{{toast}}</span></div></sc-if>
+  <sc-if value="{{sheetOpen}}" hint-placeholder-val="{{false}}">
+    <button aria-label="Close" onClick="{{closeSheet}}" style="position:absolute;left:0;top:0;width:390px;height:100%;background:rgba(0,0,0,0.4);"></button>
+    <div style="position:absolute;left:0;bottom:0;width:390px;padding:12px 16px 24px;background:#171B22;border-radius:22px 22px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,0.3);">
+      <div style="width:40px;height:4px;border-radius:2px;background:#21252E;margin:0 auto 12px;"></div>
+      <button onClick="{{addPhoto}}" style="width:100%;display:flex;align-items:center;gap:14px;padding:13px 4px;text-align:left;border-bottom:1px solid #21252E;"><span style="width:42px;height:42px;border-radius:50%;background:#E8A87C18;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A87C" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m5 18 5-5 4 3 5-6v9"/></svg></span><span style="font-size:15px;font-weight:600;">Photo</span></button>
+      <button onClick="{{addEvent}}" style="width:100%;display:flex;align-items:center;gap:14px;padding:13px 4px;text-align:left;"><span style="width:42px;height:42px;border-radius:50%;background:#E8A87C18;display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A87C" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.3"/></svg></span><span style="font-size:15px;font-weight:600;">Invite to an event</span></button>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+<sc-if value="{{isProfile}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;padding:16px;">
+  <div style="display:flex;align-items:center;gap:14px;"><span style="width:68px;height:68px;border-radius:50%;background:#3B4351;color:#F1F0EC;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;">S</span>
+  <div style="flex-grow:1;"><div style="font-family:Fraunces,serif;font-size:24px;font-weight:600;">Shashank</div><div style="font-size:13px;color:#7C828E;">@shashank</div></div>
+  <button aria-label="Settings" onClick="{{goSettings}}" style="width:44px;height:44px;border-radius:50%;border:1.5px solid #21252E;background:#171B22;display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F1F0EC" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg></button></div>
+  <div style="margin-top:22px;font-size:12px;color:#7C828E;line-height:1.5;">Profile stub for this prototype. Tap the gear to open Settings.</div>
+</div>
+</sc-if>
+<sc-if value="{{isSettings}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+  <header style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:12px 16px 10px;border-bottom:1px solid #21252E;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F1F0EC" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:22px;font-weight:600;">Settings</div></header>
+  <div style="flex-grow:1;overflow-y:auto;min-height:0;padding-bottom:24px;">
+    <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#7C828E;padding:18px 16px 6px;">ACCOUNT</div><div style="background:#171B22;border-top:1px solid #21252E;"><button style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Edit profile</span><div style="font-size:11.5px;color:#7C828E;margin-top:1px;">Name, handle, photo, pinned thought</div></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button><button style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Your circle</span><div style="font-size:11.5px;color:#7C828E;margin-top:1px;">Inner circle and friends</div></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button><button style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Blocked users</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button><button style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Muted friends</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button></div> <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#7C828E;padding:18px 16px 6px;">PRIVACY</div><div style="background:#171B22;border-top:1px solid #21252E;"><button style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Let people find me by name</span><div style="font-size:11.5px;color:#7C828E;margin-top:1px;">On</div></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button><button style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Friend requests</span><div style="font-size:11.5px;color:#7C828E;margin-top:1px;">Everyone</div></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button><button style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Invites to events and groups</span><div style="font-size:11.5px;color:#7C828E;margin-top:1px;">Friends</div></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button><button style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Read receipts</span><div style="font-size:11.5px;color:#7C828E;margin-top:1px;">On</div></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button></div> <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#7C828E;padding:18px 16px 6px;">NOTIFICATIONS</div><div style="background:#171B22;border-top:1px solid #21252E;"><button onClick="{{goNotif}}" style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Notifications</span><div style="font-size:11.5px;color:#7C828E;margin-top:1px;">{{notifSummary}}</div></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button></div> <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#7C828E;padding:18px 16px 6px;">APPEARANCE</div><div style="background:#171B22;border-top:1px solid #21252E;"><button style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Theme</span><div style="font-size:11.5px;color:#7C828E;margin-top:1px;">System</div></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button></div> <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#7C828E;padding:18px 16px 6px;">ABOUT</div><div style="background:#171B22;border-top:1px solid #21252E;"><button onClick="{{goAbout}}" style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">About Circle</span><div style="font-size:11.5px;color:#7C828E;margin-top:1px;">What it is and how it's different</div></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button><button onClick="{{goWhy}}" style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Why I built it</span><div style="font-size:11.5px;color:#7C828E;margin-top:1px;">A note from Shashank</div></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button><button style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Membership</span><div style="font-size:11.5px;color:#7C828E;margin-top:1px;">Keeps Circle running</div></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button><button style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:56px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">Privacy policy and terms</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button></div>
+    <div style="margin:22px 16px 0;display:flex;flex-direction:column;gap:10px;"><div style="padding:13px 0;border-radius:999px;border:1px solid #21252E;text-align:center;font-size:14px;font-weight:600;">Log out</div><div style="padding:8px 0;text-align:center;font-size:13px;color:#E5484D;">Delete account</div></div>
+  </div>
+</div>
+</sc-if>
+<sc-if value="{{isNotif}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+  <header style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:12px 16px 10px;border-bottom:1px solid #21252E;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F1F0EC" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:22px;font-weight:600;">Notifications</div></header>
+  <div style="flex-grow:1;overflow-y:auto;min-height:0;padding-bottom:24px;">
+    <div style="font-size:12px;color:#7C828E;line-height:1.5;padding:14px 16px 4px;">Likes are always private. These only decide which quiet alerts you get.</div>
+    <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#7C828E;padding:14px 16px 6px;">ALERT ME ABOUT</div>
+    <div style="background:#171B22;border-top:1px solid #21252E;">
+    <sc-for list="{{toggles}}" as="x" hint-placeholder-count="6">
+      <button onClick="{{x.tap}}" style="width:100%;display:flex;align-items:center;gap:12px;padding:13px 16px;text-align:left;border-bottom:1px solid #21252E;min-height:60px;"><span style="flex-grow:1;"><span style="display:block;font-size:14.5px;font-weight:600;">{{x.label}}</span><span style="display:block;font-size:11.5px;color:#7C828E;margin-top:1px;">{{x.sub}}</span></span>
+        <span style="position:relative;width:48px;height:28px;border-radius:14px;background:{{x.trackBg}};flex-shrink:0;transition:background .2s;"><span style="position:absolute;top:3px;left:{{x.knobL}}px;width:22px;height:22px;border-radius:50%;background:{{x.knobBg}};transition:left .2s;"></span></span></button>
+    </sc-for></div>
+    <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#7C828E;padding:20px 16px 8px;">PAUSE ALL</div>
+    <div style="display:flex;gap:8px;padding:0 16px;"><sc-for list="{{pauses}}" as="p" hint-placeholder-count="3"><button onClick="{{p.tap}}" style="flex:1;padding:10px 0;border-radius:999px;background:{{p.bg}};color:{{p.fg}};border:1.5px solid {{p.bd}};font-size:12.5px;font-weight:700;">{{p.label}}</button></sc-for></div>
+    <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#7C828E;padding:22px 16px 6px;">QUIET HOURS</div>
+    <div style="background:#171B22;border-top:1px solid #21252E;border-bottom:1px solid #21252E;padding:14px 16px;display:flex;justify-content:space-between;"><span style="font-size:14.5px;font-weight:600;">22:00 to 07:00</span><span style="font-size:13px;color:#7C828E;">Off</span></div>
+  </div>
+</div>
+</sc-if>
+<sc-if value="{{isAbout}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+  <header style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:12px 16px 10px;border-bottom:1px solid #21252E;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F1F0EC" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:22px;font-weight:600;">About Circle</div></header>
+  <div style="flex-grow:1;overflow-y:auto;min-height:0;padding:16px 16px 28px;">
+    <div style="padding:20px 18px;border-radius:18px;background:#E8A87C14;border:1px solid #E8A87C4D;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.18em;color:#E8A87C;">WHAT IT IS</div>
+      <div style="font-family:Fraunces,serif;font-size:25px;font-weight:600;line-height:1.2;letter-spacing:-.015em;margin-top:8px;">A small place for the people you actually know.</div>
+    </div>
+    <div style="font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#7C828E;padding:22px 2px 4px;">HOW IT'S DIFFERENT</div>
+    <div style="display:flex;gap:12px;padding:12px 2px;border-bottom:1px solid #21252E;"><span style="width:7px;height:7px;border-radius:50%;background:#E8A87C;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">Just your friends.</span> <span style="color:#E7E5DF;">You ask, they accept. No followers, and no strangers in your feed.</span></div></div><div style="display:flex;gap:12px;padding:12px 2px;border-bottom:1px solid #21252E;"><span style="width:7px;height:7px;border-radius:50%;background:#E8A87C;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">See what they're up to.</span> <span style="color:#E7E5DF;">Newest first, in the order it happened. Nothing is ranked or pushed at you.</span></div></div><div style="display:flex;gap:12px;padding:12px 2px;border-bottom:1px solid #21252E;"><span style="width:7px;height:7px;border-radius:50%;background:#E8A87C;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">It ends.</span> <span style="color:#E7E5DF;">Circle tells you when you're caught up, so you can close it and go and see them.</span></div></div><div style="display:flex;gap:12px;padding:12px 2px;border-bottom:1px solid #21252E;"><span style="width:7px;height:7px;border-radius:50%;background:#E8A87C;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">Quiet likes.</span> <span style="color:#E7E5DF;">Only the person you liked sees it. Nobody is performing for a score.</span></div></div><div style="display:flex;gap:12px;padding:12px 2px;border-bottom:1px solid #21252E;"><span style="width:7px;height:7px;border-radius:50%;background:#E8A87C;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">Made for real life.</span> <span style="color:#E7E5DF;">Events and groups take you out of the house and back to real people.</span></div></div><div style="display:flex;gap:12px;padding:12px 2px;border-bottom:1px solid #21252E;"><span style="width:7px;height:7px;border-radius:50%;background:#E8A87C;margin-top:7px;flex-shrink:0;"></span><div style="font-size:14px;line-height:1.5;"><span style="font-weight:700;">No ads.</span> <span style="color:#E7E5DF;">Circle runs on a small membership, and your data is never sold.</span></div></div>
+    <div style="margin-top:20px;padding:18px;border-radius:18px;background:#E8A87C14;border:1px solid #E8A87C4D;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.18em;color:#E8A87C;">WHY &ldquo;CIRCLE&rdquo;?</div>
+      <div style="font-size:14px;line-height:1.55;color:#E7E5DF;margin-top:8px;">It's your circle of friends. And a circle closes: when you've seen everyone's day, the circle is closed, and you're done. That's why the name ends with a full stop<span style="color:#E8A87C;font-weight:800;">.</span></div>
+    </div>
+  </div>
+</div>
+</sc-if>
+<sc-if value="{{isWhy}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+  <header style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:12px 16px 10px;border-bottom:1px solid #21252E;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F1F0EC" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-family:Fraunces,serif;font-size:22px;font-weight:600;">Why I built it</div></header>
+  <div style="flex-grow:1;overflow-y:auto;min-height:0;padding:16px 16px 28px;">
+    <div style="position:relative;padding:26px 20px 22px;border-radius:18px;background:#E8A87C14;border:1px solid #E8A87C4D;">
+      <div style="position:absolute;left:16px;top:-2px;font-family:Fraunces,serif;font-size:64px;line-height:1;color:#E8A87C;opacity:.55;">&ldquo;</div>
+      <div style="font-family:Fraunces,serif;font-size:17.5px;line-height:1.55;color:#F1F0EC;margin-top:16px;">I built Circle because the apps I used to love for keeping up with friends turned into endless scrolling. I wanted a place where I open the app, see what my friends are up to, and close it again. No ads, no tricks to keep me there.</div>
+      <div style="font-family:Fraunces,serif;font-size:17.5px;line-height:1.55;color:#F1F0EC;margin-top:14px;">If you want a bigger circle, make an event, go outside and meet someone. Then come back and tell your friends about it.</div>
+      <div style="font-family:Fraunces,serif;font-size:17.5px;line-height:1.55;color:#F1F0EC;margin-top:14px;">Thank you for being here.</div>
+      <div style="width:36px;height:2px;border-radius:2px;background:#E8A87C;margin-top:20px;"></div>
+      <div style="font-family:Fraunces,serif;font-style:italic;font-size:20px;color:#E8A87C;margin-top:10px;">Shashank</div>
+    </div>
+  </div>
+</div>
+</sc-if>
+<sc-if value="{{isPost}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+  <header style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:12px 16px 10px;border-bottom:1px solid #21252E;"><button aria-label="Back to chat" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F1F0EC" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-size:17px;font-weight:700;">Thread</div></header>
+  <div style="flex-grow:1;overflow-y:auto;min-height:0;padding:14px 16px;">
+    <div style="font-size:11.5px;color:#7C828E;margin:0 2px 10px;">Opened from your chat with Priya. Back returns to the chat.</div>
+    <div style="padding:16px;background:#171B22;border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,0.28);">
+      <div style="display:flex;gap:11px;align-items:center;"><span style="width:44px;height:44px;border-radius:50%;background:#D98C4A;color:#181310;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;">AO</span><div><div style="font-size:14.5px;font-weight:700;">Amara Osei</div><div style="font-size:12px;color:#7C828E;">2h ago</div></div></div>
+      <div style="font-family:'Public Sans',sans-serif;font-size:17px;line-height:1.45;margin-top:12px;">Finally finished the puzzle we started at Mom's over the summer.</div>
+      <div style="display:flex;gap:30px;padding-top:14px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v10.5H8.5L4 19.5V5Z"/></svg><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h9a3 3 0 0 1 3 3v2"/><path d="m15 5 3 3-3 3"/><path d="M18 16H9a3 3 0 0 1-3-3v-2"/><path d="m9 19-3-3 3-3"/></svg><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.2-9.3-8.3C1.2 8.5 2.6 5.2 6 5.2c1.9 0 3.2 1 3.9 2.1.7-1.1 2-2.1 3.9-2.1 3.4 0 4.8 3.3 3.3 6.5C19 15.8 12 20 12 20Z"/></svg></div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:11px;"><span style="width:36px;height:36px;border-radius:50%;background:#7FA88C;color:#181310;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">PK</span><div><div style="font-size:13.5px;font-weight:700;">Priya Kapoor <span style="font-weight:500;color:#7C828E;">&middot; 1h</span></div><div style="font-size:13.5px;line-height:1.5;color:#E7E5DF;margin-top:2px;">Wait you actually finished it?? Which one was it?</div></div></div>
+    <div style="margin-top:16px;display:flex;gap:11px;"><span style="width:36px;height:36px;border-radius:50%;background:#8DA6D9;color:#181310;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">JL</span><div><div style="font-size:13.5px;font-weight:700;">Jonah Lee <span style="font-weight:500;color:#7C828E;">&middot; 30m</span></div><div style="font-size:13.5px;line-height:1.5;color:#E7E5DF;margin-top:2px;">Puzzle night at yours next time?</div></div></div>
+  </div>
+</div>
+</sc-if>
+<sc-if value="{{isEventStub}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+  <header style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:12px 16px 10px;border-bottom:1px solid #21252E;"><button aria-label="Back to chat" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F1F0EC" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="font-size:17px;font-weight:700;">Event</div></header>
+  <div style="padding:20px 16px;"><div style="font-family:Fraunces,serif;font-size:25px;font-weight:600;">Board Game Night</div><div style="font-size:13px;color:#7C828E;margin-top:5px;">Fri 18 Sep, 18:00 &middot; Kaffeehaus Zeitlos</div><div style="margin-top:16px;font-size:12.5px;color:#7C828E;line-height:1.5;">This opens the real event screen with the table, as in the whole-app prototype. Back returns to the chat.</div></div>
+</div>
+</sc-if>
+<sc-if value="{{isPerson}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;width:390px;height:100%;display:flex;flex-direction:column;">
+  <header style="flex-shrink:0;display:flex;align-items:center;gap:10px;padding:12px 16px 10px;border-bottom:1px solid #21252E;"><button aria-label="Back" onClick="{{back}}" style="display:flex;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F1F0EC" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button><div style="flex-grow:1;font-size:17px;font-weight:700;">Profile</div><span style="display:flex;padding:6px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></header>
+  <div style="flex-grow:1;overflow-y:auto;min-height:0;padding:22px 16px;">
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <span style="width:92px;height:92px;border-radius:50%;background:{{pCol}};color:{{pFg}};display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;">{{pIni}}</span>
+      <div style="font-family:Fraunces,serif;font-size:26px;font-weight:600;letter-spacing:-.015em;margin-top:12px;">{{pName}}</div>
+      <div style="font-size:13px;color:#7C828E;margin-top:2px;">{{pHandle}}</div>
+      <div style="font-size:12px;color:#7C828E;margin-top:6px;">{{pSub}}</div>
+    </div>
+    <div style="margin-top:20px;padding:14px 16px;border-radius:14px;background:#171B22;border:1px solid #21252E;box-shadow:0 8px 20px rgba(0,0,0,0.28);"><div style="font-size:10px;font-weight:700;letter-spacing:.14em;color:#7C828E;">PINNED</div><div style="font-family:'Public Sans',sans-serif;font-size:14px;line-height:1.5;color:#E7E5DF;margin-top:5px;">{{pPinned}}</div></div>
+    <sc-if value="{{pIsFriend}}" hint-placeholder-val="{{true}}">
+      <button onClick="{{pMessage}}" style="margin-top:16px;width:100%;padding:13px 0;border-radius:999px;background:#E8A87C;color:#181310;font-size:14px;font-weight:700;">Message</button>
+      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;font-size:12px;color:#E8A87C;font-weight:700;">&#10003; Friends</div>
+    </sc-if>
+    <sc-if value="{{pIsStranger}}" hint-placeholder-val="{{false}}">
+      <sc-if value="{{pCanRequest}}" hint-placeholder-val="{{true}}"><button onClick="{{doRequest}}" style="margin-top:16px;width:100%;padding:13px 0;border-radius:999px;background:#E8A87C;color:#181310;font-size:14px;font-weight:700;">Add friend</button></sc-if>
+      <sc-if value="{{pRequested}}" hint-placeholder-val="{{false}}"><div style="margin-top:16px;padding:12px 0;border-radius:999px;border:1.5px solid #21252E;text-align:center;font-size:14px;font-weight:700;color:#E8A87C;">Requested</div><button onClick="{{cancelRequest}}" style="margin:8px auto 0;display:block;font-size:12.5px;color:#7C828E;">Cancel request</button></sc-if>
+      <div style="margin-top:16px;padding:16px;border-radius:14px;border:1.5px dashed #21252E;text-align:center;font-size:12.5px;line-height:1.5;color:#7C828E;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><div style="margin-top:6px;">You're not friends yet. You'll see their notes and friends once they accept. Until then you see only their photo and pinned thought.</div></div>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+  </div>
+<sc-if value="{{showNav}}" hint-placeholder-val="{{true}}">
+<nav style="flex-shrink:0;height:64px;position:relative;display:flex;align-items:center;justify-content:space-around;border-top:1px solid #21252E;background:#12151A;box-shadow:0 -8px 18px rgba(0,0,0,0.25);z-index:5;">
+  <button onClick="{{nav0}}" style="display:flex;padding:8px;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/></svg></button>
+  <button onClick="{{nav1}}" style="display:flex;padding:8px;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="{{na1}}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 5 18 7-18 7 4-7-4-7Z"/></svg></button>
+  <button onClick="{{nav2}}" style="width:46px;height:46px;border-radius:50%;background:#12151A;border:2px solid #E8A87C;box-shadow:0 0 0 4px #12151A;display:flex;align-items:center;justify-content:center;margin-top:-24px;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#E8A87C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15 9-4 2-2 4 4-2 2-4Z"/></svg></button>
+  <button onClick="{{nav3}}" style="display:flex;padding:8px;position:relative;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#7C828E" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.2-9.3-8.3C1.2 8.5 2.6 5.2 6 5.2c1.9 0 3.2 1 3.9 2.1.7-1.1 2-2.1 3.9-2.1 3.4 0 4.8 3.3 3.3 6.5C19 15.8 12 20 12 20Z"/></svg><span style="position:absolute;top:5px;right:4px;width:8px;height:8px;border-radius:50%;background:#E5484D;border:1.5px solid #12151A;"></span></button>
+  <button onClick="{{nav4}}" style="display:flex;padding:8px;"><span style="width:24px;height:24px;border-radius:50%;background:#3B4351;color:#F1F0EC;border:1.5px solid {{na4}};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">S</span></button>
+</nav>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const ACC='#E8A87C', ONACC='#181310', BG='#12151A', SURF='#171B22', TXT='#F1F0EC', MUT='#7C828E', BRD='#21252E', TRACK='#262B35';
+const PEOPLE = { PK:['Priya Kapoor','#7FA88C'], JL:['Jonah Lee','#8DA6D9'], AO:['Amara Osei','#D98C4A'], TN:['Tomas Novak','#3B4351'], EV:['Elena Voss','#C77B8F'], S:['You','#3B4351'] };
+const INFO = {
+  PK:{ handle:'@priya.k', pinned:'Golden hour chaser. Tripod always packed.', friend:true, since:'2023' },
+  JL:{ handle:'@jonah.l', pinned:'Coffee first, plans second.', friend:true, since:'2023' },
+  AO:{ handle:'@amara.o', pinned:'Puzzles, plants and long walks.', friend:true, since:'2023' },
+  TN:{ handle:'@tomas.n', pinned:'Garlic is the new tomato.', friend:true, since:'2024' },
+  EV:{ handle:'@elena.v', pinned:'New in Aachen. Looking for a climbing partner and good coffee.', friend:false, mutual:3 }
+};
+const fgOf = (c) => { const r=parseInt(c.slice(1,3),16), g=parseInt(c.slice(3,5),16), b=parseInt(c.slice(5,7),16); return (0.299*r+0.587*g+0.114*b) < 110 ? '#F1F0EC' : '#181310'; };
+const CHATS = {
+  pk:{ title:'Priya Kapoor', sub:'Friends since 2023', ini:'PK', group:false, time:'10m' },
+  jl:{ title:'Jonah Lee', sub:'Friends since 2023', ini:'JL', group:false, time:'2h' },
+  ao:{ title:'Amara Osei', sub:'Friends since 2023', ini:'AO', group:false, time:'1d' },
+  g1:{ title:'Aachen Photo Walk', sub:'128 members', ini:'A', group:true, c:'#D98C4A', time:'12m' },
+  g2:{ title:'RWTH Board Game Club', sub:'64 members', ini:'R', group:true, c:'#8DA6D9', time:'2h' }
+};
+const NOTIFS = [
+  ['Likes','A quiet alert when someone likes your note'], ['Comments and replies','On your notes and in threads you joined'],
+  ['Friend requests','When someone asks to be your friend'], ['Event updates','Seats, changes and cancellations'],
+  ['Group activity','New posts and join requests'], ['Messages','New messages in your chats']
+];
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      screen:'messages', tab:0, chat:'pk', draft:'', replyTo:null, sheet:false, menuFor:-1, dragI:-1, dragX:0, toast:'', person:'PK', from:'chat', req:{}, gate:null,
+      unread:{ pk:true }, pinned:{ pk:true },
+      notif:[true,true,true,true,true,true], pause:0,
+      chats:{
+        pk:[{ k:'text', mine:false, t:'Are we still on for Saturday?', time:'09:12' },
+            { k:'text', mine:true, t:'Yes! Golden hour at the cathedral steps.', time:'09:14', status:'Seen 09:20' },
+            { k:'text', mine:false, t:'Perfect. I will bring the tripod.', time:'10:02' },
+            { k:'post', mine:false, who:'Amara Osei', ini:'AO', friend:true, t:"Finally finished the puzzle we started at Mom's over the summer.", time:'10:05' },
+            { k:'post', mine:false, who:'Elena Voss', ini:'EV', friend:false, t:'Anyone know a good climbing gym near the station?', time:'10:07' }],
+        jl:[{ k:'text', mine:false, t:'Bringing the tripod', time:'Yesterday' }],
+        ao:[{ k:'text', mine:false, t:'Thanks for the recipe', time:'Mon' }],
+        g1:[{ k:'text', mine:false, w:'Priya', ini:'PK', t:'Meet at the cathedral steps, 6:30', time:'09:40' },
+            { k:'text', mine:false, w:'Tomas', ini:'TN', t:"I'll bring a tripod to share", time:'09:52' },
+            { k:'text', mine:false, w:'Elena', ini:'EV', t:'Is there still space on Sunday?', time:'10:20' }],
+        g2:[{ k:'text', mine:false, w:'Jonah', ini:'JL', t:'Anyone up for Catan tonight?', time:'Yesterday' }]
+      }
+    };
+  }
+  go(screen) { this.setState({ screen, draft:'', replyTo:null, sheet:false, menuFor:-1, gate:null }); }
+  openPerson(ini) { this.setState({ screen:'person', person:ini, from:this.state.screen, menuFor:-1, gate:null }); }
+  say(msg) { clearTimeout(this._tt); this.setState({ toast: msg }); this._tt = setTimeout(() => this.setState({ toast:'' }), 1800); }
+  replyTo(i) {
+    const s = this.state, ch = CHATS[s.chat], m = (s.chats[s.chat] || [])[i]; if (!m) return;
+    this.setState({ replyTo: { who: m.mine ? 'yourself' : (m.w || ch.title.split(' ')[0]), t: m.t || (m.k === 'photo' ? 'Photo' : m.k === 'event' ? 'Event invite' : 'Shared note') }, menuFor:-1 });
+  }
+  tapMsg(i) {
+    const s = this.state, m = (s.chats[s.chat] || [])[i]; if (!m) return;
+    if (m.k === 'post') { if (m.friend === false) this.setState({ gate:{ ini:m.ini, name:m.who }, menuFor:-1 }); else this.setState({ screen:'post', menuFor:-1 }); }
+    else if (m.k === 'event') this.setState({ screen:'eventStub', menuFor:-1 });
+    else if (s.menuFor >= 0) this.setState({ menuFor:-1 });
+  }
+  down(i, e) {
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+    this._g = { i, x0:e.clientX, y0:e.clientY, dx:0, moved:false, long:false };
+    clearTimeout(this._lp);
+    this._lp = setTimeout(() => { if (this._g && !this._g.moved) { this._g.long = true; this._menuAt = Date.now(); this.setState({ menuFor:i, dragI:-1, dragX:0 }); } }, 420);
+  }
+  move(i, e) {
+    const g = this._g; if (!g) return;
+    const dx = e.clientX - g.x0, dy = e.clientY - g.y0;
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) { g.moved = true; clearTimeout(this._lp); }
+    if (dx > 0 && Math.abs(dy) < 40) { g.dx = Math.min(dx * 0.7, 72); this.setState({ dragI:i, dragX:g.dx }); }
+  }
+  up(i, e) {
+    const g = this._g; if (!g) return;
+    clearTimeout(this._lp); this._g = null;
+    if (g.dx >= 44) this.replyTo(i);
+    else if (!g.moved && !g.long) this.tapMsg(i);
+    this.setState({ dragI:-1, dragX:0 });
+  }
+  send(extra) {
+    const s = this.state, c = (s.chats[s.chat] || []).slice();
+    const t = (s.draft || '').trim();
+    if (!extra && !t) return;
+    c.forEach(m => { if (m.mine) m.status = undefined; });
+    const msg = Object.assign({ k:'text', mine:true, t, time:'now', status:'Sent', reply: s.replyTo }, extra || {});
+    if (extra) { msg.t = ''; }
+    const chats = Object.assign({}, s.chats); chats[s.chat] = c.concat([msg]);
+    this.setState({ chats, draft:'', replyTo:null, sheet:false, menuFor:-1 });
+  }
+  renderVals() {
+    const s = this.state, sc = s.screen, v = {};
+    ['messages','chat','profile','settings','notif','about','why','post','eventStub','person'].forEach(k => { v['is' + k[0].toUpperCase() + k.slice(1)] = sc === k; });
+    v.showNav = sc === 'messages' || sc === 'profile';
+    v.na1 = sc === 'messages' ? ACC : MUT; v.na4 = sc === 'profile' ? ACC : MUT;
+    v.nav1 = () => this.go('messages'); v.nav4 = () => this.go('profile');
+    v.nav0 = () => {}; v.nav2 = () => {}; v.nav3 = () => {};
+    v.back = () => this.go(sc === 'person' ? s.from : (sc === 'post' || sc === 'eventStub') ? 'chat' : sc === 'chat' ? 'messages' : (sc === 'notif' || sc === 'about' || sc === 'why') ? 'settings' : sc === 'settings' ? 'profile' : 'messages');
+
+    // ---- list
+    v.tMsg = s.tab === 0; v.tGrp = s.tab === 1;
+    v.mLine = s.tab === 0 ? ACC : 'transparent'; v.gLine = s.tab === 1 ? ACC : 'transparent';
+    v.mColor = s.tab === 0 ? TXT : MUT; v.gColor = s.tab === 1 ? TXT : MUT;
+    v.setMsg = () => this.setState({ tab:0 }); v.setGrp = () => this.setState({ tab:1 });
+    const rowOf = (id) => {
+      const ch = CHATS[id], list = s.chats[id], last = list[list.length - 1], un = !!s.unread[id], p = PEOPLE[ch.ini];
+      const kind = last.k === 'photo' ? 'Photo' : last.k === 'event' ? 'Event invite' : last.k === 'post' ? 'Shared a note' : last.t;
+      const who = last.mine ? 'You: ' : (ch.group && last.w ? last.w + ': ' : '');
+      const col = ch.group ? ch.c : p[1];
+      return { name:ch.title, prev: who + kind, time: last.time === 'now' ? 'now' : ch.time, ini:ch.ini, col, fg:fgOf(col), rad: ch.group ? '17px' : '50%',
+        unread:un, pinned:!!s.pinned[id], bg: un ? ACC + '14' : 'transparent', nameW: un ? 800 : 700, prevColor: un ? TXT : MUT, prevW: un ? 600 : 400, timeColor: un ? ACC : MUT,
+        sub: ch.sub, open: () => { const u = Object.assign({}, s.unread); delete u[id]; this.setState({ chat:id, unread:u, screen:'chat', draft:'', replyTo:null, sheet:false, menuFor:-1 }); } };
+    };
+    v.pinnedRows = ['pk','jl','ao'].filter(id => s.pinned[id]).map(rowOf);
+    v.hasPinned = v.pinnedRows.length > 0;
+    v.dmRows = ['pk','jl','ao'].filter(id => !s.pinned[id]).map(rowOf);
+    v.grpRows = ['g1','g2'].map(rowOf);
+
+    // ---- chat
+    const ch = CHATS[s.chat], list = s.chats[s.chat] || [];
+    v.cTitle = ch.title; v.cSub = ch.sub; v.cIni = ch.ini; v.cRad = ch.group ? '12px' : '50%';
+    v.cCol = ch.group ? ch.c : PEOPLE[ch.ini][1]; v.cFg = fgOf(v.cCol);
+    v.msgs = list.map((m, i) => {
+      const prev = list[i-1], next = list[i+1];
+      const same = (a, b) => !!a && !!b && a.mine === b.mine && (a.w || '') === (b.w || '');
+      const firstOfRun = !same(prev, m), lastOfRun = !same(next, m);
+      const rich = m.k !== 'text', dx = s.dragI === i ? s.dragX : 0;
+      return { align: m.mine ? 'flex-end' : 'flex-start', mt: firstOfRun ? 10 : 3,
+        showWho: !!(ch.group && !m.mine && firstOfRun && m.w), who: m.w || '',
+        bg: rich ? 'transparent' : (m.mine ? ACC : SURF), fg: m.mine ? ONACC : TXT, bd: rich ? 'transparent' : (m.mine ? ACC : BRD),
+        pad: rich ? '0px' : '9px 13px',
+        rad: m.mine ? '18px 18px ' + (lastOfRun ? '5px' : '18px') + ' 18px' : '18px 18px 18px ' + (lastOfRun ? '5px' : '18px'),
+        isText: m.k === 'text', isPhoto: m.k === 'photo', isPost: m.k === 'post', isEvent: m.k === 'event',
+        t: m.t || '', who2: m.who || '', hasReply: !!m.reply, replyWho: m.reply ? m.reply.who : '', replyText: m.reply ? m.reply.t : '',
+        meta: lastOfRun ? (m.status ? m.time + ' \u00b7 ' + m.status : m.time) : '', hasMeta: lastOfRun,
+        dx, tr: dx > 0 ? 'none' : 'transform .22s cubic-bezier(.3,1.4,.5,1)', hint: Math.min(1, dx / 44),
+        down: (e) => this.down(i, e), move: (e) => this.move(i, e), up: (e) => this.up(i, e),
+        avSpace: !!(ch.group && !m.mine), avShow: !!(ch.group && !m.mine && firstOfRun), avIni: m.ini || '', avCol: m.ini && PEOPLE[m.ini] ? PEOPLE[m.ini][1] : TRACK, avFg: m.ini && PEOPLE[m.ini] ? fgOf(PEOPLE[m.ini][1]) : TXT,
+        openAuthor: () => { if (m.ini) this.openPerson(m.ini); },
+        postLocked: m.k === 'post' && m.friend === false, postOpen: !(m.k === 'post' && m.friend === false),
+        showMenu: s.menuFor === i, canUnsend: !!m.mine,
+        mCopy: () => { this.setState({ menuFor:-1 }); this.say('Copied'); },
+        mDelete: () => { const chats = Object.assign({}, s.chats); chats[s.chat] = list.filter((_, j) => j !== i); this.setState({ chats, menuFor:-1 }); this.say('Removed from your chat only'); },
+        mUnsend: () => { const chats = Object.assign({}, s.chats); chats[s.chat] = list.filter((_, j) => j !== i); this.setState({ chats, menuFor:-1 }); this.say('Unsent for both of you'); } };
+    });
+    const pi = INFO[s.person] || INFO.PK, pp = PEOPLE[s.person] || PEOPLE.PK, requested = !!s.req[s.person];
+    v.pName = pp[0]; v.pHandle = pi.handle; v.pPinned = pi.pinned; v.pIni = s.person; v.pCol = pp[1]; v.pFg = fgOf(pp[1]);
+    v.pIsFriend = pi.friend; v.pIsStranger = !pi.friend; v.pCanRequest = !pi.friend && !requested; v.pRequested = !pi.friend && requested;
+    v.pSub = pi.friend ? 'Friends since ' + pi.since : 'Not friends yet';
+    v.doRequest = () => { const r = Object.assign({}, s.req); r[s.person] = true; this.setState({ req:r }); this.say('Friend request sent'); };
+    v.cancelRequest = () => { const r = Object.assign({}, s.req); r[s.person] = false; this.setState({ req:r }); this.say('Request cancelled'); };
+    v.pMessage = () => this.setState({ screen: s.from === 'messages' ? 'messages' : 'chat' });
+    const gt = s.gate;
+    v.gateOpen = !!gt; v.gateName = gt ? gt.name : ''; v.gateFirst = gt ? gt.name.split(' ')[0] : '';
+    v.gateSend = () => { const r = Object.assign({}, s.req); if (gt) r[gt.ini] = true; this.setState({ req:r, gate:null }); this.say('Friend request sent'); };
+    v.gateView = () => { if (gt) this.openPerson(gt.ini); };
+    v.gateClose = () => this.setState({ gate:null });
+    v.closeMenu = () => { if (this._menuAt && Date.now() - this._menuAt < 700) return; if (s.menuFor >= 0) this.setState({ menuFor:-1 }); };
+    v.hasToast = !!s.toast; v.toast = s.toast;
+    v.hasReplyTo = !!s.replyTo; v.rtWho = s.replyTo ? s.replyTo.who : ''; v.rtText = s.replyTo ? s.replyTo.t : '';
+    v.clearReply = () => this.setState({ replyTo:null });
+    v.draft = s.draft; v.onDraft = (e) => this.setState({ draft: e.target.value });
+    v.canSend = (s.draft || '').trim().length > 0; v.sendBg = v.canSend ? ACC : TRACK; v.sendFg = v.canSend ? ONACC : MUT;
+    v.sendMsg = () => this.send();
+    v.openSheet = () => this.setState({ sheet:true }); v.closeSheet = () => this.setState({ sheet:false });
+    v.addPhoto = () => this.send({ k:'photo' }); v.addEvent = () => this.send({ k:'event' });
+    v.sheetOpen = s.sheet;
+
+    // ---- settings
+    v.goSettings = () => this.go('settings'); v.goNotif = () => this.go('notif'); v.goAbout = () => this.go('about'); v.goWhy = () => this.go('why');
+    v.toggles = NOTIFS.map((n, i) => ({ label:n[0], sub:n[1], trackBg: s.notif[i] ? ACC : TRACK, knobL: s.notif[i] ? 21 : 3, knobBg: s.notif[i] ? ONACC : MUT,
+      tap: () => { const a = s.notif.slice(); a[i] = !a[i]; this.setState({ notif:a }); } }));
+    v.pauses = ['Off','1 hour','Until tomorrow'].map((p, i) => ({ label:p, bg: s.pause === i ? ACC : 'transparent', fg: s.pause === i ? ONACC : TXT, bd: s.pause === i ? ACC : BRD, tap: () => this.setState({ pause:i }) }));
+    v.notifSummary = s.notif.filter(x => x).length + ' of 6 on';
+    return v;
+  }
+}
+
+</script>
+</body>
+</html>
