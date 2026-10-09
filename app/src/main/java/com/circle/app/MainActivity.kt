@@ -14,11 +14,17 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.circle.app.data.CircleStore
+import androidx.compose.runtime.CompositionLocalProvider
 import com.circle.app.data.ThemeMode
+import com.circle.app.data.repo.CircleRepository
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import com.circle.app.navigation.CircleNavGraph
 import com.circle.app.ui.launch.SessionViewModel
 import com.circle.app.ui.theme.CircleTheme
+import com.circle.app.ui.vm.LocalMe
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -34,21 +40,30 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** App-wide state: the theme choice and your own profile (for avatars everywhere). */
+class RootViewModel(repo: CircleRepository) : RepoViewModel(repo) {
+    val theme = repo.theme().state(ThemeMode.SYSTEM)
+    val me = repo.me().state(null)
+}
+
 @Composable
-fun CircleApp(session: SessionViewModel) {
-    val night = when (CircleStore.theme) {
+fun CircleApp(session: SessionViewModel, navController: NavHostController = rememberNavController()) {
+    val root = circleViewModel { RootViewModel(it) }
+    val theme by root.theme.collectAsStateWithLifecycle()
+    val me by root.me.collectAsStateWithLifecycle()
+    val night = when (theme) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.NIGHT -> true
         ThemeMode.DAY -> false
     }
     val start by session.start.collectAsStateWithLifecycle()
-    CircleTheme(night = night) {
+    CircleTheme(night = night) { CompositionLocalProvider(LocalMe provides me) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = CircleTheme.colors.background,
             contentColor = CircleTheme.colors.text
         ) {
-            start?.let { CircleNavGraph(session, it) }
+            start?.let { CircleNavGraph(session, it, navController) }
         }
-    }
+    } }
 }

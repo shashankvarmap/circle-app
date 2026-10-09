@@ -14,9 +14,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.circle.app.data.CircleStore
-import com.circle.app.data.GroupInfo
-import com.circle.app.data.Person
+import com.circle.app.data.repo.GroupView
+import com.circle.app.data.repo.JoinRequestView
+import com.circle.app.data.repo.PersonRef
+import com.circle.app.ui.format.relativeTime
 import com.circle.app.ui.a11y.rememberReduceMotion
 import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.components.GroupTile
@@ -26,8 +27,8 @@ import com.circle.app.ui.theme.*
 
 /** What sits in one of the 12 member-ring slots. */
 private sealed interface Slot {
-    data class Member(val p: Person) : Slot
-    data class Request(val p: Person) : Slot
+    data class Member(val p: PersonRef) : Slot
+    data class Request(val p: PersonRef) : Slot
     data object More : Slot
 }
 
@@ -37,19 +38,20 @@ private sealed interface Slot {
  * chip. Every person opens their profile, rendered by your relationship to them.
  */
 @Composable
-fun GroupPeople(group: GroupInfo, showMap: Boolean, onPerson: (String) -> Unit) {
-    val hosts = CircleStore.visibleHosts(group).mapNotNull { CircleStore.person(it) }
-    val members = CircleStore.visibleMembers(group).mapNotNull { CircleStore.person(it) }
-    val requests = CircleStore.visibleJoinRequests(group).mapNotNull { (id, ago) -> CircleStore.person(id)?.let { it to ago } }
-    val hidden = (group.memberCount - hosts.size - members.size).coerceAtLeast(0)
+fun GroupPeople(group: GroupView, showMap: Boolean, onPerson: (String) -> Unit) {
+    // Members only: the repository returns no people to anyone else.
+    val people = group.people ?: return
+    val hosts = people.hosts
+    val members = people.members
+    val hidden = people.hiddenCount
 
-    if (showMap) GroupOrbit(group, hosts, members, requests.map { it.first }, hidden, onPerson)
+    if (showMap) GroupOrbit(group, hosts, members, people.requests.map { it.person }, hidden, onPerson)
     else GroupList(hosts, members, hidden, onPerson)
-    AskedToJoin(requests, onPerson)
+    AskedToJoin(people.requests, onPerson)
 }
 
 @Composable
-private fun GroupOrbit(group: GroupInfo, hosts: List<Person>, members: List<Person>, requests: List<Person>, hidden: Int, onPerson: (String) -> Unit) {
+private fun GroupOrbit(group: GroupView, hosts: List<PersonRef>, members: List<PersonRef>, requests: List<PersonRef>, hidden: Int, onPerson: (String) -> Unit) {
     val colors = CircleTheme.colors
     val g = GroupPeopleGeometry
     val reduceMotion = rememberReduceMotion()
@@ -76,7 +78,7 @@ private fun GroupOrbit(group: GroupInfo, hosts: List<Person>, members: List<Pers
             orbitRing(c, px(g.MEMBER_R), colors.border, dashed = true)
             orbitRing(c, px(g.HOST_R), colors.border, dashed = false)
         }
-        Box(Modifier.centeredAt(Pt(g.CX, g.CY), g.CENTER_TILE.dp)) { GroupTile(group.initial, group.color, size = g.CENTER_TILE.toInt()) }
+        Box(Modifier.centeredAt(Pt(g.CX, g.CY), g.CENTER_TILE.dp)) { GroupTile(group.ref.initial, group.ref.color, size = g.CENTER_TILE.toInt()) }
         OrbitLabel("HOSTS", 8.5f, Modifier.placedAt(g.CX - 40f, g.CY + 28f).width((80 * scale).dp))
 
         hosts.take(2).forEachIndexed { i, p ->
@@ -111,7 +113,7 @@ private fun GroupOrbit(group: GroupInfo, hosts: List<Person>, members: List<Pers
 }
 
 @Composable
-private fun GroupList(hosts: List<Person>, members: List<Person>, hidden: Int, onPerson: (String) -> Unit) {
+private fun GroupList(hosts: List<PersonRef>, members: List<PersonRef>, hidden: Int, onPerson: (String) -> Unit) {
     Column {
         ListHeading("HOSTS")
         hosts.forEach { PersonListRow(it, "Host", onPerson) }
@@ -124,7 +126,7 @@ private fun GroupList(hosts: List<Person>, members: List<Person>, hidden: Int, o
 }
 
 @Composable
-private fun AskedToJoin(requests: List<Pair<Person, String>>, onPerson: (String) -> Unit) {
+private fun AskedToJoin(requests: List<JoinRequestView>, onPerson: (String) -> Unit) {
     if (requests.isEmpty()) return
     Column(Modifier.padding(top = 8.dp)) {
         ListHeading("ASKED TO JOIN · ${requests.size}")
@@ -132,10 +134,7 @@ private fun AskedToJoin(requests: List<Pair<Person, String>>, onPerson: (String)
             "Dashed circles are join requests. Every member can see them, not just the hosts.",
             color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp)
         )
-        requests.forEach { (p, ago) ->
-            val mutual = if (p.mutualFriends == 1) "1 mutual friend" else "${p.mutualFriends} mutual friends"
-            PersonListRow(p, "asked $ago ago · $mutual", onPerson)
-        }
+        requests.forEach { r -> PersonListRow(r.person, "asked ${relativeTime(r.askedAt)} ago", onPerson) }
     }
 }
 
@@ -146,7 +145,7 @@ private fun ListHeading(text: String) {
 
 /** A person in a list: the whole row (at least 48dp) opens their profile. */
 @Composable
-fun PersonListRow(p: Person, subtitle: String, onPerson: (String) -> Unit) {
+fun PersonListRow(p: PersonRef, subtitle: String, onPerson: (String) -> Unit) {
     Row(
         Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(RoundedCornerShape(10.dp))
             .clickable(onClickLabel = "Open ${p.name}'s profile") { onPerson(p.id) }.padding(vertical = 6.dp),

@@ -36,9 +36,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.circle.app.data.CircleStore
-import com.circle.app.data.EventInfo
-import com.circle.app.data.GroupInfo
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.EventSummary
+import com.circle.app.data.repo.ExploreView
+import com.circle.app.data.repo.GroupView
+import com.circle.app.ui.format.*
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
+
 import com.circle.app.navigation.Routes
 import com.circle.app.ui.a11y.rememberReduceMotion
 import com.circle.app.ui.a11y.rememberScreenReaderOn
@@ -52,25 +58,22 @@ private sealed interface ExploreItem {
     val compassDeg: Float?
     val title: String
 
-    data class Event(val e: EventInfo) : ExploreItem {
+    data class Event(val e: EventSummary) : ExploreItem {
         override val key get() = "e:${e.id}"
         override val compassDeg get() = e.compassDeg
         override val title get() = e.title
     }
 
-    data class Group(val g: GroupInfo) : ExploreItem {
+    data class Group(val g: GroupView) : ExploreItem {
         override val key get() = "g:${g.id}"
         override val compassDeg get() = g.compassDeg
         override val title get() = g.name
     }
 }
 
-private val MonthNames = mapOf(
-    "JAN" to "January", "FEB" to "February", "MAR" to "March", "APR" to "April", "MAY" to "May", "JUN" to "June",
-    "JUL" to "July", "AUG" to "August", "SEP" to "September", "OCT" to "October", "NOV" to "November", "DEC" to "December"
-)
-
-private fun EventInfo.dateSpoken() = MonthNames[month]?.let { "$day $it" } ?: whenLabel
+class ExploreViewModel(repo: CircleRepository) : RepoViewModel(repo) {
+    val explore = repo.explore().state(ExploreView(emptyList(), emptyList()))
+}
 
 /**
  * Explore: the one public layer. Angle = topic, distance = how soon (events this week on the
@@ -84,9 +87,11 @@ fun ExploreScreen(nav: NavHostController) {
     var selectedKey by rememberSaveable { mutableStateOf("e:board-game-night") }
     var topic by rememberSaveable { mutableStateOf<String?>(null) } // Sector name, null = all
 
-    // Private groups never appear in Explore.
-    val events = CircleStore.events.map { ExploreItem.Event(it) }
-    val groups = CircleStore.groups.filter { it.isPublic }.map { ExploreItem.Group(it) }
+    // Private groups and events you may not see never reach this screen (the repository filters them).
+    val vm = circleViewModel { ExploreViewModel(it) }
+    val explore by vm.explore.collectAsStateWithLifecycle()
+    val events = explore.events.map { ExploreItem.Event(it) }
+    val groups = explore.groups.map { ExploreItem.Group(it) }
     val onMap = (events + groups).filter { it.compassDeg != null }
     val selected = onMap.firstOrNull { it.key == selectedKey } ?: onMap.firstOrNull()
 
@@ -136,10 +141,8 @@ fun ExploreScreen(nav: NavHostController) {
 
                 fun inTopic(item: ExploreItem) =
                     topic == null || item.compassDeg?.let { Sector.of(it).name } == topic
-                // Events by how soon (seed dates are all this month; undated ones last), groups by name.
-                val listEvents = events.filter(::inTopic).sortedWith(
-                    compareBy({ it.e.compassDeg == null }, { it.e.day.toIntOrNull() ?: Int.MAX_VALUE })
-                )
+                // Events by how soon, groups by name. Never by popularity.
+                val listEvents = events.filter(::inTopic).sortedBy { it.e.startsAt }
                 val listGroups = groups.filter(::inTopic).sortedBy { it.g.name }
 
                 if (listEvents.isEmpty() && listGroups.isEmpty()) {
@@ -380,7 +383,7 @@ private fun PreviewCard(item: ExploreItem, onOpen: () -> Unit) {
 }
 
 @Composable
-private fun CapacityBar(e: EventInfo, modifier: Modifier = Modifier) {
+private fun CapacityBar(e: EventSummary, modifier: Modifier = Modifier) {
     val colors = CircleTheme.colors
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(999.dp)).background(colors.track)) {
@@ -426,7 +429,7 @@ private fun ListSection(text: String) {
 }
 
 @Composable
-private fun EventListRow(e: EventInfo, onClick: () -> Unit) {
+private fun EventListRow(e: EventSummary, onClick: () -> Unit) {
     val colors = CircleTheme.colors
     Row(
         modifier = Modifier
@@ -449,7 +452,7 @@ private fun EventListRow(e: EventInfo, onClick: () -> Unit) {
 }
 
 @Composable
-private fun GroupListRow(g: GroupInfo, onClick: () -> Unit) {
+private fun GroupListRow(g: GroupView, onClick: () -> Unit) {
     val colors = CircleTheme.colors
     val status = when {
         g.isMember -> "Member"

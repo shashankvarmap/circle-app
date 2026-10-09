@@ -38,8 +38,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.circle.app.data.CircleStore
-import com.circle.app.data.Person
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.CircleSummary
+import com.circle.app.data.repo.FriendView
+import com.circle.app.ui.components.MeAvatar
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
 import com.circle.app.ui.a11y.rememberReduceMotion
 import com.circle.app.ui.a11y.rememberScreenReaderOn
 import com.circle.app.ui.components.Avatar
@@ -48,6 +53,13 @@ import com.circle.app.ui.orbit.*
 import com.circle.app.ui.theme.*
 
 private val MoveEasing = CubicBezierEasing(0.3f, 1.25f, 0.5f, 1f) // the prototype's slight overshoot
+
+/** Your friends and inner circle: the owner's only (AccessPolicy.friendGraph). */
+class YourCircleViewModel(repo: CircleRepository) : RepoViewModel(repo) {
+    val friends = repo.friends().state(emptyList())
+    val summary = repo.circleSummary().state(CircleSummary(0, 0))
+    fun toggleInner(id: String) = run({ toggleInnerCircle(id) })
+}
 
 /**
  * Your circle: private to you. Inner circle on the solid ring, other friends on the dashed
@@ -67,29 +79,31 @@ fun YourCircleScreen(nav: NavHostController) {
         mutableStateListOf<String>()
     }
 
-    val friends = CircleStore.friends
-    val inner = friends.filter { CircleStore.isInner(it.id) }.take(YourCircleGeometry.MAX_SHOWN)
+    val vm = circleViewModel { YourCircleViewModel(it) }
+    val friends by vm.friends.collectAsStateWithLifecycle()
+    val summary by vm.summary.collectAsStateWithLifecycle()
+    val byId = friends.associateBy { it.person.id }
+    val inner = friends.filter { it.isInner }.take(YourCircleGeometry.MAX_SHOWN)
     val outerSlots = (YourCircleGeometry.MAX_SHOWN - inner.size).coerceAtLeast(0)
-    val outerIds = (pinned.filter { CircleStore.isFriend(it) && !CircleStore.isInner(it) } +
-        friends.filter { !CircleStore.isInner(it.id) }.map { it.id }).distinct().take(outerSlots).toSet()
-    val outer = friends.filter { it.id in outerIds } // stable friend order around the ring
-    val selected = CircleStore.person(selectedId)?.takeIf { CircleStore.isFriend(it.id) } ?: friends.first()
+    val outerIds = (pinned.filter { byId[it]?.isInner == false } +
+        friends.filter { !it.isInner }.map { it.person.id }).distinct().take(outerSlots).toSet()
+    val outer = friends.filter { it.person.id in outerIds } // stable friend order around the ring
+    val selected = byId[selectedId] ?: friends.firstOrNull()
 
-    fun select(p: Person) {
-        selectedId = p.id
-        if (!CircleStore.isInner(p.id) && p.id !in outerIds) {
-            pinned.remove(p.id); pinned.add(0, p.id)
+    fun select(p: FriendView) {
+        selectedId = p.person.id
+        if (!p.isInner && p.person.id !in outerIds) {
+            pinned.remove(p.person.id); pinned.add(0, p.person.id)
         }
     }
 
-    fun toggle(p: Person) {
-        val movingOut = CircleStore.isInner(p.id)
-        CircleStore.toggleInner(p.id)
-        if (movingOut) { pinned.remove(p.id); pinned.add(0, p.id) }
+    fun toggle(p: FriendView) {
+        vm.toggleInner(p.person.id)
+        if (p.isInner) { pinned.remove(p.person.id); pinned.add(0, p.person.id) }
     }
 
-    val filtered = friends.filter { query.isBlank() || it.name.contains(query.trim(), ignoreCase = true) }
-        .sortedByDescending { CircleStore.isInner(it.id) } // stable: inner circle first, then friends
+    val filtered = friends.filter { query.isBlank() || it.person.name.contains(query.trim(), ignoreCase = true) }
+        .sortedByDescending { it.isInner } // stable: inner circle first, then friends
 
     Column(modifier = Modifier.fillMaxSize().background(colors.background)) {
         // Header
@@ -109,7 +123,7 @@ fun YourCircleScreen(nav: NavHostController) {
                     letterSpacing = (-0.21).sp, color = colors.text, modifier = Modifier.semantics { heading() }
                 )
                 Text(
-                    "${CircleStore.friendCount} friends · ${CircleStore.innerCount} inner circle",
+                    "${summary.friendCount} friends · ${summary.innerCount} inner circle",
                     color = colors.muted, fontSize = 11.5.sp
                 )
             }
@@ -125,9 +139,9 @@ fun YourCircleScreen(nav: NavHostController) {
                     MapListToggle(showMap, { showMap = it })
                 }
             }
-            if (showMap) {
+            if (showMap && selected != null) {
                 item(key = "map") {
-                    CircleMap(inner, outer, selected.id, reduceMotion) { select(it) }
+                    CircleMap(inner, outer, selected.person.id, reduceMotion) { select(it) }
                 }
                 item(key = "detail") {
                     DetailCard(selected, onToggle = { toggle(selected) })
@@ -136,7 +150,7 @@ fun YourCircleScreen(nav: NavHostController) {
 
             item(key = "all-header") {
                 Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 6.dp)) {
-                    SectionLabel(if (showMap) "ALL FRIENDS · ${CircleStore.friendCount}" else "YOUR CIRCLE · ${CircleStore.friendCount}")
+                    SectionLabel(if (showMap) "ALL FRIENDS · ${summary.friendCount}" else "YOUR CIRCLE · ${summary.friendCount}")
                     Spacer(Modifier.height(10.dp))
                     SearchField(query, onChange = { query = it }, placeholder = "Search your friends")
                 }
@@ -156,11 +170,10 @@ fun YourCircleScreen(nav: NavHostController) {
                     }
                 }
             }
-            items(filtered, key = { it.id }) { p ->
+            items(filtered, key = { it.person.id }) { p ->
                 FriendRow(
-                    person = p,
-                    isInner = CircleStore.isInner(p.id),
-                    isSelected = showMap && p.id == selected.id,
+                    friend = p,
+                    isSelected = showMap && p.person.id == selected?.person?.id,
                     showMoveButton = !showMap,
                     onClick = { if (showMap) select(p) },
                     onToggle = { toggle(p) }
@@ -179,11 +192,11 @@ fun YourCircleScreen(nav: NavHostController) {
 
 @Composable
 private fun CircleMap(
-    inner: List<Person>,
-    outer: List<Person>,
+    inner: List<FriendView>,
+    outer: List<FriendView>,
     selectedId: String,
     reduceMotion: Boolean,
-    onSelect: (Person) -> Unit
+    onSelect: (FriendView) -> Unit
 ) {
     val colors = CircleTheme.colors
     val g = YourCircleGeometry
@@ -199,14 +212,10 @@ private fun CircleMap(
             orbitRing(c, px(g.INNER_R), colors.border, dashed = false)
         }
         // You, in the middle
-        Box(
-            modifier = Modifier.centeredAt(Pt(g.CX, g.CY), g.ME_NODE.dp).size(g.ME_NODE.dp)
-                .clip(CircleShape).background(CircleStore.me.color)
-                .semantics { contentDescription = "You" },
-            contentAlignment = Alignment.Center
-        ) { Text("S", color = avatarTextColor(CircleStore.me.color), fontWeight = FontWeight.Bold, fontSize = 15.sp) }
+        MeAvatar(g.ME_NODE.toInt(), Modifier.centeredAt(Pt(g.CX, g.CY), g.ME_NODE.dp).semantics { contentDescription = "You" })
 
-        targets.forEach { (p, target, isInner) ->
+        targets.forEach { (f, target, isInner) ->
+            val p = f.person
             key(p.id) {
                 val spec = if (reduceMotion) snap<Float>() else tween(550, easing = MoveEasing)
                 val x by animateFloatAsState(target.x, spec, label = "x-${p.id}")
@@ -227,7 +236,7 @@ private fun CircleMap(
                     halo = 2.dp,
                     selectedGap = 2.dp,
                     reduceMotion = reduceMotion,
-                    onClick = { onSelect(p) }
+                    onClick = { onSelect(f) }
                 ) {
                     Text(p.initials, color = avatarTextColor(p.color), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
@@ -244,9 +253,10 @@ private fun CircleMap(
 }
 
 @Composable
-private fun DetailCard(person: Person, onToggle: () -> Unit) {
+private fun DetailCard(friend: FriendView, onToggle: () -> Unit) {
     val colors = CircleTheme.colors
-    val isInner = CircleStore.isInner(person.id)
+    val person = friend.person
+    val isInner = friend.isInner
     Column(
         modifier = Modifier
             .padding(horizontal = 16.dp)
@@ -262,7 +272,7 @@ private fun DetailCard(person: Person, onToggle: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(person.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(statusLine(person, isInner), color = colors.muted, fontSize = 12.sp)
+                Text(statusLine(friend.sinceYear, isInner), color = colors.muted, fontSize = 12.sp)
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -275,8 +285,8 @@ private fun DetailCard(person: Person, onToggle: () -> Unit) {
     }
 }
 
-private fun statusLine(p: Person, isInner: Boolean) =
-    (if (isInner) "In your inner circle" else "Friend") + " · since ${p.sinceYear}"
+private fun statusLine(sinceYear: Int, isInner: Boolean) =
+    (if (isInner) "In your inner circle" else "Friend") + " · since $sinceYear"
 
 /** "Move to inner circle" (accent fill) or "Move back to friends" (outlined). */
 @Composable
@@ -303,14 +313,15 @@ private fun MoveButton(isInner: Boolean, fill: Boolean, onClick: () -> Unit, mod
 
 @Composable
 private fun FriendRow(
-    person: Person,
-    isInner: Boolean,
+    friend: FriendView,
     isSelected: Boolean,
     showMoveButton: Boolean,
     onClick: () -> Unit,
     onToggle: () -> Unit
 ) {
     val colors = CircleTheme.colors
+    val person = friend.person
+    val isInner = friend.isInner
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -328,7 +339,7 @@ private fun FriendRow(
         Column(Modifier.weight(1f)) {
             Text(person.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
             Text(
-                statusLine(person, isInner) + if (isSelected) " · selected" else "",
+                statusLine(friend.sinceYear, isInner) + if (isSelected) " · selected" else "",
                 color = colors.muted, fontSize = 11.5.sp
             )
         }

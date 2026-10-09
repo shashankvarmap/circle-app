@@ -18,29 +18,32 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] Five tests (LaunchFlowTest) + Robolectric UI test of the start screen; verified on the emulator
 
 ## Phase 2: Privacy core (MASTER_PROMPT section 2) — gates everything after it
-- [ ] `Relationship` = SELF, FRIEND, REQUEST_SENT, REQUEST_RECEIVED, NONE, BLOCKED_BY_ME, BLOCKED_ME
-- [ ] `AccessPolicy` (pure Kotlin, deny by default) answering every cell of the table
-- [ ] Redacted types: `ProfileView` (Full / Limited / NotFound), `NoteView` (Full / Snippet / Hidden), `ThreadResult` (Opened / Denied(reason))
-- [ ] `relationshipTo(id)` on the repository
-- [ ] Repository is the only data access; every read asks AccessPolicy; actions (open thread, comments, comment, like, repost, quote, share, message) return Denied for non-friends
-- [ ] Nothing in `ui/` (or navigation) imports the store; a test fails the build if it does
-- [ ] Mutual-friends number removed everywhere (profile, request rows, search, seats, group requests)
-- [ ] Limited profile built from limited fields only
-- [ ] Shared card = Snippet (<= 90 chars, no photo, no replies), gate sheet with Send request / View profile / Not now
-- [ ] Relationship change re-evaluates every screen; unfriend/block purges cached notes/threads/snippets; open thread closes to the gate
-- [ ] Deep link to a thread goes through the repository (gate if denied)
-- [ ] No logging of note/comment/message text (test)
-- [ ] Exhaustive table-driven AccessPolicy test (every relationship x resource x action)
-- [ ] Repository tests (Limited for NONE, Denied(NOT_FRIENDS), comment/like/repost Denied, Snippet <= 90 + canOpen=false, purge on unfriend)
-- [ ] Compose UI tests for the six owner scenarios (Robolectric)
-- [ ] `PRIVACY_RULES.md`; server-enforcement note in BACKEND_READINESS.md
+- [x] `Relationship` = SELF, FRIEND, REQUEST_SENT, REQUEST_RECEIVED, NONE, BLOCKED_BY_ME, BLOCKED_ME
+- [x] `AccessPolicy` (pure Kotlin, deny by default) answering every cell of the table (`data/access/AccessPolicy.kt`)
+- [x] Redacted types: `ProfileView`, `NoteView`, `ThreadResult` (`data/repo/Views.kt`)
+- [x] `relationshipTo(id)` on the repository
+- [x] Repository is the only data access; every read asks AccessPolicy; actions return Denied for non-friends
+- [x] Nothing in `ui/` (or navigation, MainActivity) touches the store; `PrivacyBoundaryTest` fails the build if it does
+- [x] Mutual-friends number removed everywhere (test guards it)
+- [x] Limited profile built from limited fields only
+- [x] Shared card = Snippet (<= 90 chars, no photo, no replies), gate sheet with Send request / View profile / Not now
+- [x] Relationship change re-evaluates every screen (snapshot flows); unfriend/block purge `ContentCache`; open thread closes to the gate
+- [x] Deep links `circle://app/thread/{id}` and `/person/{id}` go through the same ViewModels (gate if denied)
+- [x] No logging of any kind (test)
+- [x] Exhaustive table-driven AccessPolicy test (`AccessPolicyTableTest`)
+- [x] Repository tests (`FakeCircleRepositoryTest`, `FlowReactivityTest`)
+- [x] Compose UI tests for the owner scenarios 1-6 (`PrivacyScenariosUiTest`, Robolectric)
+- [x] `PRIVACY_RULES.md`; server-enforcement section in BACKEND_READINESS.md
+- [x] Verified on the emulator (shared card gate, Elena's Limited profile)
 
 ## Phase 3: Repository + ViewModel layer (FRONTEND_COMPLETE 8)
-- [ ] `CircleRepository` interface (Flows + suspend actions), `FakeCircleRepository`
-- [ ] ViewModels per screen; screens talk only to ViewModels
-- [ ] `Outcome` (Success / Error) on network-shaped calls; UI handles errors
-- [ ] String ids (UUID for new items), `Instant` timestamps (no "2h" strings in data)
+- [x] `CircleRepository` interface (Flows + suspend actions), `FakeCircleRepository` (landed in Phase 2)
+- [x] ViewModels per screen; screens talk only to ViewModels (landed in Phase 2)
+- [x] `Outcome` (Success / Denied / Error) on every action (landed in Phase 2)
+- [ ] UI error states for Outcome.Error (with Phase 8 states)
+- [x] String ids (UUID for new items), `Instant` timestamps (landed in Phase 2)
 - [ ] `MediaStore` abstraction for media URIs
+- [ ] Debug "fail" switch on the fake (Phase 11)
 
 ## Phase 4: Posts and threads (F1)
 - [x] Quote cause found + fixed (f2886fb); Repost / Undo repost / Quote from the store

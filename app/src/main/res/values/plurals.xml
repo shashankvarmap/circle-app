@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="thread_replies_caps">
+        <item quantity="one">%1$d REPLY</item>
+        <item quantity="other">%1$d REPLIES</item>
+    </plurals>
+    <plurals name="members_count">
+        <item quantity="one">%1$d member</item>
+        <item quantity="other">%1$d members</item>
+    </plurals>
+</resources>

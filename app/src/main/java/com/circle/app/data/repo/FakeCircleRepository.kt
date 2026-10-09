@@ -1,0 +1,656 @@
+package com.circle.app.data.repo
+
+import androidx.compose.runtime.snapshotFlow
+import com.circle.app.data.*
+import com.circle.app.data.access.AccessPolicy
+import com.circle.app.data.access.Audience
+import com.circle.app.data.access.Decision
+import com.circle.app.data.access.DenyReason
+import com.circle.app.data.access.EventVisibility
+import com.circle.app.data.access.NoteAction
+import com.circle.app.data.access.NoteFacts
+import com.circle.app.data.access.ProfileAccess
+import com.circle.app.data.access.Relationship
+import com.circle.app.data.access.SharedCardAccess
+import com.circle.app.ui.theme.*
+import kotlinx.coroutines.flow.Flow
+
+/**
+ * The repository over the in-memory [CircleStore] (the fake server). Every read asks
+ * [AccessPolicy] and returns redacted views; every action is checked the same way.
+ * Observations are snapshot flows, so they re-evaluate whenever anything they read changes.
+ */
+class FakeCircleRepository(
+    private val store: CircleStore = CircleStore,
+    val cache: ContentCache = ContentCache(),
+) : CircleRepository {
+
+    private fun <T> observe(block: () -> T): Flow<T> = snapshotFlow(block)
+
+    // =========================================================================== relationship
+
+    private fun rel(personId: String): Relationship = when {
+        personId == ME -> Relationship.SELF
+        personId in store.blockedIds -> Relationship.BLOCKED_BY_ME
+        personId in store.blockedMeIds -> Relationship.BLOCKED_ME
+        personId in store.friendIds -> Relationship.FRIEND
+        store.requestStatus[personId] == RequestStatus.PENDING -> Relationship.REQUEST_RECEIVED
+        personId in store.outgoingRequestIds -> Relationship.REQUEST_SENT
+        else -> Relationship.NONE
+    }
+
+    private fun hiddenFromMe(personId: String) = rel(personId).isBlocked
+
+    /** Who someone is. Null across a block, or for nobody. */
+    private fun ref(personId: String): PersonRef? {
+        if (hiddenFromMe(personId)) return null
+        val p = store.person(personId) ?: return null
+        return if (personId == ME) {
+            PersonRef(ME, p.name, store.profile.initial, p.color, isMe = true)
+        } else PersonRef(p.id, p.name, p.initials, p.color)
+    }
+
+    // =========================================================================== notes
+
+    private fun facts(p: Post) = NoteFacts(
+        audience = p.audience,
+        viewerInAuthorsInnerCircle = p.authorId in store.innerCirclesIAmIn,
+        groupId = p.groupId,
+        viewerIsGroupMember = p.groupId?.let { store.group(it)?.isMember } == true,
+    )
+
+    private fun decide(p: Post, action: NoteAction): Decision = AccessPolicy.note(rel(p.authorId), facts(p), action)
+
+    private fun original(p: Post): Post = p.repostOfId?.let { store.post(it) } ?: p
+
+    private fun commentCount(p: Post) = p.comments
+        .filter { !hiddenFromMe(it.authorId) }
+        .sumOf { c -> 1 + c.replies.count { !hiddenFromMe(it.authorId) } }
+
+    private fun toNote(p: Post): Note? {
+        val author = ref(p.authorId) ?: return null
+        val target = original(p)
+        val repost = when {
+            decide(target, NoteAction.REPOST).let { it is Decision.Deny } ->
+                RepostState.Unavailable((decide(target, NoteAction.REPOST) as Decision.Deny).reason)
+            isReposted(target.id) -> RepostState.Reposted
+            else -> RepostState.Available
+        }
+        return Note(
+            id = p.id,
+            author = author,
+            createdAt = p.createdAt,
+            text = p.text,
+            hasMedia = p.hasMedia,
+            audience = p.audience,
+            group = p.groupId?.let { store.group(it) }?.let { GroupRef(it.id, it.name, it.initial, it.color) },
+            quoted = p.quotedPostId?.let { embedded(it) },
+            repostOf = p.repostOfId?.let { embedded(it) },
+            actionTargetId = target.id,
+            likedByMe = target.id in store.likedPostIds,
+            commentCount = commentCount(target),
+            repost = repost,
+            canShare = decide(target, NoteAction.SHARE).allowed,
+        )
+    }
+
+    /** A note seen in full, if allowed. */
+    private fun fullView(p: Post): NoteView =
+        if (decide(p, NoteAction.VIEW).allowed) toNote(p)?.let { NoteView.Full(it) } ?: NoteView.Hidden else NoteView.Hidden
+
+    /** A note travelling inside something else (a quote, a repost card, a chat): full, a snippet, or hidden. */
+    private fun embedded(noteId: String): NoteView {
+        val p = store.post(noteId) ?: return NoteView.Hidden
+        return when (AccessPolicy.sharedCard(rel(p.authorId), facts(p))) {
+            SharedCardAccess.OPEN -> fullView(p).also { if (it is NoteView.Full && p.authorId != ME) cache.remember(p.authorId, "note:${p.id}") }
+            SharedCardAccess.SNIPPET -> {
+                val author = store.person(p.authorId) ?: return NoteView.Hidden
+                cache.remember(p.authorId, "snippet:${p.id}")
+                NoteView.Snippet(p.id, author.id, author.name, AccessPolicy.snippet(p.text))
+            }
+            SharedCardAccess.HIDDEN -> NoteView.Hidden
+        }
+    }
+
+    private fun isReposted(postId: String) = store.posts.any { it.authorId == ME && it.repostOfId == postId }
+
+    private fun visibleNotes(posts: List<Post>): List<Note> =
+        posts.filter { decide(it, NoteAction.VIEW).allowed }.mapNotNull { toNote(it) }
+
+    override fun homeFeed(): Flow<List<Note>> = observe {
+        visibleNotes(store.posts.filter { it.groupId == null && it.authorId !in store.mutedIds })
+    }
+
+    override fun groupFeed(): Flow<List<Note>> = observe { visibleNotes(store.posts.filter { it.groupId != null }) }
+
+    override fun myNotes(): Flow<List<Note>> = observe {
+        visibleNotes(store.posts.filter { it.authorId == ME && it.groupId == null })
+    }
+
+    override fun notesBy(personId: String): Flow<List<Note>> = observe {
+        if (AccessPolicy.profile(rel(personId)) != ProfileAccess.FULL) emptyList()
+        else visibleNotes(store.posts.filter { it.authorId == personId && it.groupId == null && !it.isRepost })
+    }
+
+    override fun note(noteId: String): Flow<NoteView> = observe { embedded(noteId) }
+
+    override fun thread(noteId: String): Flow<ThreadResult> = observe { threadNow(noteId) }
+
+    private fun threadNow(noteId: String): ThreadResult {
+        val p = store.post(noteId)?.let { original(it) } ?: return ThreadResult.Denied(DenyReason.NOT_FOUND, null)
+        val decision = decide(p, NoteAction.OPEN_THREAD)
+        if (decision is Decision.Deny) {
+            cache.forget(p.authorId, "thread:${p.id}")
+            return ThreadResult.Denied(decision.reason, ref(p.authorId))
+        }
+        val root = toNote(p) ?: return ThreadResult.Denied(DenyReason.NOT_FOUND, null)
+        if (p.authorId != ME) cache.remember(p.authorId, "thread:${p.id}")
+        return ThreadResult.Opened(Thread(root, comments(p.comments)))
+    }
+
+    private fun comments(list: List<Comment>): List<CommentView> = list.mapNotNull { c ->
+        val author = ref(c.authorId) ?: return@mapNotNull null
+        CommentView(c.id, author, c.createdAt, c.text, comments(c.replies))
+    }
+
+    private fun denied(d: Decision): Outcome.Denied? = (d as? Decision.Deny)?.let { Outcome.Denied(it.reason) }
+
+    override suspend fun toggleLike(noteId: String): Outcome<Boolean> {
+        val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        denied(decide(p, NoteAction.LIKE))?.let { return it }
+        val nowLiked = !store.likedPostIds.remove(p.id)
+        if (nowLiked) store.likedPostIds.add(p.id)
+        return Outcome.Success(nowLiked)
+    }
+
+    override suspend fun addComment(noteId: String, text: String): Outcome<Unit> {
+        val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        denied(decide(p, NoteAction.COMMENT))?.let { return it }
+        val t = text.trim()
+        if (t.isEmpty()) return Outcome.Error("empty")
+        p.comments.add(Comment(newId("c"), ME, Clock.now(), t))
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun repost(noteId: String): Outcome<Unit> {
+        val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        denied(decide(p, NoteAction.REPOST))?.let { return it }
+        if (!isReposted(p.id)) store.posts.add(0, Post(newId("rp"), ME, Clock.now(), "", repostOfId = p.id))
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun undoRepost(noteId: String): Outcome<Unit> {
+        val target = store.post(noteId)?.let { original(it) }?.id ?: noteId
+        store.posts.removeAll { it.authorId == ME && it.repostOfId == target }
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun post(text: String, audience: Audience, quotedNoteId: String?, groupId: String?): Outcome<String> {
+        val t = text.trim()
+        if (t.isEmpty()) return Outcome.Error("empty")
+        val quoted = quotedNoteId?.let { id -> store.post(id)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND) }
+        if (quoted != null) {
+            if (groupId != null) return Outcome.Denied(DenyReason.GROUP_POST)
+            denied(decide(quoted, NoteAction.QUOTE))?.let { return it }
+        }
+        if (groupId != null) denied(AccessPolicy.groupContent(store.group(groupId)?.isMember == true))?.let { return it }
+        val p = Post(
+            newId("note"), ME, Clock.now(), t,
+            audience = if (groupId != null) Audience.FRIENDS else audience,
+            quotedPostId = quoted?.id, groupId = groupId,
+        )
+        store.posts.add(0, p)
+        return Outcome.Success(p.id)
+    }
+
+    // =========================================================================== people
+
+    override fun relationshipTo(personId: String): Flow<Relationship> = observe { rel(personId) }
+
+    override fun profile(personId: String): Flow<ProfileView> = observe { profileNow(personId) }
+
+    private fun profileNow(personId: String): ProfileView {
+        val r = rel(personId)
+        return when (AccessPolicy.profile(r)) {
+            ProfileAccess.FULL -> {
+                val p = store.person(personId) ?: return ProfileView.NotFound
+                if (r == Relationship.SELF) {
+                    ProfileView.Full(ref(ME)!!, store.profile.handle, store.profile.pinnedThought, r, null, false)
+                } else ProfileView.Full(ref(personId)!!, p.handle, p.pinned, r, p.sinceYear, personId in store.mutedIds)
+            }
+            // Built from the limited fields only: nothing else is read.
+            ProfileAccess.LIMITED -> {
+                val p = store.person(personId) ?: return ProfileView.NotFound
+                ProfileView.Limited(p.id, p.name, p.initials, p.color, p.handle, p.pinned)
+            }
+            ProfileAccess.NOT_FOUND -> ProfileView.NotFound
+        }
+    }
+
+    private fun result(p: Person) = PersonResult(ref(p.id)!!, p.handle, rel(p.id))
+
+    override fun searchPeople(query: String): Flow<List<PersonResult>> = observe {
+        val q = query.trim()
+        store.people.values
+            .filter { it.id != ME && !hiddenFromMe(it.id) }
+            .filter { if (q.isEmpty()) rel(it.id) != Relationship.FRIEND else it.name.contains(q, ignoreCase = true) || it.handle.contains(q.removePrefix("@"), ignoreCase = true) }
+            .sortedBy { it.name }
+            .map { result(it) }
+    }
+
+    override fun contactMatches(): Flow<List<PersonResult>> = observe {
+        listOf("PK", "JL", "AO", "LB").mapNotNull { id -> store.person(id)?.takeIf { !hiddenFromMe(id) }?.let { result(it) } }
+    }
+
+    override fun incomingRequests(): Flow<List<RequestView>> = observe {
+        store.incomingRequests
+            .filter { store.requestStatus[it.personId] != RequestStatus.DECLINED && !hiddenFromMe(it.personId) }
+            .mapNotNull { r -> ref(r.personId)?.let { RequestView(it, store.requestStatus[r.personId] == RequestStatus.ACCEPTED, r.receivedAt) } }
+    }
+
+    override fun blocked(): Flow<List<PersonRef>> = observe {
+        // You can see who you blocked (to unblock them); they can't see you.
+        store.blockedIds.mapNotNull { id -> store.person(id)?.let { PersonRef(it.id, it.name, it.initials, it.color) } }
+    }
+
+    override fun muted(): Flow<List<PersonRef>> = observe { store.mutedIds.mapNotNull { ref(it) } }
+
+    override suspend fun sendFriendRequest(personId: String): Outcome<Unit> {
+        if (store.person(personId) == null) return Outcome.Denied(DenyReason.NOT_FOUND)
+        return when (rel(personId)) {
+            Relationship.NONE -> { store.outgoingRequestIds.add(personId); Outcome.Success(Unit) }
+            Relationship.REQUEST_SENT -> Outcome.Success(Unit)
+            Relationship.BLOCKED_BY_ME, Relationship.BLOCKED_ME -> Outcome.Denied(DenyReason.BLOCKED)
+            else -> Outcome.Error("not possible")
+        }
+    }
+
+    override suspend fun cancelFriendRequest(personId: String): Outcome<Unit> {
+        store.outgoingRequestIds.remove(personId)
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun acceptRequest(personId: String): Outcome<Unit> {
+        if (rel(personId) != Relationship.REQUEST_RECEIVED) return Outcome.Error("no request")
+        store.requestStatus[personId] = RequestStatus.ACCEPTED
+        if (personId !in store.friendIds) store.friendIds.add(personId)
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun declineRequest(personId: String): Outcome<Unit> {
+        if (store.requestStatus[personId] == RequestStatus.PENDING) store.requestStatus[personId] = RequestStatus.DECLINED
+        return Outcome.Success(Unit)
+    }
+
+    /** They accepted your request. With a backend this arrives as an event; tests use it. */
+    internal fun acceptedByThem(personId: String) {
+        if (store.outgoingRequestIds.remove(personId) && personId !in store.friendIds) store.friendIds.add(personId)
+    }
+
+    /** They blocked you. With a backend this arrives as an event; tests use it. */
+    internal fun blockedByThem(personId: String) {
+        if (personId !in store.blockedMeIds) store.blockedMeIds.add(personId)
+        endFriendship(personId)
+    }
+
+    private fun endFriendship(personId: String) {
+        store.friendIds.remove(personId); store.innerCircle.remove(personId); store.mutedIds.remove(personId)
+        store.outgoingRequestIds.remove(personId)
+        if (store.requestStatus[personId] == RequestStatus.PENDING) store.requestStatus[personId] = RequestStatus.DECLINED
+        cache.purgeAuthor(personId)
+    }
+
+    override suspend fun unfriend(personId: String): Outcome<Unit> {
+        if (rel(personId) != Relationship.FRIEND) return Outcome.Error("not a friend")
+        store.friendIds.remove(personId); store.innerCircle.remove(personId); store.mutedIds.remove(personId)
+        cache.purgeAuthor(personId)
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun block(personId: String): Outcome<Unit> {
+        if (personId == ME || store.person(personId) == null) return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (personId !in store.blockedIds) store.blockedIds.add(personId)
+        endFriendship(personId)
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun unblock(personId: String): Outcome<Unit> {
+        store.blockedIds.remove(personId)
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun mute(personId: String): Outcome<Unit> {
+        if (rel(personId) != Relationship.FRIEND) return Outcome.Denied(DenyReason.NOT_FRIENDS)
+        if (personId !in store.mutedIds) store.mutedIds.add(personId)
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun unmute(personId: String): Outcome<Unit> {
+        store.mutedIds.remove(personId)
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun report(kind: String, targetId: String): Outcome<Unit> {
+        store.reports.add(kind to targetId)
+        return Outcome.Success(Unit)
+    }
+
+    // =========================================================================== you & circle
+
+    override fun me(): Flow<MeView> = observe {
+        val p = store.profile
+        MeView(ref(ME)!!, p.displayName, p.handle, p.pinnedThought, p.avatarUri)
+    }
+
+    override fun theme(): Flow<ThemeMode> = observe { store.theme }
+    override fun privacy(): Flow<PrivacyPrefs> = observe { store.privacy }
+    override fun notificationPrefs(): Flow<NotificationPrefs> = observe { store.notifications }
+    override suspend fun setTheme(mode: ThemeMode) { store.theme = mode }
+    override suspend fun setPrivacy(prefs: PrivacyPrefs) { store.privacy = prefs }
+    override suspend fun setNotificationPrefs(prefs: NotificationPrefs) { store.notifications = prefs }
+
+    override suspend fun saveProfile(displayName: String, handle: String, pinnedThought: String, avatarUri: String?): Outcome<MyProfile> {
+        val name = displayName.trim()
+        val h = handle.trim().removePrefix("@").lowercase()
+        if (name.isEmpty()) return Outcome.Error("Add a display name")
+        HandleRules.problem(h)?.let { return Outcome.Error(it) }
+        store.profile = MyProfile(name, h, pinnedThought.trim(), avatarUri)
+        return Outcome.Success(store.profile)
+    }
+
+    override suspend fun deleteAccount(): Outcome<Unit> {
+        // The demo restores its seed; with a backend this deletes the account.
+        store.reset()
+        cache.clear()
+        return Outcome.Success(Unit)
+    }
+
+    override fun circleSummary(): Flow<CircleSummary> = observe {
+        check(AccessPolicy.friendGraph(Relationship.SELF).allowed)
+        CircleSummary(store.friendIds.size, store.innerCircle.size)
+    }
+
+    override fun friends(): Flow<List<FriendView>> = observe {
+        store.friendIds.mapNotNull { id ->
+            val p = store.person(id) ?: return@mapNotNull null
+            ref(id)?.let { FriendView(it, id in store.innerCircle, p.sinceYear) }
+        }
+    }
+
+    override suspend fun toggleInnerCircle(personId: String): Outcome<Boolean> {
+        if (store.innerCircle.remove(personId)) return Outcome.Success(false)
+        if (rel(personId) != Relationship.FRIEND) return Outcome.Denied(DenyReason.NOT_FRIENDS)
+        store.innerCircle.add(personId)
+        return Outcome.Success(true)
+    }
+
+    // =========================================================================== chats
+
+    private fun chatVisible(c: Chat): Boolean = when {
+        c.groupId != null -> AccessPolicy.groupContent(store.group(c.groupId)?.isMember == true).allowed
+        c.directPersonId != null -> !hiddenFromMe(c.directPersonId!!)
+        else -> true
+    }
+
+    private fun visibleMessages(c: Chat) =
+        c.messages.filter { it.id !in store.hiddenMessageIds && !hiddenFromMe(it.senderId) }
+
+    private fun chatKind(c: Chat) = when {
+        c.groupId != null -> ChatKind.GROUP
+        c.directPersonId != null -> ChatKind.DIRECT
+        else -> ChatKind.MULTI
+    }
+
+    private fun chatTitle(c: Chat): String = when {
+        c.groupId != null -> store.group(c.groupId)?.name.orEmpty()
+        c.name != null -> c.name
+        else -> c.directPersonId?.let { store.person(it)?.name }.orEmpty()
+    }
+
+    private fun groupRef(id: String?) = id?.let { store.group(it) }?.let { GroupRef(it.id, it.name, it.initial, it.color) }
+
+    override fun chats(): Flow<List<ChatRowView>> = observe {
+        store.chats.filter { chatVisible(it) }.map { c ->
+            val last = visibleMessages(c).lastOrNull()
+            val kind = chatKind(c)
+            ChatRowView(
+                id = c.id, kind = kind, title = chatTitle(c),
+                person = c.directPersonId?.let { ref(it) },
+                group = groupRef(c.groupId),
+                members = c.memberIds.mapNotNull { ref(it) },
+                preview = last?.let {
+                    ChatPreview(
+                        mine = it.senderId == ME,
+                        senderFirstName = if (kind != ChatKind.DIRECT && it.senderId != ME) store.person(it.senderId)?.firstName else null,
+                        kind = it.kind, text = it.text,
+                    )
+                },
+                lastAt = last?.createdAt,
+                unread = c.unread,
+            )
+        }
+    }
+
+    override fun chat(chatId: String): Flow<ChatView?> = observe {
+        val c = store.chat(chatId)?.takeIf { chatVisible(it) } ?: return@observe null
+        val messages = visibleMessages(c)
+        val byId = messages.associateBy { it.id }
+        ChatView(
+            id = c.id, kind = chatKind(c), title = chatTitle(c),
+            person = c.directPersonId?.let { ref(it) },
+            group = groupRef(c.groupId),
+            memberCount = c.groupId?.let { store.group(it)?.memberCount } ?: (c.memberIds.size + 1),
+            friendsSinceYear = c.directPersonId?.let { store.person(it)?.sinceYear },
+            messages = messages.mapNotNull { m -> messageView(m, byId) },
+        )
+    }
+
+    private fun messageView(m: ChatMessage, byId: Map<String, ChatMessage>): MessageView? {
+        val sender = ref(m.senderId) ?: return null
+        val replied = m.replyToId?.let { byId[it] }
+        return MessageView(
+            id = m.id, sender = sender, createdAt = m.createdAt, kind = m.kind, text = m.text,
+            sharedNote = m.postId?.let { embedded(it) },
+            event = m.eventId?.let { id -> store.event(id) }?.let { e ->
+                EventCardView(e.id, e.title, e.startsAt, AccessPolicy.event(e.visibility, rel(e.hostId)).allowed, ref(e.hostId))
+            },
+            replyTo = replied?.let { r ->
+                ReplySnippet(r.id, if (r.senderId == ME) "" else store.person(r.senderId)?.firstName.orEmpty(), r.senderId == ME, r.kind, r.text)
+            },
+            // Receipts are mutual: you see theirs only while yours are on.
+            seenAt = m.seenAt?.takeIf { m.senderId == ME && store.privacy.readReceipts },
+        )
+    }
+
+    override suspend fun sendMessage(chatId: String, text: String, replyToId: String?): Outcome<Unit> {
+        val c = store.chat(chatId)?.takeIf { chatVisible(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        c.directPersonId?.let { denied(AccessPolicy.directMessage(rel(it)))?.let { d -> return d } }
+        val t = text.trim()
+        if (t.isEmpty()) return Outcome.Error("empty")
+        val reply = replyToId?.takeIf { id -> visibleMessages(c).any { it.id == id } }
+        c.messages.add(ChatMessage(newId("m"), ME, Clock.now(), text = t, replyToId = reply))
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun shareNote(chatId: String, noteId: String): Outcome<Unit> {
+        val c = store.chat(chatId)?.takeIf { chatVisible(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        c.directPersonId?.let { denied(AccessPolicy.directMessage(rel(it)))?.let { d -> return d } }
+        val allInner = p.authorId == ME && c.memberIds.all { it in store.innerCircle }
+        denied(AccessPolicy.shareInto(rel(p.authorId), facts(p), c.groupId, allInner))?.let { return it }
+        c.messages.add(ChatMessage(newId("m"), ME, Clock.now(), MessageKind.SHARED_NOTE, postId = p.id))
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun deleteForMe(chatId: String, messageId: String): Outcome<Unit> {
+        if (messageId !in store.hiddenMessageIds) store.hiddenMessageIds.add(messageId)
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun unsend(chatId: String, messageId: String): Outcome<Unit> {
+        val c = store.chat(chatId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        val m = c.messages.firstOrNull { it.id == messageId } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (m.senderId != ME) return Outcome.Error("not yours")
+        c.messages.remove(m)
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun markRead(chatId: String) {
+        store.chat(chatId)?.unread = false
+    }
+
+    override suspend fun openDirectChat(personId: String): Outcome<String> {
+        denied(AccessPolicy.directMessage(rel(personId)))?.let { return it }
+        store.chats.firstOrNull { it.directPersonId == personId }?.let { return Outcome.Success(it.id) }
+        val c = Chat(newId("dm"), listOf(personId), messages = emptyList())
+        store.chats.add(0, c)
+        return Outcome.Success(c.id)
+    }
+
+    // =========================================================================== groups & events
+
+    private fun eventVisible(e: EventInfo) = AccessPolicy.event(e.visibility, rel(e.hostId)).allowed
+
+    private fun summary(e: EventInfo) = EventSummary(e.id, e.title, e.topic, e.compassDeg, e.startsAt, e.venue, e.capacity, e.going)
+
+    private fun groupView(g: GroupInfo): GroupView {
+        val people = if (AccessPolicy.groupContent(g.isMember).allowed) {
+            val hosts = g.hostIds.mapNotNull { ref(it) }
+            val members = g.memberIds.mapNotNull { ref(it) }
+            GroupPeopleView(
+                hosts = hosts, members = members,
+                requests = g.joinRequests.mapNotNull { (id, at) -> ref(id)?.let { JoinRequestView(it, at) } },
+                hiddenCount = (g.memberCount - hosts.size - members.size).coerceAtLeast(0),
+            )
+        } else null
+        return GroupView(
+            GroupRef(g.id, g.name, g.initial, g.color), g.category, g.topic, g.description, g.isPublic,
+            g.memberCount, g.isMember, g.joinRequested, g.compassDeg, people,
+        )
+    }
+
+    override fun explore(): Flow<ExploreView> = observe {
+        ExploreView(
+            events = store.events.filter { eventVisible(it) }.map { summary(it) },
+            groups = store.groups.filter { it.isPublic }.map { groupView(it) },
+        )
+    }
+
+    override fun memberGroups(): Flow<List<GroupRef>> = observe {
+        store.groups.filter { it.isMember }.map { GroupRef(it.id, it.name, it.initial, it.color) }
+    }
+
+    override fun group(groupId: String): Flow<GroupView?> = observe {
+        store.group(groupId)?.takeIf { AccessPolicy.group(it.isPublic, it.isMember).allowed }?.let { groupView(it) }
+    }
+
+    override fun groupPosts(groupId: String): Flow<List<Note>> = observe {
+        visibleNotes(store.posts.filter { it.groupId == groupId })
+    }
+
+    override fun event(eventId: String): Flow<EventView?> = observe {
+        val e = store.event(eventId)?.takeIf { eventVisible(it) } ?: return@observe null
+        val host = ref(e.hostId) ?: return@observe null
+        val hasSeat = e.joined || e.hostId == ME
+        EventView(
+            summary = summary(e), visibility = e.visibility, host = host, description = e.description,
+            seatsLeft = e.seatsLeft, isFull = e.isFull, hasSeat = hasSeat, iAmHost = e.hostId == ME,
+            seats = eventSeats(e, e.joined).map { s ->
+                when (s.kind) {
+                    com.circle.app.data.SeatKind.PERSON -> ref(s.personId!!)?.let { SeatView(SeatKind.PERSON, it, s.isHost) }
+                        ?: SeatView(SeatKind.TAKEN, isHost = s.isHost)
+                    com.circle.app.data.SeatKind.ME -> SeatView(SeatKind.ME, ref(ME), s.isHost)
+                    com.circle.app.data.SeatKind.EMPTY -> SeatView(SeatKind.EMPTY)
+                    com.circle.app.data.SeatKind.MORE -> SeatView(SeatKind.MORE, moreCount = s.moreCount)
+                }
+            },
+            thread = if (AccessPolicy.eventThread(hasSeat).allowed) EventThreadView.Open(comments(e.comments))
+            else EventThreadView.Locked(e.comments.size),
+        )
+    }
+
+    override suspend fun requestToJoin(groupId: String): Outcome<Unit> {
+        val g = store.group(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (!g.isPublic) return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (!g.isMember) g.joinRequested = true // never instant: a host approves it
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun leaveGroup(groupId: String): Outcome<Unit> {
+        val g = store.group(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (g.isMember) {
+            g.isMember = false
+            g.memberCount = (g.memberCount - 1).coerceAtLeast(0)
+        }
+        return Outcome.Success(Unit)
+    }
+
+    private val tileColors = listOf(AvatarOrange, AvatarSage, AvatarBlue, AvatarRose, AvatarTeal, AvatarAmber)
+
+    override suspend fun createGroup(name: String, category: String, description: String, isPublic: Boolean): Outcome<String> {
+        if (name.isBlank()) return Outcome.Error("Add a name")
+        val cat = category.trim().ifEmpty { "General" }
+        val g = GroupInfo(
+            id = newId("group"), name = name.trim(), category = cat, topic = cat.uppercase(),
+            description = description.trim(), color = tileColors[store.groups.size % tileColors.size],
+            isPublic = isPublic, compassDeg = null, memberCount = 1, isMember = true, // the creator is a member
+        ).apply { hostIds.add(ME) }
+        store.groups.add(0, g)
+        return Outcome.Success(g.id)
+    }
+
+    override suspend fun takeSeat(eventId: String): Outcome<Unit> {
+        val e = store.event(eventId)?.takeIf { eventVisible(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (e.joined || e.hostId == ME) return Outcome.Success(Unit)
+        if (e.isFull) return Outcome.Error("full")
+        e.joined = true
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun leaveSeat(eventId: String): Outcome<Unit> {
+        store.event(eventId)?.joined = false // the thread locks again; the host is quietly told (with a backend)
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun addEventComment(eventId: String, text: String): Outcome<Unit> {
+        val e = store.event(eventId)?.takeIf { eventVisible(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        denied(AccessPolicy.eventThread(e.joined || e.hostId == ME))?.let { return it }
+        val t = text.trim()
+        if (t.isEmpty()) return Outcome.Error("empty")
+        e.comments.add(Comment(newId("c"), ME, Clock.now(), t))
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun createEvent(title: String, visibility: EventVisibility, description: String, capacity: Int): Outcome<String> {
+        if (title.isBlank()) return Outcome.Error("Add a title")
+        val e = EventInfo(
+            id = newId("event"), title = title.trim(), topic = "EVENT", compassDeg = null,
+            startsAt = Clock.now().plusSeconds(7 * 24 * 3600L), venue = "", visibility = visibility, hostId = ME,
+            description = description.trim(), capacity = capacity.coerceAtLeast(1), goingBase = 1, joined = false,
+        )
+        store.events.add(0, e)
+        return Outcome.Success(e.id)
+    }
+
+    // =========================================================================== alerts
+
+    private fun alertView(a: Alert): AlertView? {
+        val actor = ref(a.actorId) ?: return null
+        // A quoted comment only travels to someone who may read that thread.
+        val readable = a.postId?.let { store.post(it) }?.let { decide(it, NoteAction.READ_COMMENTS).allowed } ?: false
+        return AlertView(a.id, actor, a.kind, a.createdAt, a.quote?.takeIf { readable }, a.postId, a.aboutId?.let { ref(it) })
+    }
+
+    private val aimedAtYou = setOf(AlertKind.LIKED_YOUR_NOTE, AlertKind.COMMENTED_ON_YOUR_NOTE, AlertKind.REPOSTED_YOUR_NOTE, AlertKind.QUOTED_YOUR_NOTE)
+
+    override fun alerts(): Flow<List<AlertView>> = observe {
+        store.alerts.filter { it.kind in aimedAtYou }.mapNotNull { alertView(it) }
+    }
+
+    override fun activity(): Flow<List<AlertView>> = observe {
+        // Only what friends did, and only about notes you may see.
+        store.alerts.filter { it.kind !in aimedAtYou && rel(it.actorId) == Relationship.FRIEND }
+            .filter { a -> a.postId?.let { store.post(it) }?.let { decide(it, NoteAction.VIEW).allowed } ?: false }
+            .mapNotNull { alertView(it) }
+    }
+}

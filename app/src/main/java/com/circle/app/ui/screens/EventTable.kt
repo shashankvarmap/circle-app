@@ -19,7 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.circle.app.data.*
+import com.circle.app.data.repo.EventView
+import com.circle.app.data.repo.SeatKind
+import com.circle.app.data.repo.SeatView
+import com.circle.app.ui.components.MeAvatar
 import com.circle.app.ui.a11y.rememberReduceMotion
 import com.circle.app.ui.orbit.*
 import com.circle.app.ui.theme.*
@@ -30,13 +33,13 @@ import com.circle.app.ui.theme.*
  * The ring caps at 20 places with a "+N more" chip.
  */
 @Composable
-fun EventTable(e: EventInfo, showMap: Boolean, onPerson: (String) -> Unit) {
-    val seats = eventSeats(e, e.joined)
-    if (showMap) TableOrbit(e, seats, onPerson) else TableList(seats, onPerson)
+fun EventTable(view: EventView, showMap: Boolean, onPerson: (String) -> Unit) {
+    if (showMap) TableOrbit(view, view.seats, onPerson) else TableList(view.seats, onPerson)
 }
 
 @Composable
-private fun TableOrbit(e: EventInfo, seats: List<Seat>, onPerson: (String) -> Unit) {
+private fun TableOrbit(view: EventView, seats: List<SeatView>, onPerson: (String) -> Unit) {
+    val e = view.summary
     val colors = CircleTheme.colors
     val g = EventTableGeometry
     val reduceMotion = rememberReduceMotion()
@@ -66,24 +69,24 @@ private fun TableOrbit(e: EventInfo, seats: List<Seat>, onPerson: (String) -> Un
         seats.forEachIndexed { i, seat ->
             val pt = pts[i]
             when (seat.kind) {
-                SeatKind.PERSON, SeatKind.ME -> {
-                    val p = seat.personId?.let { CircleStore.person(it) }
+                SeatKind.PERSON, SeatKind.ME, SeatKind.TAKEN -> {
+                    val p = seat.person
                     val isMe = seat.kind == SeatKind.ME
-                    val blocked = p != null && CircleStore.relationshipTo(p.id) == Relationship.BLOCKED
-                    val fill = if (blocked || p == null) colors.track else p.color
+                    // TAKEN: someone hidden from you by a block. Just a filled seat, no name, no tap.
+                    val fill = if (p == null) colors.track else p.color
                     OrbitNode(
                         center = pt, size = size, shape = NodeShape.Circle, fill = fill,
                         description = when {
-                            blocked -> "Seat taken"
+                            p == null -> "Seat taken"
                             isMe -> if (seat.isHost) "You, host" else "You"
-                            else -> "${p?.name}" + if (seat.isHost) ", host" else ""
+                            else -> p.name + if (seat.isHost) ", host" else ""
                         },
                         accentRing = seat.isHost || isMe, halo = 2.dp, reduceMotion = reduceMotion,
-                        onClick = if (blocked || p == null) null else ({ onPerson(p.id) })
+                        onClick = if (p == null || isMe) null else ({ onPerson(p.id) })
                     ) {
-                        if (!blocked && p != null) {
+                        if (p != null) {
                             Text(
-                                if (isMe) CircleStore.profile.initial else p.initials,
+                                p.initials,
                                 color = avatarTextColor(fill), fontSize = if (size.value >= 38f) 12.sp else 10.sp, fontWeight = FontWeight.Bold
                             )
                         }
@@ -104,20 +107,21 @@ private fun TableOrbit(e: EventInfo, seats: List<Seat>, onPerson: (String) -> Un
 }
 
 @Composable
-private fun TableList(seats: List<Seat>, onPerson: (String) -> Unit) {
+private fun TableList(seats: List<SeatView>, onPerson: (String) -> Unit) {
     Column {
         seats.filter { it.kind == SeatKind.PERSON || it.kind == SeatKind.ME }.forEach { seat ->
-            val p = seat.personId?.let { CircleStore.person(it) } ?: return@forEach
-            if (CircleStore.relationshipTo(p.id) == Relationship.BLOCKED) return@forEach
+            val p = seat.person ?: return@forEach
             val label = buildString {
-                append(if (seat.kind == SeatKind.ME) "You" else when (CircleStore.relationshipTo(p.id)) {
-                    Relationship.FRIEND -> "Friend"
-                    else -> if (p.mutualFriends == 1) "1 mutual friend" else "${p.mutualFriends} mutual friends"
-                })
+                append(if (seat.kind == SeatKind.ME) "You" else "At the table")
                 if (seat.isHost) append(" · host")
             }
             PersonListRow(p, label, onPerson)
         }
+        val taken = seats.count { it.kind == SeatKind.TAKEN }
+        if (taken > 0) Text(
+            if (taken == 1) "1 seat taken" else "$taken seats taken",
+            color = CircleTheme.colors.muted, fontSize = 12.5.sp, modifier = Modifier.padding(vertical = 4.dp)
+        )
         val empty = seats.count { it.kind == SeatKind.EMPTY } + (seats.firstOrNull { it.kind == SeatKind.MORE }?.moreCount ?: 0)
         if (empty > 0) Text(
             if (empty == 1) "1 empty seat" else "$empty empty seats",

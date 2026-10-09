@@ -26,7 +26,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.circle.app.data.CircleStore
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.CircleSummary
+import com.circle.app.ui.vm.LocalMe
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
 import com.circle.app.navigation.Routes
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.ui.semantics.contentDescription
@@ -36,14 +41,22 @@ import com.circle.app.ui.theme.*
 
 private enum class ProfileTab { ALL, THOUGHTS, POSTS }
 
+class MyProfileViewModel(repo: CircleRepository) : RepoViewModel(repo) {
+    val notes = repo.myNotes().state(emptyList())
+    val circle = repo.circleSummary().state(CircleSummary(0, 0))
+}
+
 @Composable
 fun ProfileScreen(nav: NavHostController) {
-    var tab by remember { mutableStateOf(ProfileTab.ALL) }
+    var tab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(ProfileTab.ALL) }
+    val vm = circleViewModel { MyProfileViewModel(it) }
+    val mine by vm.notes.collectAsStateWithLifecycle()
+    val circle by vm.circle.collectAsStateWithLifecycle()
+    val me = LocalMe.current
     // All: everything of yours, reposts and quotes included. Thoughts: text notes. Posts: photo posts.
-    val mine = CircleStore.myPosts
     val visiblePosts = when (tab) {
         ProfileTab.ALL -> mine
-        ProfileTab.THOUGHTS -> mine.filter { !it.isRepost && it.quotedPostId == null && !it.hasMedia }
+        ProfileTab.THOUGHTS -> mine.filter { !it.isRepost && it.quoted == null && !it.hasMedia }
         ProfileTab.POSTS -> mine.filter { !it.isRepost && it.hasMedia }
     }
 
@@ -55,10 +68,10 @@ fun ProfileScreen(nav: NavHostController) {
                     Spacer(Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            CircleStore.profile.displayName, fontFamily = Display, fontWeight = FontWeight.SemiBold,
+                            me?.displayName.orEmpty(), fontFamily = Display, fontWeight = FontWeight.SemiBold,
                             fontSize = 24.sp, letterSpacing = (-0.36).sp, color = CircleTheme.colors.text
                         )
-                        Text("@${CircleStore.profile.handle}", color = CircleTheme.colors.muted, fontSize = 13.sp)
+                        Text("@${me?.handle.orEmpty()}", color = CircleTheme.colors.muted, fontSize = 13.sp)
                     }
                     Box(
                         modifier = Modifier.size(44.dp).clip(CircleShape).clickable { nav.navigate(Routes.SETTINGS) },
@@ -74,12 +87,12 @@ fun ProfileScreen(nav: NavHostController) {
                         Text("PINNED", color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                     }
                     Text(
-                        CircleStore.profile.pinnedThought.ifBlank { "No pinned thought yet. Add one in Settings → Edit profile." },
+                        me?.pinnedThought.orEmpty().ifBlank { "No pinned thought yet. Add one in Settings → Edit profile." },
                         color = CircleTheme.colors.body, fontSize = 14.5.sp
                     )
                 }
             }
-            item { FriendsRow(onOpen = { nav.navigate(Routes.YOUR_CIRCLE) }) }
+            item { FriendsRow(circle, onOpen = { nav.navigate(Routes.YOUR_CIRCLE) }) }
             item {
                 UnderlineTabs(listOf("All", "Thoughts", "Posts"), tab.ordinal) { tab = ProfileTab.entries[it] }
             }
@@ -131,10 +144,10 @@ fun ProfileScreen(nav: NavHostController) {
 
 /** The highlighted entry to Your circle. Counts come from the store and are private to you. */
 @Composable
-private fun FriendsRow(onOpen: () -> Unit) {
+private fun FriendsRow(circle: CircleSummary, onOpen: () -> Unit) {
     val colors = CircleTheme.colors
-    val friends = CircleStore.friendCount
-    val inner = CircleStore.innerCount
+    val friends = circle.friendCount
+    val inner = circle.innerCount
     Column {
         Row(
             modifier = Modifier

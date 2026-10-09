@@ -23,11 +23,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.circle.app.data.CircleStore
-import com.circle.app.data.EventInfo
-import com.circle.app.data.GroupInfo
-import com.circle.app.data.Person
-import com.circle.app.data.Relationship
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.circle.app.data.access.Relationship
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.EventSummary
+import com.circle.app.data.repo.ExploreView
+import com.circle.app.data.repo.GroupView
+import com.circle.app.data.repo.PersonResult
+import com.circle.app.ui.format.*
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import com.circle.app.navigation.openPerson
 import com.circle.app.navigation.Routes
 import com.circle.app.ui.components.*
@@ -41,6 +49,15 @@ private val explorePostCaptions = listOf(
     "Small wins count too.", "Still thinking about this one."
 )
 
+/** Search shows only Limited information about people (photo, name, handle) and the button state. */
+@OptIn(ExperimentalCoroutinesApi::class)
+class ExploreSearchViewModel(repo: CircleRepository) : RepoViewModel(repo) {
+    private val query = MutableStateFlow("")
+    val people = query.flatMapLatest { repo.searchPeople(it) }.state(emptyList())
+    val explore = repo.explore().state(ExploreView(emptyList(), emptyList()))
+    fun setQuery(q: String) { query.value = q }
+}
+
 /** Explore search, opened from the search pill on the map: People / Events / Groups / Posts. */
 @Composable
 fun ExploreSearchScreen(nav: NavHostController) {
@@ -48,6 +65,10 @@ fun ExploreSearchScreen(nav: NavHostController) {
     var tab by rememberSaveable { mutableStateOf(SearchTab.PEOPLE) }
     var query by rememberSaveable { mutableStateOf("") }
     val q = query.trim()
+    val vm = circleViewModel { ExploreSearchViewModel(it) }
+    LaunchedEffect(q) { vm.setQuery(q) }
+    val people by vm.people.collectAsStateWithLifecycle()
+    val explore by vm.explore.collectAsStateWithLifecycle()
     fun matches(vararg fields: String) = q.isEmpty() || fields.any { it.contains(q, ignoreCase = true) }
 
     Column(modifier = Modifier.fillMaxSize().background(colors.background)) {
@@ -73,18 +94,17 @@ fun ExploreSearchScreen(nav: NavHostController) {
             when (tab) {
                 SearchTab.PEOPLE -> {
                     // Anyone you haven't blocked; with no query, people you might know.
-                    val people = CircleStore.searchPeople(q)
                     if (people.isEmpty()) item { NoResults(q) { query = "" } }
-                    people.forEach { p -> item(key = p.id) { PersonRow(p) { nav.openPerson(p.id) } } }
+                    people.forEach { p -> item(key = p.person.id) { PersonRow(p) { nav.openPerson(p.person.id) } } }
                 }
                 SearchTab.EVENTS -> {
-                    val events = CircleStore.events.filter { matches(it.title, it.venue, it.topic) }
+                    val events = explore.events.filter { matches(it.title, it.venue, it.topic) }
                     if (events.isEmpty()) item { NoResults(q) { query = "" } }
                     events.forEach { e -> item(key = e.id) { EventResultCard(e) { nav.navigate(Routes.eventDetail(e.id)) } } }
                 }
                 SearchTab.GROUPS -> {
                     // Private groups never appear in Explore.
-                    val groups = CircleStore.groups.filter { it.isPublic && matches(it.name, it.category, it.description) }
+                    val groups = explore.groups.filter { matches(it.name, it.category, it.description) }
                     if (groups.isEmpty()) item { NoResults(q) { query = "" } }
                     groups.forEach { g -> item(key = g.id) { GroupListRow(g) { nav.navigate(Routes.groupDetail(g.id)) } } }
                 }
@@ -121,7 +141,7 @@ private fun NoResults(query: String, onClear: () -> Unit) {
 }
 
 @Composable
-private fun EventResultCard(event: EventInfo, onClick: () -> Unit) {
+private fun EventResultCard(event: EventSummary, onClick: () -> Unit) {
     val colors = CircleTheme.colors
     Row(
         modifier = Modifier
@@ -144,7 +164,7 @@ private fun EventResultCard(event: EventInfo, onClick: () -> Unit) {
 
 /** Day over month in an accent-tinted tile. */
 @Composable
-fun EventDateTile(event: EventInfo) {
+fun EventDateTile(event: EventSummary) {
     val colors = CircleTheme.colors
     Column(
         modifier = Modifier.size(42.dp).clip(RoundedCornerShape(9.dp)).background(colors.accent.copy(alpha = 0.14f)),
@@ -176,8 +196,8 @@ private fun PostsGrid(captions: List<String>) {
 }
 
 @Composable
-private fun PersonRow(p: Person, onOpen: () -> Unit) {
-    val rel = CircleStore.relationshipTo(p.id)
+private fun PersonRow(r: PersonResult, onOpen: () -> Unit) {
+    val p = r.person
     Row(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
             .clickable(onClickLabel = "Open ${p.name}'s profile", onClick = onOpen).padding(vertical = 6.dp),
@@ -188,16 +208,16 @@ private fun PersonRow(p: Person, onOpen: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(p.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
             Text(
-                if (rel == Relationship.FRIEND) "Friend" else if (p.mutualFriends == 1) "1 mutual friend" else "${p.mutualFriends} mutual friends",
+                if (r.relationship == Relationship.FRIEND) "Friend" else "@${r.handle}",
                 color = CircleTheme.colors.muted, fontSize = 11.5.sp
             )
         }
-        FriendRequestButton(p.id)
+        FriendRequestButton(p.id, r.relationship)
     }
 }
 
 @Composable
-private fun GroupListRow(group: GroupInfo, onClick: () -> Unit) {
+private fun GroupListRow(group: GroupView, onClick: () -> Unit) {
     val colors = CircleTheme.colors
     Column(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp)).background(colors.surface).clickable(onClick = onClick).padding(13.dp),

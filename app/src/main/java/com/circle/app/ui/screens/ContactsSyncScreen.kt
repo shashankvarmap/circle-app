@@ -21,20 +21,27 @@ import androidx.compose.ui.unit.sp
 import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.components.FriendRequestButton
 import com.circle.app.ui.components.PrimaryButton
-import com.circle.app.data.CircleStore
-import com.circle.app.data.Relationship
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.circle.app.data.access.Relationship
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
 import com.circle.app.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private enum class Stage { PROMPT, LOADING, RESULTS }
 
-/** Phone contacts who are already on Circle (by person id). */
-private val contactIds = listOf("PK", "JL", "AO")
+/** Phone contacts who are already on Circle (matched by the repository; Limited information only). */
+class ContactsViewModel(repo: CircleRepository) : RepoViewModel(repo) {
+    val matches = repo.contactMatches().state(emptyList())
+}
 
 @Composable
 fun ContactsSyncScreen(onDone: () -> Unit) {
     var stage by remember { mutableStateOf(Stage.PROMPT) }
+    val vm = circleViewModel { ContactsViewModel(it) }
+    val matches by vm.matches.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
@@ -87,7 +94,7 @@ fun ContactsSyncScreen(onDone: () -> Unit) {
 
             Stage.RESULTS -> Column(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp)) {
                 Spacer(Modifier.height(8.dp))
-                Text("3 people you know", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, color = CircleTheme.colors.text)
+                Text("${matches.size} people you know", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, color = CircleTheme.colors.text)
                 Spacer(Modifier.height(2.dp))
                 Text(
                     "Send a friend request now — decide who goes in your Inner Circle later from their profile.",
@@ -95,8 +102,9 @@ fun ContactsSyncScreen(onDone: () -> Unit) {
                 )
                 Spacer(Modifier.height(14.dp))
 
-                contactIds.mapNotNull { CircleStore.person(it) }.forEach { c ->
-                    val s = CircleStore.relationshipTo(c.id)
+                matches.forEach { m ->
+                    val c = m.person
+                    val s = m.relationship
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -113,7 +121,7 @@ fun ContactsSyncScreen(onDone: () -> Unit) {
                             }
                             Text(subtitle, color = CircleTheme.colors.muted, fontSize = 11.5.sp)
                         }
-                        FriendRequestButton(c.id, addLabel = "Add")
+                        FriendRequestButton(c.id, s, addLabel = "Add")
                     }
                 }
 

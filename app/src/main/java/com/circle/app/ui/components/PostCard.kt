@@ -4,9 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -14,17 +16,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.circle.app.data.Audience
-import com.circle.app.data.CircleStore
-import com.circle.app.data.ME
-import com.circle.app.data.Post
+import com.circle.app.R
+import com.circle.app.data.access.Audience
+import com.circle.app.data.repo.Note
+import com.circle.app.data.repo.NoteView
 import com.circle.app.navigation.Routes
 import com.circle.app.navigation.openPerson
+import com.circle.app.ui.format.relativeTime
 import com.circle.app.ui.theme.*
 
 private const val AVATAR = 34
@@ -35,70 +39,80 @@ private val TextInset = (AVATAR + 10).dp
  * embedded under it) or a "You reposted" card. Actions always act on the original note.
  */
 @Composable
-fun FeedCard(nav: NavHostController, post: Post) {
-    if (post.isRepost) {
-        val original = post.repostOfId?.let { CircleStore.post(it) }
+fun FeedCard(nav: NavHostController, note: Note) {
+    val repostOf = note.repostOf
+    if (repostOf != null) {
         CircleCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.Repeat, contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("You reposted", color = CircleTheme.colors.muted, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
-                Text(" · ${post.time}", color = CircleTheme.colors.muted, fontSize = 12.sp)
+                Text(stringResource(R.string.note_you_reposted), color = CircleTheme.colors.muted, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
+                Text(" · ${relativeTime(note.createdAt)}", color = CircleTheme.colors.muted, fontSize = 12.sp)
             }
-            if (original == null) {
-                Text("This note is no longer available.", color = CircleTheme.colors.muted, fontSize = 13.sp)
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(11.dp))
-                        .background(CircleTheme.colors.background)
-                        .clickable(onClickLabel = "Open thread") { nav.navigate(Routes.thread(original.id)) }
-                        .padding(12.dp)
-                ) { NoteBody(nav, original, embedQuote = true) }
-                Box(Modifier.padding(start = 2.dp)) { PostActions(nav, post) }
+            when (repostOf) {
+                is NoteView.Full -> {
+                    val original = repostOf.note
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(CircleTheme.colors.background)
+                            .clickable(onClickLabel = "Open thread") { nav.navigate(Routes.thread(original.id)) }
+                            .padding(12.dp)
+                    ) { NoteBody(nav, original, embedQuote = true) }
+                    Box(Modifier.padding(start = 2.dp)) { PostActions(nav, note) }
+                }
+                else -> EmbeddedPost(repostOf) { nav.navigate(Routes.thread(note.actionTargetId)) }
             }
         }
     } else {
         CircleCard {
-            NoteBody(nav, post, embedQuote = true)
-            Box(Modifier.padding(start = TextInset)) { PostActions(nav, post) }
+            NoteBody(nav, note, embedQuote = true)
+            Box(Modifier.padding(start = TextInset)) { PostActions(nav, note) }
         }
     }
 }
 
 /** Avatar, name, time (and the private "INNER CIRCLE ONLY" tag on your own notes), then the content. */
 @Composable
-private fun NoteBody(nav: NavHostController, post: Post, embedQuote: Boolean) {
+private fun NoteBody(nav: NavHostController, note: Note, embedQuote: Boolean) {
+    val author = note.author
     Row {
         Box(
-            Modifier.clip(androidx.compose.foundation.shape.CircleShape)
-                .clickable(onClickLabel = "Open ${post.author}'s profile") { nav.openPerson(post.authorId) }
-        ) { Avatar(post.initials, post.color, size = AVATAR) }
+            Modifier.clip(CircleShape)
+                .clickable(onClickLabel = "Open ${author.name}'s profile") { nav.openPerson(author.id) }
+        ) { if (author.isMe) MeAvatar(AVATAR) else Avatar(author.initials, author.color, size = AVATAR) }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Box(
                 Modifier.clip(RoundedCornerShape(6.dp))
-                    .clickable(onClickLabel = "Open ${post.author}'s profile") { nav.openPerson(post.authorId) }
-            ) { NoteHeader(post) }
-            if (post.text.isNotEmpty()) {
-                Text(post.text, color = CircleTheme.colors.body, style = CircleTheme.postText, modifier = Modifier.padding(top = 2.dp))
+                    .clickable(onClickLabel = "Open ${author.name}'s profile") { nav.openPerson(author.id) }
+            ) { NoteHeader(note) }
+            if (note.text.isNotEmpty()) {
+                Text(note.text, color = CircleTheme.colors.body, style = CircleTheme.postText, modifier = Modifier.padding(top = 2.dp))
             }
-            if (post.hasMedia) MediaBlock(Modifier.padding(top = 8.dp))
-            if (embedQuote) post.quotedPostId?.let { id ->
-                EmbeddedPost(CircleStore.post(id), Modifier.padding(top = 10.dp)) { nav.navigate(Routes.thread(id)) }
+            if (note.hasMedia) MediaBlock(Modifier.padding(top = 8.dp))
+            if (embedQuote) note.quoted?.let { quoted ->
+                EmbeddedPost(quoted, Modifier.padding(top = 10.dp)) {
+                    val id = when (quoted) {
+                        is NoteView.Full -> quoted.note.id
+                        is NoteView.Snippet -> quoted.noteId
+                        NoteView.Hidden -> null
+                    }
+                    id?.let { nav.navigate(Routes.thread(it)) }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun NoteHeader(post: Post) {
+private fun NoteHeader(note: Note) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(post.author, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+        Text(note.author.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
         Spacer(Modifier.width(6.dp))
-        Text("· ${post.time}", color = CircleTheme.colors.muted, fontSize = 12.sp)
-        if (post.authorId == ME && post.audience == Audience.INNER_CIRCLE) {
+        Text("· ${relativeTime(note.createdAt)}", color = CircleTheme.colors.muted, fontSize = 12.sp)
+        if (note.isMine && note.audience == Audience.INNER_CIRCLE) {
             Spacer(Modifier.width(8.dp))
             InnerCircleTag()
         }
@@ -108,7 +122,7 @@ private fun NoteHeader(post: Post) {
 @Composable
 fun InnerCircleTag() {
     Text(
-        "INNER CIRCLE ONLY", color = CircleTheme.colors.accent, fontSize = 10.sp,
+        stringResource(R.string.note_inner_circle_tag), color = CircleTheme.colors.accent, fontSize = 10.sp,
         fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp, maxLines = 1
     )
 }
@@ -118,15 +132,15 @@ fun MediaBlock(modifier: Modifier = Modifier, height: Int = 180) {
     Box(
         modifier = modifier.fillMaxWidth().height(height.dp).clip(RoundedCornerShape(11.dp)).background(CircleTheme.colors.track),
         contentAlignment = Alignment.Center
-    ) { Icon(Icons.Outlined.Image, contentDescription = "Photo", tint = CircleTheme.colors.muted) }
+    ) { Icon(Icons.Outlined.Image, contentDescription = stringResource(R.string.note_photo), tint = CircleTheme.colors.muted) }
 }
 
 /**
- * The original note shown small inside a quote card (and in Compose while quoting).
- * Tapping it opens the original's thread.
+ * A note shown small inside another (a quote card, a repost of something you can no longer see,
+ * Compose while quoting). A note you may not open shows only its author and snippet, with a lock.
  */
 @Composable
-fun EmbeddedPost(post: Post?, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+fun EmbeddedPost(view: NoteView, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
     val colors = CircleTheme.colors
     Column(
         modifier = modifier
@@ -134,35 +148,46 @@ fun EmbeddedPost(post: Post?, modifier: Modifier = Modifier, onClick: (() -> Uni
             .clip(RoundedCornerShape(11.dp))
             .background(colors.background)
             .border(1.dp, colors.border, RoundedCornerShape(11.dp))
-            .then(if (onClick != null && post != null) Modifier.clickable(onClickLabel = "Open the original note", onClick = onClick) else Modifier)
+            .then(if (onClick != null && view !is NoteView.Hidden) Modifier.clickable(onClickLabel = "Open the original note", onClick = onClick) else Modifier)
             .padding(12.dp)
     ) {
-        if (post == null) {
-            Text("This note is no longer available.", color = colors.muted, fontSize = 13.sp)
-            return@Column
+        when (view) {
+            NoteView.Hidden -> Text(stringResource(R.string.note_unavailable), color = colors.muted, fontSize = 13.sp)
+            is NoteView.Snippet -> {
+                Text(view.authorName, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text(view.text, color = colors.body, fontSize = 13.5.sp, lineHeight = 19.sp, modifier = Modifier.padding(top = 4.dp))
+                Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(12.dp))
+                    Spacer(Modifier.width(5.dp))
+                    Text(stringResource(R.string.not_friends_yet), color = colors.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            is NoteView.Full -> {
+                val post = view.note
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (post.author.isMe) MeAvatar(24) else Avatar(post.author.initials, post.author.color, size = 24)
+                    Spacer(Modifier.width(8.dp))
+                    Text(post.author.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(" · ${relativeTime(post.createdAt)}", color = colors.muted, fontSize = 12.sp)
+                }
+                if (post.text.isNotEmpty()) {
+                    Text(
+                        post.text, color = colors.body, fontSize = 13.5.sp, lineHeight = 19.sp,
+                        maxLines = 4, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+                if (post.hasMedia) MediaBlock(Modifier.padding(top = 8.dp), height = 90)
+            }
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Avatar(post.initials, post.color, size = 24)
-            Spacer(Modifier.width(8.dp))
-            Text(post.author, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            Text(" · ${post.time}", color = colors.muted, fontSize = 12.sp)
-        }
-        if (post.text.isNotEmpty()) {
-            Text(
-                post.text, color = colors.body, fontSize = 13.5.sp, lineHeight = 19.sp,
-                maxLines = 4, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp)
-            )
-        }
-        if (post.hasMedia) MediaBlock(Modifier.padding(top = 8.dp), height = 90)
     }
 }
 
 /** A post in a group: optional group line above the author, comment and like only. */
 @Composable
-fun GroupPostCard(nav: NavHostController, post: Post, showGroup: Boolean) {
+fun GroupPostCard(nav: NavHostController, note: Note, showGroup: Boolean) {
     CircleCard {
         if (showGroup) {
-            post.groupId?.let { CircleStore.groupOrNull(it) }?.let { g ->
+            note.group?.let { g ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.clickable(onClickLabel = "Open group") { nav.navigate(Routes.groupDetail(g.id)) }
@@ -173,8 +198,8 @@ fun GroupPostCard(nav: NavHostController, post: Post, showGroup: Boolean) {
                 }
             }
         }
-        NoteBody(nav, post, embedQuote = false)
+        NoteBody(nav, note, embedQuote = false)
         // Group posts stay in the group: comment and like only, no repost or quote.
-        Box(Modifier.padding(start = TextInset)) { PostActions(nav, post) }
+        Box(Modifier.padding(start = TextInset)) { PostActions(nav, note) }
     }
 }

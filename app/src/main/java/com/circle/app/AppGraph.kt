@@ -2,6 +2,8 @@ package com.circle.app
 
 import android.app.Application
 import android.content.Context
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.FakeCircleRepository
 import com.circle.app.data.session.DataStoreSessionStore
 import com.circle.app.data.session.SessionStore
 
@@ -11,6 +13,11 @@ import com.circle.app.data.session.SessionStore
  */
 object AppGraph {
     private var session: SessionStore? = null
+    private var repo: CircleRepository? = null
+
+    /** The only door to data for the UI (through ViewModels). */
+    val repository: CircleRepository
+        get() = repo ?: FakeCircleRepository().also { repo = it }
 
     val sessionStore: SessionStore get() = checkNotNull(session) { "AppGraph.init was not called" }
 
@@ -19,8 +26,9 @@ object AppGraph {
     }
 
     /** Tests: replace the real objects. */
-    fun install(sessionStore: SessionStore) {
-        session = sessionStore
+    fun install(sessionStore: SessionStore? = null, repository: CircleRepository? = null) {
+        sessionStore?.let { session = it }
+        repository?.let { repo = it }
     }
 }
 

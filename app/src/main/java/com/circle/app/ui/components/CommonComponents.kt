@@ -16,41 +16,41 @@ import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
-import androidx.compose.material.icons.outlined.Repeat
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.circle.app.data.CircleStore
-import com.circle.app.data.Comment
-import com.circle.app.data.Relationship
-import com.circle.app.data.GroupInfo
-import com.circle.app.data.Post
+import com.circle.app.data.access.DenyReason
+import com.circle.app.data.access.Relationship
+import com.circle.app.data.repo.CommentView
+import com.circle.app.data.repo.GroupView
+import com.circle.app.data.repo.Note
+import com.circle.app.data.repo.RepostState
 import com.circle.app.navigation.Routes
+import com.circle.app.ui.format.denyText
+import com.circle.app.ui.format.relativeTime
 import com.circle.app.ui.theme.*
+import com.circle.app.ui.vm.ActionsViewModel
+import com.circle.app.ui.vm.circleViewModel
 
-/** Circular initials avatar — the same visual language used for people everywhere. */
+/** Circular initials avatar: the same visual language used for people everywhere. */
 @Composable
 fun Avatar(initials: String, color: Color, size: Int = 40) {
     Box(
@@ -61,7 +61,7 @@ fun Avatar(initials: String, color: Color, size: Int = 40) {
     }
 }
 
-/** Rounded-square avatar — reserved for Groups, distinct from people's circles. */
+/** Rounded-square avatar: reserved for Groups, distinct from people's circles. */
 @Composable
 fun GroupTile(initial: String, color: Color, size: Int = 40) {
     Box(
@@ -77,8 +77,7 @@ fun SectionLabel(text: String) {
     Text(text, color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 0.5.sp)
 }
 
-/** Small underline text tabs — the "Twitter For You / Following" style used
- *  across Home (Friends/Groups), Notifications, Explore search, and Group. */
+/** Small underline text tabs used across Home (Friends/Groups), Alerts, Explore search and Group. */
 @Composable
 fun UnderlineTabs(tabs: List<String>, selected: Int, spacing: Dp = 22.dp, onSelect: (Int) -> Unit) {
     val accent = CircleTheme.colors.accent
@@ -86,7 +85,7 @@ fun UnderlineTabs(tabs: List<String>, selected: Int, spacing: Dp = 22.dp, onSele
         tabs.forEachIndexed { i, label ->
             val isActive = i == selected
             // Underline is drawn behind the label rather than laid out as a sibling,
-            // so each tab is sized purely by its own text — no fillMaxWidth/intrinsics.
+            // so each tab is sized purely by its own text: no fillMaxWidth/intrinsics.
             Text(
                 label,
                 color = if (isActive) CircleTheme.colors.text else CircleTheme.colors.muted,
@@ -100,11 +99,7 @@ fun UnderlineTabs(tabs: List<String>, selected: Int, spacing: Dp = 22.dp, onSele
                     .drawBehind {
                         if (isActive) {
                             val stroke = 1.5.dp.toPx()
-                            drawRect(
-                                accent,
-                                topLeft = Offset(0f, size.height - stroke),
-                                size = Size(size.width, stroke)
-                            )
+                            drawRect(accent, topLeft = Offset(0f, size.height - stroke), size = Size(size.width, stroke))
                         }
                     }
                     .padding(start = 1.dp, end = 1.dp, top = 6.dp, bottom = 7.dp)
@@ -116,8 +111,8 @@ fun UnderlineTabs(tabs: List<String>, selected: Int, spacing: Dp = 22.dp, onSele
 /** One comment in a thread. Top-level comments are always visible; their own replies
  *  stay collapsed behind a "View N replies" link that expands just this comment, in place. */
 @Composable
-fun ThreadComment(comment: Comment, onPerson: (String) -> Unit = {}) {
-    var showReplies by remember { mutableStateOf(false) }
+fun ThreadComment(comment: CommentView, onPerson: (String) -> Unit = {}) {
+    var showReplies by rememberSaveable(comment.id) { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         CommentRow(comment, avatarSize = 32, onPerson = onPerson)
         if (comment.replies.isNotEmpty()) {
@@ -147,22 +142,23 @@ fun ThreadComment(comment: Comment, onPerson: (String) -> Unit = {}) {
 
 /** A comment. The commenter may not be your friend: avatar and name open their profile by relationship. */
 @Composable
-private fun CommentRow(comment: Comment, avatarSize: Int, onPerson: (String) -> Unit) {
+private fun CommentRow(comment: CommentView, avatarSize: Int, onPerson: (String) -> Unit) {
+    val author = comment.author
     Row {
         Box(
             Modifier.size(maxOf(avatarSize, 40).dp).clip(CircleShape)
-                .clickable(onClickLabel = "Open ${comment.author}'s profile") { onPerson(comment.authorId) },
+                .clickable(onClickLabel = "Open ${author.name}'s profile") { onPerson(author.id) },
             contentAlignment = Alignment.TopCenter
-        ) { Avatar(comment.initials, comment.color, size = avatarSize) }
+        ) { Avatar(author.initials, author.color, size = avatarSize) }
         Spacer(Modifier.width(6.dp))
         Column {
             Row(
-                Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClickLabel = "Open ${comment.author}'s profile") { onPerson(comment.authorId) },
+                Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClickLabel = "Open ${author.name}'s profile") { onPerson(author.id) },
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(comment.author, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text(author.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 Spacer(Modifier.width(6.dp))
-                Text("· ${comment.time}", color = CircleTheme.colors.muted, fontSize = 11.5.sp)
+                Text("· ${relativeTime(comment.createdAt)}", color = CircleTheme.colors.muted, fontSize = 11.5.sp)
             }
             Text(comment.text, color = CircleTheme.colors.body, fontSize = 13.sp)
         }
@@ -172,15 +168,16 @@ private fun CommentRow(comment: Comment, avatarSize: Int, onPerson: (String) -> 
 /**
  * Comment / repost / like row on every note. All three act on the original note (so a
  * "You reposted" card likes and opens the original). The heart is a private like: no count.
- * Repost is not offered on group posts; on inner-circle notes the menu says why it can't be.
+ * Group posts get no repost at all; otherwise the menu says why it can't be (from the repository).
  */
 @Composable
-fun PostActions(nav: NavHostController, post: Post, showComment: Boolean = true) {
+fun PostActions(nav: NavHostController, note: Note, showComment: Boolean = true) {
     val colors = CircleTheme.colors
-    val target = CircleStore.original(post)
-    val liked = CircleStore.isLiked(target.id)
-    val reposted = CircleStore.isReposted(target.id)
-    val commentCount = target.comments.sumOf { 1 + it.replies.size }
+    val actions = circleViewModel { ActionsViewModel(it) }
+    val target = note.actionTargetId
+    val liked = note.likedByMe
+    val repost = note.repost
+    val reposted = repost == RepostState.Reposted
 
     // Each action has a 40dp touch area; the row is pulled left so the first icon lines up with the text.
     Row(
@@ -194,26 +191,27 @@ fun PostActions(nav: NavHostController, post: Post, showComment: Boolean = true)
                 modifier = Modifier
                     .height(40.dp)
                     .clip(RoundedCornerShape(999.dp))
-                    .clickable(onClickLabel = "Open thread") { nav.navigate(Routes.thread(target.id)) }
+                    .clickable(onClickLabel = "Open thread") { nav.navigate(Routes.thread(target)) }
                     .padding(horizontal = 11.dp)
             ) {
                 Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = "Comments", tint = colors.muted, modifier = Modifier.size(18.dp))
-                if (commentCount > 0) {
+                if (note.commentCount > 0) {
                     Spacer(Modifier.width(5.dp))
-                    Text("$commentCount", color = colors.muted, fontSize = 12.sp)
+                    Text("${note.commentCount}", color = colors.muted, fontSize = 12.sp)
                 }
             }
         }
         // Group posts stay in the group: no repost or quote at all.
-        if (target.groupId == null) {
+        val isGroupPost = repost is RepostState.Unavailable && repost.reason == DenyReason.GROUP_POST
+        if (!isGroupPost) {
             RepostButton(
                 reposted = reposted,
                 items = repostMenuItems(
-                    blockReason = CircleStore.repostBlockReason(target),
+                    blockReason = (repost as? RepostState.Unavailable)?.let { denyText(it.reason) },
                     reposted = reposted,
-                    onRepost = { CircleStore.repost(target.id) },
-                    onUndo = { CircleStore.undoRepost(target.id) },
-                    onQuote = { nav.navigate(Routes.compose(quote = target.id)) }
+                    onRepost = { actions.repost(target) },
+                    onUndo = { actions.undoRepost(target) },
+                    onQuote = { nav.navigate(Routes.compose(quote = target)) }
                 )
             )
         }
@@ -221,7 +219,7 @@ fun PostActions(nav: NavHostController, post: Post, showComment: Boolean = true)
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .clickable(onClickLabel = if (liked) "Remove like" else "Like") { CircleStore.toggleLike(target.id) },
+                .clickable(onClickLabel = if (liked) "Remove like" else "Like") { actions.toggleLike(target) },
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -265,7 +263,7 @@ fun PrimaryButton(text: String, modifier: Modifier = Modifier, onClick: () -> Un
 /** Pill-shaped reply input with a send action. Calls [onSend] with trimmed text, then clears. */
 @Composable
 fun ReplyComposer(placeholder: String = "Add a reply…", onSend: (String) -> Unit) {
-    var text by remember { mutableStateOf("") }
+    var text by rememberSaveable { mutableStateOf("") }
     val canSend = text.isNotBlank()
     fun send() {
         if (canSend) {
@@ -295,7 +293,7 @@ fun ReplyComposer(placeholder: String = "Add a reply…", onSend: (String) -> Un
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = { send() }),
                     maxLines = 4,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = placeholder }
                 )
             }
             Box(
@@ -317,56 +315,58 @@ fun ReplyComposer(placeholder: String = "Add a reply…", onSend: (String) -> Un
 
 /**
  * Add friend / Requested (tap to cancel) / Accept / ✓ Friends, by relationship. Requests are
- * never instant. Shared by Contacts Sync, Explore search and profiles.
+ * never instant. Shared by Contacts, Explore search and lists of people.
  */
 @Composable
-fun FriendRequestButton(personId: String, addLabel: String = "Add friend") {
+fun FriendRequestButton(personId: String, relationship: Relationship, addLabel: String = "Add friend") {
     val colors = CircleTheme.colors
+    val actions = circleViewModel { ActionsViewModel(it) }
     val shape = RoundedCornerShape(999.dp)
-    when (CircleStore.relationshipTo(personId)) {
+    when (relationship) {
         Relationship.NONE -> Box(
-            Modifier.clip(shape).background(colors.accent).clickable { CircleStore.sendFriendRequest(personId) }
+            Modifier.clip(shape).background(colors.accent).clickable { actions.sendFriendRequest(personId) }
                 .padding(horizontal = 14.dp, vertical = 7.dp)
         ) { Text(addLabel, color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
         Relationship.REQUEST_SENT -> Box(
             Modifier.clip(shape).border(1.dp, colors.border, shape)
-                .clickable { CircleStore.cancelFriendRequest(personId) }
+                .clickable { actions.cancelFriendRequest(personId) }
                 .semantics { contentDescription = "Requested. Tap to cancel the request" }
                 .padding(horizontal = 14.dp, vertical = 7.dp)
         ) { Text("Requested", color = colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
         Relationship.REQUEST_RECEIVED -> Box(
-            Modifier.clip(shape).background(colors.accent).clickable { CircleStore.acceptRequest(personId) }
+            Modifier.clip(shape).background(colors.accent).clickable { actions.acceptRequest(personId) }
                 .padding(horizontal = 14.dp, vertical = 7.dp)
         ) { Text("Accept", color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
         Relationship.FRIEND -> Box(Modifier.padding(horizontal = 14.dp, vertical = 7.dp)) {
             Text("✓ Friends", color = colors.accent, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
         }
-        Relationship.SELF, Relationship.BLOCKED -> Unit
+        else -> Unit
     }
 }
 
 /** Join button for a public group. Tapping sends a pending request (visible to every
- *  member) — it never makes you a member instantly. */
+ *  member): it never makes you a member instantly. */
 @Composable
-fun JoinRequestButton(group: GroupInfo, modifier: Modifier = Modifier) {
+fun JoinRequestButton(group: GroupView, modifier: Modifier = Modifier) {
+    val actions = circleViewModel { ActionsViewModel(it) }
+    val colors = CircleTheme.colors
+    val shape = RoundedCornerShape(999.dp)
     when {
         group.isMember -> Box(
-            modifier = modifier.clip(RoundedCornerShape(999.dp)).border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp))
-                .padding(horizontal = 14.dp, vertical = 7.dp),
+            modifier = modifier.clip(shape).border(1.dp, colors.border, shape).padding(horizontal = 14.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center
-        ) { Text("✓ Member", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+        ) { Text("✓ Member", color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
 
         group.joinRequested -> Box(
-            modifier = modifier.clip(RoundedCornerShape(999.dp)).border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp))
-                .padding(horizontal = 14.dp, vertical = 7.dp),
+            modifier = modifier.clip(shape).border(1.dp, colors.border, shape).padding(horizontal = 14.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center
-        ) { Text("Requested", color = CircleTheme.colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
+        ) { Text("Requested", color = colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
 
         else -> Box(
-            modifier = modifier.clip(RoundedCornerShape(999.dp)).background(CircleTheme.colors.accent)
-                .clickable { CircleStore.requestToJoin(group) }
+            modifier = modifier.clip(shape).background(colors.accent)
+                .clickable { actions.requestToJoin(group.ref.id) }
                 .padding(horizontal = 14.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center
-        ) { Text("Request to join", color = CircleTheme.colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+        ) { Text("Request to join", color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
     }
 }

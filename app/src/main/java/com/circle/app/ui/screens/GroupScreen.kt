@@ -22,18 +22,36 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.circle.app.data.CircleStore
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.ui.format.*
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
 import com.circle.app.navigation.openPerson
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.circle.app.ui.components.*
 import com.circle.app.ui.theme.*
 
+class GroupViewModel(repo: CircleRepository, private val groupId: String) : RepoViewModel(repo) {
+    /** Null while loading or when the group isn't visible to you. */
+    val group = repo.group(groupId).state(null)
+    /** Empty unless you're a member: group posts are by membership, never friendship. */
+    val posts = repo.groupPosts(groupId).state(emptyList())
+    fun leave() = run({ leaveGroup(groupId) })
+}
+
 /**
- * Group detail. Outsiders see "Request to join", which stays pending — never instant.
+ * Group detail. Outsiders see "Request to join", which stays pending: never instant.
  */
 @Composable
 fun GroupScreen(nav: NavHostController, groupId: String?) {
-    val group = CircleStore.group(groupId)
+    val vm = circleViewModel(key = "group-$groupId") { GroupViewModel(it, groupId.orEmpty()) }
+    val loaded by vm.group.collectAsStateWithLifecycle()
+    val groupPosts by vm.posts.collectAsStateWithLifecycle()
+    val group = loaded ?: run {
+        Column(Modifier.fillMaxSize().background(CircleTheme.colors.background)) { DetailHeader("Group") { nav.popBackStack() } }
+        return
+    }
     val isMember = group.isMember
     var tab by rememberSaveable { mutableStateOf(0) } // 0 Posts, 1 People
     val screenReader = com.circle.app.ui.a11y.rememberScreenReaderOn()
@@ -77,7 +95,7 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                             contentAlignment = Alignment.Center
                         ) { Text("✓ Member", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
                         Spacer(Modifier.width(10.dp))
-                        Text("Leave", color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.clickable { CircleStore.leaveGroup(group) })
+                        Text("Leave", color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.clickable { vm.leave() })
                     }
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -106,7 +124,7 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                 item { GroupPeople(group, showMap) { nav.openPerson(it) } }
             } else if (isMember) {
                 item { ComposeToGroupRow(nav, group.id) }
-                val groupPosts = CircleStore.postsInGroup(group.id)
+
                 if (groupPosts.isEmpty()) {
                     item { Text("Nothing posted here yet. Be the first.", color = CircleTheme.colors.muted, fontSize = 13.sp) }
                 }

@@ -5,6 +5,10 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneId
 
 enum class MessageKind { TEXT, SHARED_NOTE, EVENT_INVITE }
 
@@ -15,16 +19,14 @@ enum class MessageKind { TEXT, SHARED_NOTE, EVENT_INVITE }
 data class ChatMessage(
     val id: String,
     val senderId: String,
-    /** Day separator label, e.g. "YESTERDAY" or "TODAY". */
-    val day: String,
-    val time: String,
+    val createdAt: Instant,
     val kind: MessageKind = MessageKind.TEXT,
     val text: String = "",
     val postId: String? = null,
     val eventId: String? = null,
     val replyToId: String? = null,
-    /** When the other person read it (only shown if they have read receipts on). */
-    val seenAt: String? = null,
+    /** When the other person read it (shown only if they have read receipts on). */
+    val seenAt: Instant? = null,
 )
 
 /**
@@ -47,49 +49,59 @@ class Chat(
 }
 
 internal object ChatSeed {
+    /** Yesterday at a local clock time. */
+    private fun y(hhmm: String): Instant {
+        val zone = ZoneId.systemDefault()
+        val day = Clock.now().atZone(zone).toLocalDate().minusDays(1)
+        return day.atTime(LocalTime.parse(hhmm)).atZone(zone).toInstant()
+    }
+
+    /** Today, [min] minutes ago (never in the future, whatever the time of day). */
+    private fun t(min: Long): Instant = Clock.ago(Duration.ofMinutes(min))
+
     fun chats() = listOf(
         Chat(
             "pk", listOf("PK"), unread = true, messages = listOf(
-                ChatMessage("pk1", "PK", "YESTERDAY", "21:40", text = "Did you see? Amara finally finished the puzzle."),
-                ChatMessage("pk2", "PK", "YESTERDAY", "21:40", MessageKind.SHARED_NOTE, postId = "amara-puzzle"),
-                ChatMessage("pk2b", "PK", "YESTERDAY", "21:43", text = "And my friend Elena's museum tip. You two would get on."),
-                ChatMessage("pk2c", "PK", "YESTERDAY", "21:43", MessageKind.SHARED_NOTE, postId = "elena-forum"),
-                ChatMessage("pk3", ME, "YESTERDAY", "21:55", text = "Three months! Mom must be thrilled.", seenAt = "21:58"),
-                ChatMessage("pk4", "PK", "TODAY", "09:05", MessageKind.EVENT_INVITE, eventId = "board-game-night"),
-                ChatMessage("pk5", "PK", "TODAY", "09:06", text = "Friday? Bring the good snacks."),
-                ChatMessage("pk6", ME, "TODAY", "09:12", text = "I'm in. I'll bring the good snacks.", replyToId = "pk5", seenAt = "09:20"),
-                ChatMessage("pk7", "PK", "TODAY", "09:31", text = "Sounds good, see you then"),
+                ChatMessage("pk1", "PK", y("21:40"), text = "Did you see? Amara finally finished the puzzle."),
+                ChatMessage("pk2", "PK", y("21:40"), MessageKind.SHARED_NOTE, postId = "amara-puzzle"),
+                ChatMessage("pk2b", "PK", y("21:43"), text = "And my friend Elena's museum tip. You two would get on."),
+                ChatMessage("pk2c", "PK", y("21:43"), MessageKind.SHARED_NOTE, postId = "elena-forum"),
+                ChatMessage("pk3", ME, y("21:55"), text = "Three months! Mom must be thrilled.", seenAt = y("21:58")),
+                ChatMessage("pk4", "PK", t(150), MessageKind.EVENT_INVITE, eventId = "board-game-night"),
+                ChatMessage("pk5", "PK", t(149), text = "Friday? Bring the good snacks."),
+                ChatMessage("pk6", ME, t(143), text = "I'm in. I'll bring the good snacks.", replyToId = "pk5", seenAt = t(135)),
+                ChatMessage("pk7", "PK", t(124), text = "Sounds good, see you then"),
             )
         ),
         Chat(
             "jl", listOf("JL"), messages = listOf(
-                ChatMessage("jl1", ME, "TODAY", "09:50", text = "Can you bring the tripod on Sunday?", seenAt = "09:58"),
-                ChatMessage("jl2", "JL", "TODAY", "10:02", text = "Bringing the tripod"),
+                ChatMessage("jl1", ME, t(105), text = "Can you bring the tripod on Sunday?", seenAt = t(97)),
+                ChatMessage("jl2", "JL", t(93), text = "Bringing the tripod"),
             )
         ),
         Chat(
             "trip", listOf("PK", "JL"), name = "Weekend Trip", messages = listOf(
-                ChatMessage("tr1", "JL", "TODAY", "08:30", text = "Cabin or tents?"),
-                ChatMessage("tr2", "PK", "TODAY", "08:41", text = "I'll book the cabin"),
+                ChatMessage("tr1", "JL", t(205), text = "Cabin or tents?"),
+                ChatMessage("tr2", "PK", t(194), text = "I'll book the cabin"),
             )
         ),
         Chat(
             "ao", listOf("AO"), messages = listOf(
-                ChatMessage("ao1", ME, "YESTERDAY", "18:20", text = "Here's the recipe. It's my mum's, don't tell her.", seenAt = "18:25"),
-                ChatMessage("ao2", "AO", "YESTERDAY", "18:26", text = "Thanks for the recipe"),
+                ChatMessage("ao1", ME, y("18:20"), text = "Here's the recipe. It's my mum's, don't tell her.", seenAt = y("18:25")),
+                ChatMessage("ao2", "AO", y("18:26"), text = "Thanks for the recipe"),
             )
         ),
         Chat(
             "g-photo-walk", listOf("PK", "TN", "AO", "EV"), groupId = "photo-walk", unread = true, messages = listOf(
-                ChatMessage("pw1", "PK", "TODAY", "10:10", text = "Meet at the cathedral steps, 6:30"),
-                ChatMessage("pw2", "PK", "TODAY", "10:10", text = "Golden hour is short this week"),
-                ChatMessage("pw2b", "EV", "TODAY", "10:18", text = "Could someone lend me a 50mm for Sunday? Mine is at the repair shop."),
-                ChatMessage("pw3", "TN", "TODAY", "10:24", text = "I'll bring a tripod to share"),
+                ChatMessage("pw1", "PK", t(85), text = "Meet at the cathedral steps, 6:30"),
+                ChatMessage("pw2", "PK", t(85), text = "Golden hour is short this week"),
+                ChatMessage("pw2b", "EV", t(77), text = "Could someone lend me a 50mm for Sunday? Mine is at the repair shop."),
+                ChatMessage("pw3", "TN", t(71), text = "I'll bring a tripod to share"),
             )
         ),
         Chat(
             "g-board-game-club", listOf("JL"), groupId = "board-game-club", messages = listOf(
-                ChatMessage("bg1", "JL", "TODAY", "08:00", text = "Anyone up for Catan tonight?"),
+                ChatMessage("bg1", "JL", t(240), text = "Anyone up for Catan tonight?"),
             )
         ),
     )

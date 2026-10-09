@@ -16,8 +16,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.lazy.items
-import com.circle.app.data.CircleStore
-import com.circle.app.data.Chat
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.circle.app.R
+import com.circle.app.data.repo.ChatKind
+import com.circle.app.data.repo.ChatRowView
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.ui.format.clockTime
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -30,9 +37,15 @@ import com.circle.app.ui.theme.*
 
 private enum class MTab { DIRECT, GROUP }
 
+class MessagesViewModel(repo: CircleRepository) : RepoViewModel(repo) {
+    val chats = repo.chats().state(emptyList())
+}
+
 @Composable
 fun MessagesScreen(nav: NavHostController) {
     var tab by rememberSaveable { mutableStateOf(MTab.DIRECT) }
+    val vm = circleViewModel { MessagesViewModel(it) }
+    val chats by vm.chats.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     val header = rememberCollapsingHeaderState { listState.canScrollForward || listState.canScrollBackward }
 
@@ -60,7 +73,7 @@ fun MessagesScreen(nav: NavHostController) {
         ) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
                 if (tab == MTab.DIRECT) {
-                    items(CircleStore.directChats, key = { it.id }) { c -> ChatRow(c) { nav.navigate(Routes.chat(c.id)) } }
+                    items(chats.filter { it.kind != ChatKind.GROUP }, key = { it.id }) { c -> ChatRow(c) { nav.navigate(Routes.chat(c.id)) } }
                 } else {
                     item {
                         Text(
@@ -68,7 +81,7 @@ fun MessagesScreen(nav: NavHostController) {
                             color = CircleTheme.colors.muted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 10.dp)
                         )
                     }
-                    val groups = CircleStore.groupChats
+                    val groups = chats.filter { it.kind == ChatKind.GROUP }
                     if (groups.isEmpty()) {
                         item { Text("No group chats yet. They appear when you join a group.", color = CircleTheme.colors.muted, fontSize = 13.sp) }
                     }
@@ -82,40 +95,42 @@ fun MessagesScreen(nav: NavHostController) {
 
 /** A chat in the list: avatar (circle for people, rounded square for groups), name, preview, time, unread dot. */
 @Composable
-private fun ChatRow(chat: Chat, onOpen: () -> Unit) {
+private fun ChatRow(chat: ChatRowView, onOpen: () -> Unit) {
     val colors = CircleTheme.colors
-    val last = CircleStore.visibleMessages(chat).lastOrNull()
-    val group = chat.groupId?.let { CircleStore.groupOrNull(it) }
-    val person = chat.directPersonId?.let { CircleStore.person(it) }
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClickLabel = "Open chat", onClick = onOpen).padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         when {
-            group != null -> GroupTile(group.initial, group.color, size = 44)
-            person != null -> Avatar(person.initials, person.color, size = 44)
+            chat.group != null -> GroupTile(chat.group.initial, chat.group.color, size = 44)
+            chat.person != null -> Avatar(chat.person.initials, chat.person.color, size = 44)
             else -> Box(modifier = Modifier.width(44.dp)) {
-                val a = chat.memberIds.getOrNull(0)?.let { CircleStore.person(it) }
-                val b = chat.memberIds.getOrNull(1)?.let { CircleStore.person(it) }
-                a?.let { Avatar(it.initials, it.color, size = 32) }
-                b?.let { Box(modifier = Modifier.offset(x = 20.dp)) { Avatar(it.initials, it.color, size = 32) } }
+                chat.members.getOrNull(0)?.let { Avatar(it.initials, it.color, size = 32) }
+                chat.members.getOrNull(1)?.let { Box(modifier = Modifier.offset(x = 20.dp)) { Avatar(it.initials, it.color, size = 32) } }
             }
         }
         Spacer(Modifier.width(11.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                CircleStore.chatTitle(chat), color = colors.text,
+                chat.title, color = colors.text,
                 fontWeight = if (chat.unread) FontWeight.ExtraBold else FontWeight.Bold, fontSize = 13.5.sp
             )
+            val p = chat.preview
+            val preview = when {
+                p == null -> stringResource(R.string.messages_no_messages)
+                p.mine -> stringResource(R.string.messages_preview_you, summary(p.kind, p.text))
+                p.senderFirstName != null -> stringResource(R.string.messages_preview_named, p.senderFirstName, summary(p.kind, p.text))
+                else -> summary(p.kind, p.text)
+            }
             Text(
-                CircleStore.chatPreview(chat), color = if (chat.unread) colors.text else colors.body,
+                preview, color = if (chat.unread) colors.text else colors.body,
                 fontWeight = if (chat.unread) FontWeight.SemiBold else FontWeight.Normal,
                 fontSize = 12.5.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
         }
         Spacer(Modifier.width(8.dp))
         Column(horizontalAlignment = Alignment.End) {
-            Text(last?.time ?: "", color = if (chat.unread) colors.accent else colors.muted, fontSize = 11.sp)
+            Text(chat.lastAt?.let { clockTime(it) } ?: "", color = if (chat.unread) colors.accent else colors.muted, fontSize = 11.sp)
             if (chat.unread) {
                 Spacer(Modifier.height(4.dp))
                 Box(modifier = Modifier.size(8.dp).background(colors.accent, androidx.compose.foundation.shape.CircleShape).semantics { contentDescription = "Unread" })

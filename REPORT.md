@@ -84,3 +84,59 @@ token yet (the fake has none).
 - A small hand-written `AppGraph` instead of a DI library (a handful of objects; tests swap them).
 - Case 3 taken literally: after the story was seen on a device, Welcome offers Log in only (Create account is hidden).
   Deleting the account also lands there. Flag if the owner wants Create account back after a deletion.
+
+---
+
+## Phase 2: Privacy core (MASTER_PROMPT section 2)
+
+**Works now**
+- **One place decides.** `data/access/AccessPolicy.kt` is pure Kotlin, deny by default, and answers every question from one
+  `Relationship` (SELF, FRIEND, REQUEST_SENT, REQUEST_RECEIVED, NONE, BLOCKED_BY_ME, BLOCKED_ME) plus the note's facts
+  (audience, whether the viewer is in the author's inner circle, group membership).
+- **The UI never receives data it may not show.** `CircleRepository` / `FakeCircleRepository` (over the store, which is now
+  plain data: the fake "server") asks the policy before returning anything and returns redacted types
+  (`ProfileView.Full/Limited/NotFound`, `NoteView.Full/Snippet/Hidden`, `ThreadResult.Opened/Denied(reason)`, plus
+  `PersonRef`, `ChatView`, `EventView`, `GroupView`...). `Limited` has no field for anything but photo, name, handle and
+  pinned thought. Every action (comment, like, repost, quote, share, message, seat, post) returns `Outcome.Denied(reason)`
+  when the rules say no.
+- **Every screen** has a ViewModel over the repository; nothing in `ui/`, `navigation/` or `MainActivity` touches the store
+  (`PrivacyBoundaryTest` fails the build otherwise, and also on any logging call or a mutual-friend count).
+- **Re-evaluation:** observations are Compose snapshot flows, so a relationship change re-renders every open screen. Unfriend
+  and block purge the client `ContentCache` (opened threads, notes, snippets by that person); an open thread turns into the
+  gate. Accepting a request opens the same card and thread with nothing else changing.
+- **Deep links** (`circle://app/thread/{id}`, `circle://app/person/{id}`) use the same routes and ViewModels, so a note you
+  can't open shows the gate, never the thread.
+- Mutual-friend numbers are gone from profiles, request rows, search, seats and group join requests.
+- Alerts are built from typed seed records; two prototype rows were dropped because they broke the rules
+  ("Marco and Priya are now friends" revealed someone else's friends; "Priya liked Jonah's post" revealed a like).
+- Times are `Instant`s shown in the viewer's zone and locale; seed events always fall in the coming week. New ids are UUIDs.
+- Tests: `AccessPolicyTableTest` (every relationship x resource x action with hand-written expectations: 224 note cells, group
+  cells, profile, friend graph, DMs, shared card, sharing, events, groups, snippet length), `FakeCircleRepositoryTest`
+  (section 2.4 repository cases plus all the old store behaviour), `FlowReactivityTest`, `PrivacyBoundaryTest`, and
+  `PrivacyScenariosUiTest` (Robolectric, on the real screens): the six owner scenarios (scenario 4 as search, group People tab
+  and event seat), each asserting the restricted text is absent.
+- `PRIVACY_RULES.md` (plain-language table for the backend) and the BACKEND_READINESS privacy section rewritten around it.
+- Verified on the Pixel 7 emulator: Elena's shared card is a snippet with a lock, tapping it opens the gate sheet; tapping her
+  in the group chat opens the Limited profile with Add friend, no Message, no notes, no count.
+
+**Still a stub:** the demo has no trigger for someone accepting *your* request (tests use `acceptedByThem`; a backend event does
+this). Group and event screens keep their earlier design until Phase 7.
+
+**Decisions**
+- Phase 3's repository, ViewModels, Outcome type, string ids and Instant timestamps landed here: section 2.1.3 requires that
+  nothing in `ui/` imports the store before Phase 3, so every screen had to move to the repository now. Phase 3 keeps
+  MediaStore and the fail switch.
+- Snapshot flows over the existing Compose-state store, rather than a new reactive store: every observation re-evaluates when
+  anything it read changes, which is exactly "every screen re-evaluates on change", with no extra code.
+- A note embedded in another card (a quote, a repost of a note you can no longer see) follows the shared-card rule: full if you
+  may open it, else a snippet, else hidden. Tapping any embedded note goes to the thread route, which shows the gate if needed.
+- Group posts: members can view, comment and like whatever their friendship with the author ("by membership, never by
+  friendship alone"); blocks still hide the author.
+- Inner-circle notes: only the author shares them, and only into chats whose members are all in the author's inner circle (a
+  friend passing one on would make the server reveal who else is in it).
+- The snippet card shows no photo placeholder at all: the spec's "blurred placeholder" would itself reveal that there is a
+  photo, and `Snippet` has no photo field. Flag if the owner wants the placeholder back.
+- "Seen" shows only while your own read receipts are on (mutual, as the settings text promises).
+- A friend's `Full` profile has no counts or friends fields; your own counts come only from `circleSummary()`.
+- The UI test for scenario 5 uses the sheet button's click action rather than a tap, because Robolectric can tap the sheet's
+  scrim while it is still animating in (a test artefact, not an app bug).

@@ -24,12 +24,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.circle.app.data.CircleStore
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.Outcome
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
 import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.theme.*
 
+class CreateViewModel(repo: CircleRepository) : RepoViewModel(repo) {
+    fun createGroup(name: String, category: String, description: String, isPublic: Boolean, then: (Outcome<String>) -> Unit) =
+        run({ createGroup(name, category, description, isPublic) }, then)
+    fun createEvent(title: String, visibility: com.circle.app.data.access.EventVisibility, description: String, capacity: Int, then: (Outcome<String>) -> Unit) =
+        run({ createEvent(title, visibility, description, capacity) }, then)
+}
+
 @Composable
 fun CreateGroupScreen(nav: NavHostController) {
+    val vm = circleViewModel { CreateViewModel(it) }
     var isPrivate by remember { mutableStateOf(true) }
     var name by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("") }
@@ -46,8 +57,7 @@ fun CreateGroupScreen(nav: NavHostController) {
             androidx.compose.foundation.layout.Box(
                 modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(if (canCreate) CircleTheme.colors.accent else CircleTheme.colors.track)
                     .clickable(enabled = canCreate) {
-                        CircleStore.createGroup(name, category, description, isPublic = !isPrivate)
-                        nav.popBackStack()
+                        vm.createGroup(name, category, description, isPublic = !isPrivate) { if (it is Outcome.Success) nav.popBackStack() }
                     }
                     .padding(horizontal = 16.dp, vertical = 7.dp)
             ) { Text("Create", color = if (canCreate) CircleTheme.colors.onAccent else CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 13.sp) }

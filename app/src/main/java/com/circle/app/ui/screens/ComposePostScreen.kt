@@ -36,8 +36,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.circle.app.data.Audience
-import com.circle.app.data.CircleStore
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.circle.app.data.access.Audience
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.CircleSummary
+import com.circle.app.data.repo.NoteView
+import com.circle.app.data.repo.Outcome
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
+import kotlinx.coroutines.flow.flowOf
 import com.circle.app.navigation.Routes
 import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.components.MeAvatar
@@ -45,6 +52,14 @@ import com.circle.app.ui.components.EmbeddedPost
 import com.circle.app.ui.theme.*
 
 private const val SOFT_LIMIT = 500
+
+class ComposeViewModel(repo: CircleRepository, quoteId: String?, groupId: String?) : RepoViewModel(repo) {
+    val quoted = (quoteId?.let { repo.note(it) } ?: flowOf(null)).state(null)
+    val group = (groupId?.let { repo.group(it) } ?: flowOf(null)).state(null)
+    val circle = repo.circleSummary().state(CircleSummary(0, 0))
+    fun post(text: String, audience: Audience, quoteId: String?, groupId: String?, then: (Outcome<String>) -> Unit) =
+        run({ post(text, audience, quoteId, groupId) }, then)
+}
 
 /**
  * Unified composer — a Thought and a Post are the same object; media is optional.
@@ -58,8 +73,12 @@ fun ComposePostScreen(nav: NavHostController, quoteId: String? = null, groupId: 
     var quoteRemoved by rememberSaveable { mutableStateOf(false) }
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
 
-    val group = groupId?.let { CircleStore.groupOrNull(it) }
-    val quoted = quoteId?.takeIf { !quoteRemoved }?.let { CircleStore.post(it) }?.let { CircleStore.original(it) }
+    val vm = circleViewModel(key = "compose-$quoteId-$groupId") { ComposeViewModel(it, quoteId, groupId) }
+    val group by vm.group.collectAsStateWithLifecycle()
+    val quotedView by vm.quoted.collectAsStateWithLifecycle()
+    val circle by vm.circle.collectAsStateWithLifecycle()
+    // Only a note you can see in full can be quoted.
+    val quoted = (quotedView as? NoteView.Full)?.takeIf { !quoteRemoved }
     val remaining = SOFT_LIMIT - text.length
     val canPost = text.isNotBlank() && remaining >= 0
     val focus = remember { FocusRequester() }
@@ -69,12 +88,15 @@ fun ComposePostScreen(nav: NavHostController, quoteId: String? = null, groupId: 
     fun cancel() { if (text.isNotBlank()) confirmDiscard = true else leave() }
     fun post() {
         if (!canPost) return
-        CircleStore.addPost(text, audience, quotedPostId = quoted?.id, groupId = group?.id) ?: return
-        if (group != null) {
-            leave() // back to the group, where the post now sits at the top
-        } else {
-            // Back to Home, where the new note is at the top.
-            nav.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } }
+        val inGroup = group != null
+        vm.post(text, audience, quoted?.note?.id, group?.ref?.id) { outcome ->
+            if (outcome !is Outcome.Success) return@post
+            if (inGroup) {
+                leave() // back to the group, where the post now sits at the top
+            } else {
+                // Back to Home, where the new note is at the top.
+                nav.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } }
+            }
         }
     }
 
@@ -117,7 +139,7 @@ fun ComposePostScreen(nav: NavHostController, quoteId: String? = null, groupId: 
                 Box(Modifier.weight(1f).padding(top = 6.dp)) {
                     val placeholder = when {
                         quoted != null -> "Add your thoughts…"
-                        group != null -> "Post to ${group.name}…"
+                        group != null -> "Post to ${group!!.ref.name}…"
                         else -> "What's on your mind?"
                     }
                     if (text.isEmpty()) Text(placeholder, color = colors.muted, fontSize = 17.sp, fontFamily = Body)
@@ -133,7 +155,7 @@ fun ComposePostScreen(nav: NavHostController, quoteId: String? = null, groupId: 
             }
             if (quoted != null) {
                 Box(Modifier.padding(start = 50.dp, top = 12.dp)) {
-                    EmbeddedPost(quoted)
+                    EmbeddedPost(quoted!!)
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -148,9 +170,9 @@ fun ComposePostScreen(nav: NavHostController, quoteId: String? = null, groupId: 
             }
             Spacer(Modifier.height(16.dp))
             val note = when {
-                group != null -> "Only members of ${group.name} can see this. It stays in the group."
+                group != null -> "Only members of ${group!!.ref.name} can see this. It stays in the group."
                 audience == Audience.FRIENDS -> "All your friends can see this."
-                else -> "Only your ${CircleStore.innerCount} inner-circle friends can see this."
+                else -> "Only your ${circle.innerCount} inner-circle friends can see this."
             }
             Text(note, color = colors.muted, fontSize = 12.sp, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             if (group == null) {
@@ -182,7 +204,7 @@ fun ComposePostScreen(nav: NavHostController, quoteId: String? = null, groupId: 
                     )
                 }
                 if (group != null) {
-                    Text(group.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                    Text(group!!.ref.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
                 } else {
                     Row(
                         modifier = Modifier

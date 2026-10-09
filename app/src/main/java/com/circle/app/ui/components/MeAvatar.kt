@@ -26,7 +26,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.circle.app.data.CircleStore
+import com.circle.app.ui.theme.AvatarSlate
+import com.circle.app.ui.vm.LocalMe
 import com.circle.app.ui.theme.avatarTextColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -36,7 +37,14 @@ import kotlinx.coroutines.withContext
  * [uri] overrides the saved photo (used by the edit form before saving).
  */
 @Composable
-fun MeAvatar(size: Int, modifier: Modifier = Modifier, uri: String? = CircleStore.profile.avatarUri, fill: Color = CircleStore.me.color, textColor: Color = avatarTextColor(fill)) {
+fun MeAvatar(
+    size: Int,
+    modifier: Modifier = Modifier,
+    uri: String? = LocalMe.current?.avatarUri,
+    fill: Color = LocalMe.current?.person?.color ?: AvatarSlate,
+    textColor: Color = avatarTextColor(fill),
+) {
+    val initial = LocalMe.current?.person?.initials.orEmpty()
     val bitmap = rememberUriBitmap(uri, size * 3)
     Box(
         modifier = modifier.size(size.dp).clip(CircleShape).background(fill),
@@ -45,7 +53,7 @@ fun MeAvatar(size: Int, modifier: Modifier = Modifier, uri: String? = CircleStor
         if (bitmap != null) {
             Image(bitmap, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.size(size.dp))
         } else {
-            Text(CircleStore.profile.initial, color = textColor, fontWeight = FontWeight.Bold, fontSize = (size / 3).sp)
+            Text(initial, color = textColor, fontWeight = FontWeight.Bold, fontSize = (size / 3).sp)
         }
     }
 }

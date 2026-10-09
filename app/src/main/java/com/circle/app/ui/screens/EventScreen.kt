@@ -23,18 +23,37 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.circle.app.data.CircleStore
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.EventThreadView
+import com.circle.app.ui.format.whenLabel
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
 import com.circle.app.navigation.openPerson
 import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.components.ReplyComposer
 import com.circle.app.ui.components.ThreadComment
 import com.circle.app.ui.theme.*
 
+class EventViewModel(repo: CircleRepository, private val eventId: String) : RepoViewModel(repo) {
+    /** Null while loading or when the event isn't visible to you. */
+    val event = repo.event(eventId).state(null)
+    fun takeSeat() = run({ takeSeat(eventId) })
+    fun leaveSeat() = run({ leaveSeat(eventId) })
+    fun comment(text: String) = run({ addEventComment(eventId, text) })
+}
+
 @Composable
 fun EventScreen(nav: NavHostController, eventId: String?) {
-    val event = CircleStore.event(eventId)
-    val host = CircleStore.hostOf(event)
-    val isJoined = CircleStore.hasSeat(event)
+    val vm = circleViewModel(key = "event-$eventId") { EventViewModel(it, eventId.orEmpty()) }
+    val loaded by vm.event.collectAsStateWithLifecycle()
+    val view = loaded ?: run {
+        Column(Modifier.fillMaxSize().background(CircleTheme.colors.background)) { DetailHeader("Event") { nav.popBackStack() } }
+        return
+    }
+    val event = view.summary
+    val host = view.host
+    val isJoined = view.hasSeat
     val screenReader = com.circle.app.ui.a11y.rememberScreenReaderOn()
     var showMap by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!screenReader) }
 
@@ -50,7 +69,7 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(event.title, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
-                        Text(event.visibility, color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                        Text(view.visibility.name.replace('_', ' '), color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.CalendarToday, contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(14.dp))
@@ -79,7 +98,7 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                     com.circle.app.ui.orbit.MapListToggle(showMap, { showMap = it })
                 }
             }
-            item { EventTable(event, showMap) { nav.openPerson(it) } }
+            item { EventTable(view, showMap) { nav.openPerson(it) } }
             item {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -89,11 +108,11 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                 ) {
                     Avatar(host.initials, host.color, size = 28)
                     Spacer(Modifier.width(9.dp))
-                    Text("Hosted by ${host.name} · ${event.seatsLeft} ${if (event.seatsLeft == 1) "seat" else "seats"} left", color = CircleTheme.colors.body, fontSize = 12.5.sp)
+                    Text("Hosted by ${host.name} · ${view.seatsLeft} ${if (view.seatsLeft == 1) "seat" else "seats"} left", color = CircleTheme.colors.body, fontSize = 12.5.sp)
                 }
             }
             item {
-                if (event.description.isNotEmpty()) Text(event.description, color = CircleTheme.colors.body, fontSize = 13.sp)
+                if (view.description.isNotEmpty()) Text(view.description, color = CircleTheme.colors.body, fontSize = 13.sp)
             }
             item {
                 if (isJoined) {
@@ -104,34 +123,33 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                                 contentAlignment = Alignment.Center
                             ) { Text("✓ You're going", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
                             Spacer(Modifier.width(10.dp))
-                            if (event.hostId != com.circle.app.data.ME) {
-                                Text("Leave seat", color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.clickable { CircleStore.leaveEvent(event) })
+                            if (!view.iAmHost) {
+                                Text("Leave seat", color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.clickable { vm.leaveSeat() })
                             }
                         }
-                        Text(if (event.hostId == com.circle.app.data.ME) "You're hosting this one." else "Leaving your seat locks the conversation again and quietly lets ${host.firstName} know.", color = CircleTheme.colors.muted, fontSize = 11.sp)
+                        Text(if (view.iAmHost) "You're hosting this one." else "Leaving your seat locks the conversation again and quietly lets ${host.firstName} know.", color = CircleTheme.colors.muted, fontSize = 11.sp)
                     }
                 } else {
-                    if (event.isFull) {
+                    if (view.isFull) {
                         Box(
                             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(999.dp)).border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp)).padding(vertical = 12.dp),
                             contentAlignment = Alignment.Center
                         ) { Text("Event full", color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
                     } else {
-                        com.circle.app.ui.components.PrimaryButton("Take a seat", modifier = Modifier.fillMaxWidth()) { CircleStore.joinEvent(event) }
+                        com.circle.app.ui.components.PrimaryButton("Take a seat", modifier = Modifier.fillMaxWidth()) { vm.takeSeat() }
                     }
                 }
             }
             item {
-                if (isJoined) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        val n = event.comments.size
+                when (val thread = view.thread) {
+                    is EventThreadView.Open -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        val n = thread.comments.size
                         com.circle.app.ui.components.SectionLabel(if (n == 0) "THREAD · NO REPLIES YET" else "THREAD · $n ${if (n == 1) "REPLY" else "REPLIES"}")
-                        event.comments.forEach { ThreadComment(it) { id -> nav.openPerson(id) } }
-                        ReplyComposer { text -> CircleStore.addEventComment(event, text) }
+                        thread.comments.forEach { ThreadComment(it) { id -> nav.openPerson(id) } }
+                        ReplyComposer { text -> vm.comment(text) }
                     }
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        LockedPanel("The conversation opens when you take a seat.", "${event.comments.size} replies so far")
+                    is EventThreadView.Locked -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LockedPanel("The conversation opens when you take a seat.", "${thread.replyCount} replies so far")
                         Text(
                             "Only the people actually coming can see or post here — not a public comment section.",
                             color = CircleTheme.colors.muted, fontSize = 11.sp

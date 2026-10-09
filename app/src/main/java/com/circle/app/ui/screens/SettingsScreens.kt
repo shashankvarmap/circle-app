@@ -50,7 +50,20 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.circle.app.data.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.circle.app.data.HandleRules
+import com.circle.app.data.InvitesFrom
+import com.circle.app.data.NotificationPrefs
+import com.circle.app.data.PauseAll
+import com.circle.app.data.PrivacyPrefs
+import com.circle.app.data.RequestsFrom
+import com.circle.app.data.ThemeMode
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.CircleSummary
+import com.circle.app.data.repo.Outcome
+import com.circle.app.ui.vm.LocalMe
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
 import com.circle.app.navigation.Routes
 import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.components.MeAvatar
@@ -58,14 +71,36 @@ import com.circle.app.ui.theme.*
 
 // ---------------------------------------------------------------- Settings
 
+class SettingsViewModel(repo: CircleRepository) : RepoViewModel(repo) {
+    val privacy = repo.privacy().state(PrivacyPrefs())
+    val notifications = repo.notificationPrefs().state(NotificationPrefs())
+    val theme = repo.theme().state(ThemeMode.SYSTEM)
+    val circle = repo.circleSummary().state(CircleSummary(0, 0))
+    val blocked = repo.blocked().state(emptyList())
+    val muted = repo.muted().state(emptyList())
+    fun setPrivacy(p: PrivacyPrefs) = run({ setPrivacy(p); Outcome.Success(Unit) })
+    fun setNotifications(p: NotificationPrefs) = run({ setNotificationPrefs(p); Outcome.Success(Unit) })
+    fun setTheme(t: ThemeMode) = run({ setTheme(t); Outcome.Success(Unit) })
+    fun deleteAccount(then: () -> Unit) = run({ deleteAccount() }) { then() }
+    fun unblock(id: String) = run({ unblock(id) })
+    fun unmute(id: String) = run({ unmute(id) })
+    fun saveProfile(name: String, handle: String, pinned: String, avatar: String?, then: (Outcome<*>) -> Unit) =
+        run({ saveProfile(name, handle, pinned, avatar) }, then)
+}
+
 @Composable
 fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDeleted: () -> Unit) {
     val colors = CircleTheme.colors
     val context = LocalContext.current
     var confirmLogout by rememberSaveable { mutableStateOf(false) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
-    val privacy = CircleStore.privacy
-    val notif = CircleStore.notifications
+    val vm = circleViewModel { SettingsViewModel(it) }
+    val privacy by vm.privacy.collectAsStateWithLifecycle()
+    val notif by vm.notifications.collectAsStateWithLifecycle()
+    val theme by vm.theme.collectAsStateWithLifecycle()
+    val circle by vm.circle.collectAsStateWithLifecycle()
+    val blockedList by vm.blocked.collectAsStateWithLifecycle()
+    val mutedList by vm.muted.collectAsStateWithLifecycle()
     val version = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "?"
     }
@@ -94,8 +129,7 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
-                    CircleStore.reset() // the demo restores its seed data; with a backend this deletes the account
-                    onAccountDeleted()
+                    vm.deleteAccount(onAccountDeleted)
                 }) { Text("Delete account", color = colors.alertDot) }
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Keep my account", color = colors.text) } }
@@ -107,9 +141,9 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(bottom = 32.dp)) {
             item { SectionHeading("Account") }
             item { NavRow("Edit profile", "Name, username, photo and pinned thought") { nav.navigate(Routes.EDIT_PROFILE) } }
-            item { NavRow("Your circle", "${CircleStore.friendCount} friends · ${CircleStore.innerCount} inner circle") { nav.navigate(Routes.YOUR_CIRCLE) } }
-            item { NavRow("Blocked users", countLabel(CircleStore.blockedIds.size, "person", "people", "Nobody")) { nav.navigate(Routes.peopleList("blocked")) } }
-            item { NavRow("Muted friends", countLabel(CircleStore.mutedIds.size, "friend", "friends", "Nobody")) { nav.navigate(Routes.peopleList("muted")) } }
+            item { NavRow("Your circle", "${circle.friendCount} friends · ${circle.innerCount} inner circle") { nav.navigate(Routes.YOUR_CIRCLE) } }
+            item { NavRow("Blocked users", countLabel(blockedList.size, "person", "people", "Nobody")) { nav.navigate(Routes.peopleList("blocked")) } }
+            item { NavRow("Muted friends", countLabel(mutedList.size, "friend", "friends", "Nobody")) { nav.navigate(Routes.peopleList("muted")) } }
 
             item { SectionHeading("Privacy") }
             item {
@@ -117,48 +151,48 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
                     "Let people find me by name or username",
                     "People who find you see your photo and pinned thought only.",
                     privacy.findableByName
-                ) { CircleStore.privacy = privacy.copy(findableByName = it) }
+                ) { vm.setPrivacy(privacy.copy(findableByName = it)) }
             }
             item {
                 ToggleRow("Let friends find me from their phone contacts", null, privacy.findableFromContacts) {
-                    CircleStore.privacy = privacy.copy(findableFromContacts = it)
+                    vm.setPrivacy(privacy.copy(findableFromContacts = it))
                 }
             }
             item {
                 SegmentedRow("Who can send me friend requests", RequestsFrom.entries, privacy.requestsFrom, { it.label }) {
-                    CircleStore.privacy = privacy.copy(requestsFrom = it)
+                    vm.setPrivacy(privacy.copy(requestsFrom = it))
                 }
             }
             item {
                 SegmentedRow("Who can invite me to events and groups", InvitesFrom.entries, privacy.invitesFrom, { it.label }) {
-                    CircleStore.privacy = privacy.copy(invitesFrom = it)
+                    vm.setPrivacy(privacy.copy(invitesFrom = it))
                 }
             }
             item {
                 ToggleRow("Read receipts in messages", "Friends see when you've read their message, and you see theirs.", privacy.readReceipts) {
-                    CircleStore.privacy = privacy.copy(readReceipts = it)
+                    vm.setPrivacy(privacy.copy(readReceipts = it))
                 }
             }
             item { AlwaysPrivateBox() }
             item { InfoRow("Download my data", "Coming with the backend") }
 
             item { SectionHeading("Notifications") }
-            item { ToggleRow("Likes", null, notif.likes) { CircleStore.notifications = notif.copy(likes = it) } }
-            item { ToggleRow("Comments and replies", null, notif.comments) { CircleStore.notifications = notif.copy(comments = it) } }
-            item { ToggleRow("Friend requests", null, notif.friendRequests) { CircleStore.notifications = notif.copy(friendRequests = it) } }
-            item { ToggleRow("Event updates", null, notif.events) { CircleStore.notifications = notif.copy(events = it) } }
-            item { ToggleRow("Group activity", null, notif.groups) { CircleStore.notifications = notif.copy(groups = it) } }
-            item { ToggleRow("Messages", null, notif.messages) { CircleStore.notifications = notif.copy(messages = it) } }
+            item { ToggleRow("Likes", null, notif.likes) { vm.setNotifications(notif.copy(likes = it)) } }
+            item { ToggleRow("Comments and replies", null, notif.comments) { vm.setNotifications(notif.copy(comments = it)) } }
+            item { ToggleRow("Friend requests", null, notif.friendRequests) { vm.setNotifications(notif.copy(friendRequests = it)) } }
+            item { ToggleRow("Event updates", null, notif.events) { vm.setNotifications(notif.copy(events = it)) } }
+            item { ToggleRow("Group activity", null, notif.groups) { vm.setNotifications(notif.copy(groups = it)) } }
+            item { ToggleRow("Messages", null, notif.messages) { vm.setNotifications(notif.copy(messages = it)) } }
             item {
                 SegmentedRow("Pause all", PauseAll.entries, notif.pause, { it.label }) {
-                    CircleStore.notifications = notif.copy(pause = it)
+                    vm.setNotifications(notif.copy(pause = it))
                 }
             }
 
             item { SectionHeading("Appearance") }
             item {
-                SegmentedRow("Theme", ThemeMode.entries, CircleStore.theme, { it.label }, note = "System follows your phone's day and night setting.") {
-                    CircleStore.theme = it
+                SegmentedRow("Theme", ThemeMode.entries, theme, { it.label }, note = "System follows your phone's day and night setting.") {
+                    vm.setTheme(it)
                 }
             }
 
@@ -188,7 +222,8 @@ private fun countLabel(n: Int, one: String, many: String, none: String) = when (
 fun EditProfileScreen(nav: NavHostController) {
     val colors = CircleTheme.colors
     val context = LocalContext.current
-    val saved = CircleStore.profile
+    val vm = circleViewModel { SettingsViewModel(it) }
+    val saved = LocalMe.current ?: return
     var name by rememberSaveable { mutableStateOf(saved.displayName) }
     var handle by rememberSaveable { mutableStateOf(saved.handle) }
     var pinned by rememberSaveable { mutableStateOf(saved.pinnedThought) }
@@ -238,7 +273,7 @@ fun EditProfileScreen(nav: NavHostController) {
                     .clip(RoundedCornerShape(999.dp))
                     .background(colors.accent)
                     .clickable(enabled = canSave) {
-                        if (CircleStore.saveProfile(name, cleanHandle, pinned, avatar) == null) leave()
+                        vm.saveProfile(name, cleanHandle, pinned, avatar) { if (it is Outcome.Success) leave() }
                     }
                     .semantics { if (!canSave) disabled() }
                     .padding(horizontal = 18.dp, vertical = 8.dp)
@@ -310,8 +345,10 @@ private fun FieldError(text: String) {
 fun PeopleListScreen(nav: NavHostController, kind: String) {
     val colors = CircleTheme.colors
     val blocked = kind == "blocked"
-    val ids = if (blocked) CircleStore.blockedIds else CircleStore.mutedIds
-    val people = ids.mapNotNull { CircleStore.person(it) }
+    val vm = circleViewModel { SettingsViewModel(it) }
+    val blockedList by vm.blocked.collectAsStateWithLifecycle()
+    val mutedList by vm.muted.collectAsStateWithLifecycle()
+    val people = if (blocked) blockedList else mutedList
 
     Column(Modifier.fillMaxSize().background(colors.background)) {
         DetailHeader(if (blocked) "Blocked users" else "Muted friends") { nav.popBackStack() }
@@ -338,7 +375,7 @@ fun PeopleListScreen(nav: NavHostController, kind: String) {
                     Text(p.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
                     Box(
                         Modifier.clip(RoundedCornerShape(999.dp)).border(1.dp, colors.border, RoundedCornerShape(999.dp))
-                            .clickable { if (blocked) CircleStore.unblock(p.id) else CircleStore.unmute(p.id) }
+                            .clickable { if (blocked) vm.unblock(p.id) else vm.unmute(p.id) }
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) { Text(if (blocked) "Unblock" else "Unmute", color = colors.text, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
                 }

@@ -26,9 +26,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -36,58 +38,86 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.circle.app.data.CircleStore
-import com.circle.app.data.Person
-import com.circle.app.data.Relationship
+import com.circle.app.R
+import com.circle.app.data.access.Relationship
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.Outcome
+import com.circle.app.data.repo.ProfileView
+import com.circle.app.data.repo.isSuccess
 import com.circle.app.navigation.Routes
 import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.components.CircleCard
 import com.circle.app.ui.components.FeedCard
+import com.circle.app.ui.components.SectionLabel
 import com.circle.app.ui.theme.*
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
+
+class PersonProfileViewModel(repo: CircleRepository, private val personId: String) : RepoViewModel(repo) {
+    /** Null while loading. */
+    val profile = repo.profile(personId).state(null)
+    val relationship = repo.relationshipTo(personId).state(Relationship.NONE)
+    /** Empty for anyone who isn't you or your friend: the repository returns nothing else. */
+    val notes = repo.notesBy(personId).state(emptyList())
+
+    fun sendRequest(then: (Outcome<Unit>) -> Unit) = run({ sendFriendRequest(personId) }, then)
+    fun cancelRequest(then: (Outcome<Unit>) -> Unit) = run({ cancelFriendRequest(personId) }, then)
+    fun accept(then: (Outcome<Unit>) -> Unit) = run({ acceptRequest(personId) }, then)
+    fun decline(then: (Outcome<Unit>) -> Unit) = run({ declineRequest(personId) }, then)
+    fun unfriend(then: (Outcome<Unit>) -> Unit) = run({ unfriend(personId) }, then)
+    fun block(then: (Outcome<Unit>) -> Unit) = run({ block(personId) }, then)
+    fun mute(then: (Outcome<Unit>) -> Unit) = run({ mute(personId) }, then)
+    fun unmute(then: (Outcome<Unit>) -> Unit) = run({ unmute(personId) }, then)
+    fun report(then: (Outcome<Unit>) -> Unit) = run({ report("person", personId) }, then)
+    fun message(then: (Outcome<String>) -> Unit) = run({ openDirectChat(personId) }, then)
+}
 
 /**
- * Someone else's profile, rendered by relationship. Everyone sees the photo, name, handle,
- * mutual-friend count (a number only) and pinned thought. Notes, friends, counts and the Message
- * button only exist between friends.
+ * Someone else's profile, rendered from [ProfileView]. Full (a friend): Message, ✓ Friends, their
+ * notes, and Mute / Unfriend / Block / Report. Limited (not friends): photo, name, handle and
+ * pinned thought only, Add friend / Requested / Accept, and Report / Block. NotFound: nothing.
  */
 @Composable
 fun PersonProfileScreen(nav: NavHostController, personId: String) {
     val colors = CircleTheme.colors
     val context = LocalContext.current
-    val person = CircleStore.person(personId)
-    val rel = CircleStore.relationshipTo(personId)
-
-    if (person == null || rel == Relationship.BLOCKED || rel == Relationship.SELF) {
-        LaunchedEffect(rel) { if (rel == Relationship.SELF) nav.popBackStack() }
-        Column(Modifier.fillMaxSize().background(colors.background)) {
-            DetailHeader("Profile") { nav.popBackStack() }
-            Text("This profile isn't available.", color = colors.muted, fontSize = 14.sp, modifier = Modifier.padding(24.dp))
-        }
-        return
-    }
+    val vm = circleViewModel(key = "person-$personId") { PersonProfileViewModel(it, personId) }
+    val profile by vm.profile.collectAsStateWithLifecycle()
+    val rel by vm.relationship.collectAsStateWithLifecycle()
+    val notes by vm.notes.collectAsStateWithLifecycle()
 
     var menuOpen by remember { mutableStateOf(false) }
     var confirm by rememberSaveable { mutableStateOf<String?>(null) } // "unfriend" | "block" | "report"
-    fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+    fun toast(res: Int) = Toast.makeText(context, context.getString(res), Toast.LENGTH_SHORT).show()
+
+    val view = profile
+    if (view == null) {
+        Column(Modifier.fillMaxSize().background(colors.background)) { ProfileTopBar(nav, null, false, {}, {}) }
+        return
+    }
+    if (view is ProfileView.NotFound) {
+        Column(Modifier.fillMaxSize().background(colors.background)) {
+            DetailHeader(stringResource(R.string.profile_title)) { nav.popBackStack() }
+            Text(stringResource(R.string.profile_unavailable), color = colors.muted, fontSize = 14.sp, modifier = Modifier.padding(24.dp))
+        }
+        return
+    }
+    if (view is ProfileView.Full && view.relationship == Relationship.SELF) {
+        LaunchedEffect(Unit) { nav.popBackStack(); nav.navigate(Routes.PROFILE) }
+        return
+    }
+
+    val name = when (view) { is ProfileView.Full -> view.person.name; is ProfileView.Limited -> view.name; else -> "" }
+    val first = name.substringBefore(" ")
+    val isMuted = (view as? ProfileView.Full)?.isMuted == true
 
     confirm?.let { kind ->
         val (title, body, action) = when (kind) {
-            "unfriend" -> Triple(
-                "Unfriend ${person.firstName}?",
-                "${person.firstName} leaves your circle and your friend count. They aren't told, but you'll need to send a new request to be friends again.",
-                "Unfriend"
-            )
-            "block" -> Triple(
-                "Block ${person.firstName}?",
-                "They won't be able to see you or reach you, and they disappear from your feeds, search, groups, chats and event seats. Any friendship or request ends.",
-                "Block"
-            )
-            else -> Triple(
-                "Report ${person.firstName}?",
-                "We'll look at this profile. ${person.firstName} won't know who reported them.",
-                "Report"
-            )
+            "unfriend" -> Triple(stringResource(R.string.profile_unfriend_title, first), stringResource(R.string.profile_unfriend_body, first), stringResource(R.string.profile_unfriend))
+            "block" -> Triple(stringResource(R.string.profile_block_title, first), stringResource(R.string.profile_block_body), stringResource(R.string.profile_block))
+            else -> Triple(stringResource(R.string.profile_report_title, first), stringResource(R.string.profile_report_body, first), stringResource(R.string.profile_report))
         }
         AlertDialog(
             onDismissRequest = { confirm = null },
@@ -97,119 +127,136 @@ fun PersonProfileScreen(nav: NavHostController, personId: String) {
                 TextButton(onClick = {
                     confirm = null
                     when (kind) {
-                        "unfriend" -> { CircleStore.unfriend(person.id); toast("Unfriended") }
-                        "block" -> { CircleStore.block(person.id); toast("Blocked"); nav.popBackStack() }
-                        else -> { CircleStore.report("person", person.id); toast("Thanks. We'll look at this.") }
+                        "unfriend" -> vm.unfriend { if (it.isSuccess) toast(R.string.toast_unfriended) }
+                        "block" -> vm.block { if (it.isSuccess) { toast(R.string.toast_blocked); nav.popBackStack() } }
+                        else -> vm.report { if (it.isSuccess) toast(R.string.toast_reported) }
                     }
                 }) { Text(action, color = if (kind == "report") colors.accent else colors.alertDot) }
             },
-            dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel", color = colors.text) } }
+            dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.cancel), color = colors.text) } }
         )
     }
 
     Column(Modifier.fillMaxSize().background(colors.background)) {
-        // Header: back, and the ⋯ menu (Mute / Unfriend / Block / Report for friends; Report / Block otherwise)
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clip(CircleShape).clickable { nav.popBackStack() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colors.text)
+        ProfileTopBar(nav, name, menuOpen, { menuOpen = it }) {
+            if (rel == Relationship.FRIEND) {
+                DropdownMenuItem(text = { Text(stringResource(if (isMuted) R.string.profile_unmute else R.string.profile_mute)) }, onClick = {
+                    menuOpen = false
+                    if (isMuted) vm.unmute { if (it.isSuccess) toast(R.string.toast_unmuted) }
+                    else vm.mute { if (it.isSuccess) toast(R.string.toast_muted) }
+                })
+                DropdownMenuItem(text = { Text(stringResource(R.string.profile_unfriend)) }, onClick = { menuOpen = false; confirm = "unfriend" })
             }
-            Spacer(Modifier.weight(1f))
-            Box {
-                Box(Modifier.size(44.dp).clip(CircleShape).clickable { menuOpen = true }, contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.MoreVert, contentDescription = "More options for ${person.name}", tint = colors.text)
-                }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    if (rel == Relationship.FRIEND) {
-                        val muted = person.id in CircleStore.mutedIds
-                        DropdownMenuItem(text = { Text(if (muted) "Unmute" else "Mute") }, onClick = {
-                            menuOpen = false
-                            if (muted) { CircleStore.unmute(person.id); toast("Unmuted") }
-                            else { CircleStore.mute(person.id); toast("Muted. ${person.firstName} isn't told.") }
-                        })
-                        DropdownMenuItem(text = { Text("Unfriend") }, onClick = { menuOpen = false; confirm = "unfriend" })
-                    }
-                    DropdownMenuItem(text = { Text("Report") }, onClick = { menuOpen = false; confirm = "report" })
-                    DropdownMenuItem(text = { Text("Block") }, onClick = { menuOpen = false; confirm = "block" })
-                }
-            }
+            DropdownMenuItem(text = { Text(stringResource(R.string.profile_report)) }, onClick = { menuOpen = false; confirm = "report" })
+            DropdownMenuItem(text = { Text(stringResource(R.string.profile_block)) }, onClick = { menuOpen = false; confirm = "block" })
         }
 
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp)) {
-            item { ProfileHead(person) }
-            item { Spacer(Modifier.height(16.dp)); PinnedCard(person) }
-            item { Spacer(Modifier.height(14.dp)); RelationshipActions(nav, person, rel, ::toast) }
-
-            if (rel == Relationship.FRIEND) {
-                val notes = CircleStore.posts.filter { it.authorId == person.id && it.groupId == null && CircleStore.canOpenPost(it) }
-                item { Spacer(Modifier.height(18.dp)); com.circle.app.ui.components.SectionLabel("NOTES") ; Spacer(Modifier.height(10.dp)) }
-                if (notes.isEmpty()) item { Text("${person.firstName} hasn't posted yet.", color = colors.muted, fontSize = 13.sp) }
-                items(notes, key = { it.id }) { p -> Box(Modifier.padding(bottom = 12.dp)) { FeedCard(nav, p) } }
-            } else {
-                item { Spacer(Modifier.height(16.dp)); LockedNotFriendsPanel() }
+            when (view) {
+                is ProfileView.Full -> {
+                    item { ProfileHead(view.person.initials, view.person.color, view.person.name, view.handle) }
+                    item { Spacer(Modifier.height(16.dp)); PinnedCard(view.pinnedThought) }
+                    item {
+                        Spacer(Modifier.height(14.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Pill(stringResource(R.string.profile_message), filled = true, modifier = Modifier.weight(1f)) {
+                                vm.message { if (it is Outcome.Success) nav.navigate(Routes.chat(it.value)) }
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Text(stringResource(R.string.profile_friends_check), color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 8.dp))
+                        }
+                    }
+                    item { Spacer(Modifier.height(18.dp)); SectionLabel(stringResource(R.string.profile_notes_caps)); Spacer(Modifier.height(10.dp)) }
+                    if (notes.isEmpty()) item { Text(stringResource(R.string.profile_no_notes, first), color = colors.muted, fontSize = 13.sp) }
+                    items(notes, key = { it.id }) { p -> Box(Modifier.padding(bottom = 12.dp)) { FeedCard(nav, p) } }
+                }
+                is ProfileView.Limited -> {
+                    item { ProfileHead(view.initials, view.color, view.name, view.handle) }
+                    item { Spacer(Modifier.height(16.dp)); PinnedCard(view.pinnedThought) }
+                    item {
+                        Spacer(Modifier.height(14.dp))
+                        LimitedActions(rel,
+                            onAdd = { vm.sendRequest { if (it.isSuccess) toast(R.string.toast_request_sent) } },
+                            onCancel = { vm.cancelRequest { if (it.isSuccess) toast(R.string.toast_request_cancelled) } },
+                            onAccept = { vm.accept { if (it.isSuccess) toast(R.string.toast_now_friends) } },
+                            onDecline = { vm.decline { if (it.isSuccess) toast(R.string.toast_request_declined) } },
+                        )
+                    }
+                    item { Spacer(Modifier.height(16.dp)); LockedNotFriendsPanel() }
+                }
+                ProfileView.NotFound -> Unit
             }
         }
     }
 }
 
 @Composable
-private fun ProfileHead(person: Person) {
+private fun ProfileTopBar(
+    nav: NavHostController,
+    name: String?,
+    menuOpen: Boolean,
+    setMenu: (Boolean) -> Unit,
+    menu: @Composable ColumnScope.() -> Unit,
+) {
+    val colors = CircleTheme.colors
+    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(44.dp).clip(CircleShape).clickable { nav.popBackStack() }, contentAlignment = Alignment.Center) {
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back), tint = colors.text)
+        }
+        Spacer(Modifier.weight(1f))
+        if (name != null) Box {
+            Box(Modifier.size(44.dp).clip(CircleShape).clickable { setMenu(true) }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.profile_more_options, name), tint = colors.text)
+            }
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { setMenu(false) }, content = menu)
+        }
+    }
+}
+
+@Composable
+private fun ProfileHead(initials: String, color: Color, name: String, handle: String) {
     val colors = CircleTheme.colors
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Avatar(person.initials, person.color, size = 92)
+        Avatar(initials, color, size = 92)
         Text(
-            person.name, fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 26.sp, letterSpacing = (-0.39).sp,
+            name, fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 26.sp, letterSpacing = (-0.39).sp,
             color = colors.text, modifier = Modifier.padding(top = 12.dp).semantics { heading() }
         )
-        Text("@${person.handle}", color = colors.muted, fontSize = 13.sp)
-        val n = person.mutualFriends
-        Text(
-            if (n == 1) "1 mutual friend" else "$n mutual friends",
-            color = colors.muted, fontSize = 12.5.sp, modifier = Modifier.padding(top = 4.dp)
-        )
+        Text(stringResource(R.string.handle_format, handle), color = colors.muted, fontSize = 13.sp)
     }
 }
 
 @Composable
-private fun PinnedCard(person: Person) {
+private fun PinnedCard(pinned: String) {
     val colors = CircleTheme.colors
     CircleCard {
-        Text("PINNED", color = colors.muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+        Text(stringResource(R.string.profile_pinned_caps), color = colors.muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
         Text(
-            person.pinned.ifBlank { "Nothing pinned yet." },
-            color = if (person.pinned.isBlank()) colors.muted else colors.body, style = CircleTheme.postText
+            pinned.ifBlank { stringResource(R.string.profile_nothing_pinned) },
+            color = if (pinned.isBlank()) colors.muted else colors.body, style = CircleTheme.postText
         )
     }
 }
 
+/** Add friend / Requested + Cancel request / Accept + Decline. Never a Message button. */
 @Composable
-private fun RelationshipActions(nav: NavHostController, person: Person, rel: Relationship, toast: (String) -> Unit) {
+private fun LimitedActions(rel: Relationship, onAdd: () -> Unit, onCancel: () -> Unit, onAccept: () -> Unit, onDecline: () -> Unit) {
     val colors = CircleTheme.colors
     when (rel) {
-        Relationship.FRIEND -> Row(verticalAlignment = Alignment.CenterVertically) {
-            Pill("Message", filled = true, modifier = Modifier.weight(1f)) {
-                CircleStore.openDirectChat(person.id)?.let { nav.navigate(Routes.chat(it.id)) }
-            }
-            Spacer(Modifier.width(10.dp))
-            Text("✓ Friends", color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 8.dp))
-        }
-        Relationship.NONE -> Pill("Add friend", filled = true, modifier = Modifier.fillMaxWidth()) {
-            if (CircleStore.sendFriendRequest(person.id)) toast("Friend request sent")
-        }
         Relationship.REQUEST_SENT -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Pill("Requested", filled = false, enabled = false, modifier = Modifier.fillMaxWidth()) {}
+            Pill(stringResource(R.string.profile_requested), filled = false, enabled = false, modifier = Modifier.fillMaxWidth()) {}
             Text(
-                "Cancel request", color = colors.muted, fontWeight = FontWeight.Bold, fontSize = 12.5.sp,
-                modifier = Modifier.padding(top = 4.dp).clip(RoundedCornerShape(8.dp))
-                    .clickable { CircleStore.cancelFriendRequest(person.id); toast("Request cancelled") }
+                stringResource(R.string.profile_cancel_request), color = colors.muted, fontWeight = FontWeight.Bold, fontSize = 12.5.sp,
+                modifier = Modifier.padding(top = 4.dp).clip(RoundedCornerShape(8.dp)).clickable(onClick = onCancel)
                     .padding(horizontal = 12.dp, vertical = 12.dp)
             )
         }
         Relationship.REQUEST_RECEIVED -> Row {
-            Pill("Accept", filled = true, modifier = Modifier.weight(1f)) { CircleStore.acceptRequest(person.id); toast("You're friends now") }
+            Pill(stringResource(R.string.profile_accept), filled = true, modifier = Modifier.weight(1f), onClick = onAccept)
             Spacer(Modifier.width(10.dp))
-            Pill("Decline", filled = false, modifier = Modifier.weight(1f)) { CircleStore.declineRequest(person.id); toast("Request declined") }
+            Pill(stringResource(R.string.profile_decline), filled = false, modifier = Modifier.weight(1f), onClick = onDecline)
         }
-        Relationship.SELF, Relationship.BLOCKED -> Unit
+        else -> Pill(stringResource(R.string.profile_add_friend), filled = true, modifier = Modifier.fillMaxWidth(), onClick = onAdd)
     }
 }
 
@@ -246,7 +293,7 @@ fun LockedNotFriendsPanel() {
     ) {
         Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(22.dp))
         Text(
-            "You're not friends yet. You'll see their notes and friends once they accept. Until then you see only their photo and pinned thought.",
+            stringResource(R.string.profile_locked_panel),
             color = colors.body, fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp)
         )
     }

@@ -24,10 +24,11 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Reply
 import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.Undo
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -38,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.ViewConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
@@ -62,17 +63,34 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.circle.app.data.*
+import com.circle.app.R
+import com.circle.app.data.MessageKind
+import com.circle.app.data.repo.ChatKind
+import com.circle.app.data.repo.ChatView
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.EventCardView
+import com.circle.app.data.repo.MessageView
+import com.circle.app.data.repo.NoteView
+import com.circle.app.data.repo.ReplySnippet
 import com.circle.app.navigation.Routes
+import com.circle.app.navigation.openPerson
 import com.circle.app.ui.a11y.rememberReduceMotion
 import com.circle.app.ui.components.Avatar
+import com.circle.app.ui.components.GateKind
 import com.circle.app.ui.components.GroupTile
 import com.circle.app.ui.components.NotFriendsSheet
-import com.circle.app.navigation.openPerson
-import androidx.compose.material.icons.outlined.Lock
+import com.circle.app.ui.format.clockTime
+import com.circle.app.ui.format.dayLabel
+import com.circle.app.ui.format.eventDay
+import com.circle.app.ui.format.eventMonth
+import com.circle.app.ui.format.eventWhen
 import com.circle.app.ui.theme.*
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
 import kotlinx.coroutines.launch
+import java.time.ZoneId
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -80,21 +98,33 @@ private val SwipeMax = 72.dp       // the bubble follows the finger up to here
 private val SwipeTrigger = 44.dp   // releasing past this starts a reply
 private val BubbleMaxWidth = 276.dp
 
+class ChatViewModel(repo: CircleRepository, private val chatId: String) : RepoViewModel(repo) {
+    /** Null while loading, or when the chat isn't available to you. */
+    val chat = repo.chat(chatId).state(null)
+    fun markRead() = run({ markRead(chatId); com.circle.app.data.repo.Outcome.Success(Unit) })
+    fun send(text: String, replyToId: String?, then: () -> Unit) = run({ sendMessage(chatId, text, replyToId) }) {
+        if (it is com.circle.app.data.repo.Outcome.Success) then()
+    }
+    fun deleteForMe(messageId: String) = run({ deleteForMe(chatId, messageId) })
+    fun unsend(messageId: String) = run({ unsend(chatId, messageId) })
+}
+
 /** One row of the conversation, oldest first. */
 private sealed interface ChatEntry {
     val key: String
-    data class Day(val label: String) : ChatEntry { override val key get() = "day-$label" }
-    data class Msg(val m: ChatMessage, val firstOfRun: Boolean, val lastOfRun: Boolean) : ChatEntry { override val key get() = m.id }
+    data class Day(val at: java.time.Instant, val date: java.time.LocalDate) : ChatEntry { override val key get() = "day-$date" }
+    data class Msg(val m: MessageView, val firstOfRun: Boolean, val lastOfRun: Boolean) : ChatEntry { override val key get() = m.id }
 }
 
-private fun entries(messages: List<ChatMessage>): List<ChatEntry> {
+private fun entries(messages: List<MessageView>, zone: ZoneId = ZoneId.systemDefault()): List<ChatEntry> {
     val out = mutableListOf<ChatEntry>()
+    fun day(m: MessageView) = m.createdAt.atZone(zone).toLocalDate()
     messages.forEachIndexed { i, m ->
         val prev = messages.getOrNull(i - 1)
         val next = messages.getOrNull(i + 1)
-        if (prev == null || prev.day != m.day) out += ChatEntry.Day(m.day)
-        val first = prev == null || prev.senderId != m.senderId || prev.day != m.day
-        val last = next == null || next.senderId != m.senderId || next.day != m.day
+        if (prev == null || day(prev) != day(m)) out += ChatEntry.Day(m.createdAt, day(m))
+        val first = prev == null || prev.sender.id != m.sender.id || day(prev) != day(m)
+        val last = next == null || next.sender.id != m.sender.id || day(next) != day(m)
         out += ChatEntry.Msg(m, first, last)
     }
     return out
@@ -102,21 +132,16 @@ private fun entries(messages: List<ChatMessage>): List<ChatEntry> {
 
 /**
  * A conversation. Newest at the bottom. Tapping a text message does nothing; swipe right on any
- * message to reply; hold (~400ms) for Copy / Delete for me / Unsend (yours only). Tapping a
- * shared note opens its thread, tapping an event invite opens the event.
+ * message to reply; hold (~400ms) for Copy / Delete for me / Unsend (yours only). A shared note
+ * opens its thread only if the repository says you may (else the not-friends sheet); an event
+ * invite opens the event if it's visible to you (else the same gate for the host).
  */
 @Composable
 fun ChatScreen(nav: NavHostController, chatId: String) {
     val colors = CircleTheme.colors
-    val chat = CircleStore.chat(chatId)
-    if (chat == null) {
-        Column(Modifier.fillMaxSize().background(colors.background)) {
-            DetailHeader("Chat") { nav.popBackStack() }
-            Text("This chat isn't available.", color = colors.muted, modifier = Modifier.padding(24.dp))
-        }
-        return
-    }
-    LaunchedEffect(chat.id) { CircleStore.markRead(chat) }
+    val vm = circleViewModel(key = "chat-$chatId") { ChatViewModel(it, chatId) }
+    val chat by vm.chat.collectAsStateWithLifecycle()
+    LaunchedEffect(chatId) { vm.markRead() }
 
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
@@ -124,17 +149,25 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
     val listState = rememberLazyListState()
     var draft by rememberSaveable { mutableStateOf("") }
     var replyToId by rememberSaveable { mutableStateOf<String?>(null) }
-    var gate by remember { mutableStateOf<Gate?>(null) }
+    var gate by remember { mutableStateOf<Pair<String, GateKind>?>(null) }
 
-    val messages = CircleStore.visibleMessages(chat)
+    val c = chat
+    if (c == null) {
+        Column(Modifier.fillMaxSize().background(colors.background)) {
+            DetailHeader(stringResource(R.string.chat_title)) { nav.popBackStack() }
+        }
+        return
+    }
+
+    val messages = c.messages
     val rows = entries(messages).asReversed() // reverse layout: index 0 is the newest
     val replyTo = replyToId?.let { id -> messages.firstOrNull { it.id == id } }
-    val isGroupLike = chat.directPersonId == null
-
-    fun senderName(id: String) = if (id == ME) "You" else CircleStore.person(id)?.firstName ?: "Someone"
+    val isGroupLike = c.kind != ChatKind.DIRECT
+    val youName = stringResource(R.string.chat_you)
+    fun senderName(m: MessageView) = if (m.mine) youName else m.sender.firstName
 
     fun send() {
-        if (CircleStore.sendMessage(chat, draft, replyTo?.id) != null) {
+        vm.send(draft, replyTo?.id) {
             draft = ""; replyToId = null
             scope.launch { listState.animateScrollToItem(0) }
         }
@@ -147,15 +180,12 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
         }
     }
 
-    gate?.let { g ->
-        NotFriendsSheet(
-            personId = g.personId, title = g.title, message = g.message, requestLabel = g.requestLabel,
-            onViewProfile = { nav.openPerson(g.personId) }, onDismiss = { gate = null }
-        )
+    gate?.let { (personId, kind) ->
+        NotFriendsSheet(personId = personId, kind = kind, onViewProfile = { nav.openPerson(personId) }, onDismiss = { gate = null })
     }
 
     Column(Modifier.fillMaxSize().background(colors.background)) {
-        ChatTopBar(nav, chat)
+        ChatTopBar(nav, c)
 
         CompositionLocalProvider(LocalViewConfiguration provides chatConfig) {
             LazyColumn(
@@ -166,54 +196,40 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
             ) {
                 items(rows, key = { it.key }) { entry ->
                     when (entry) {
-                        is ChatEntry.Day -> DayPill(entry.label)
+                        is ChatEntry.Day -> DayPill(dayLabel(entry.at))
                         is ChatEntry.Msg -> {
                             val m = entry.m
-                            val quoted = m.replyToId?.let { CircleStore.message(chat, it) }
+                            val removed = stringResource(R.string.chat_removed_for_you)
+                            val copyLabel = copyText(m)
                             MessageRow(
                                 m = m,
-                                mine = m.senderId == ME,
                                 firstOfRun = entry.firstOfRun,
                                 lastOfRun = entry.lastOfRun,
-                                senderLabel = if (isGroupLike && m.senderId != ME && entry.firstOfRun) senderName(m.senderId) else null,
-                                leadingPersonId = if (isGroupLike && m.senderId != ME) m.senderId else null,
+                                senderLabel = if (isGroupLike && !m.mine && entry.firstOfRun) senderName(m) else null,
+                                showLeadingAvatar = isGroupLike && !m.mine,
                                 onPerson = { nav.openPerson(it) },
-                                quoted = quoted?.takeIf { it.id !in CircleStore.hiddenMessageIds },
-                                quotedName = quoted?.let { senderName(it.senderId) },
                                 onReply = { replyToId = m.id },
-                                onCopy = {
-                                    clipboard.setText(AnnotatedString(copyText(m)))
-                                },
+                                onCopy = { clipboard.setText(AnnotatedString(copyLabel)) },
                                 onDeleteForMe = {
-                                    CircleStore.deleteForMe(m.id)
+                                    vm.deleteForMe(m.id)
                                     if (replyToId == m.id) replyToId = null
-                                    Toast.makeText(context, "Removed from your chat only", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, removed, Toast.LENGTH_SHORT).show()
                                 },
-                                onUnsend = if (m.senderId == ME) ({
-                                    CircleStore.unsend(chat, m.id)
+                                onUnsend = if (m.mine) ({
+                                    vm.unsend(m.id)
                                     if (replyToId == m.id) replyToId = null
                                 }) else null,
                                 onOpen = when (m.kind) {
                                     MessageKind.TEXT -> null
-                                    MessageKind.SHARED_NOTE -> m.postId?.let { CircleStore.post(it) }?.let { p ->
-                                        {
-                                            if (CircleStore.canOpenPost(p)) nav.navigate(Routes.thread(p.id))
-                                            else gate = Gate(
-                                                p.authorId,
-                                                "You're not friends with ${CircleStore.person(p.authorId)?.firstName ?: "them"} yet",
-                                                "Send a friend request to open this thread. You can still see who posted it."
-                                            )
-                                        }
+                                    MessageKind.SHARED_NOTE -> when (val note = m.sharedNote) {
+                                        is NoteView.Full -> ({ nav.navigate(Routes.thread(note.note.id)) })
+                                        is NoteView.Snippet -> ({ gate = note.authorId to GateKind.NOTE })
+                                        else -> null
                                     }
-                                    MessageKind.EVENT_INVITE -> m.eventId?.let { id -> CircleStore.events.firstOrNull { it.id == id } }?.let { e ->
+                                    MessageKind.EVENT_INVITE -> m.event?.let { e ->
                                         {
-                                            if (CircleStore.canSeeEvent(e)) nav.navigate(Routes.eventDetail(e.id))
-                                            else gate = Gate(
-                                                e.hostId,
-                                                "This event is for the host's friends",
-                                                "Send ${CircleStore.hostOf(e).firstName} a friend request to see it. You can still see who's hosting.",
-                                                requestLabel = "Send friend request to the host"
-                                            )
+                                            if (e.canOpen) nav.navigate(Routes.eventDetail(e.id))
+                                            else e.host?.let { gate = it.id to GateKind.EVENT }
                                         }
                                     }
                                 }
@@ -224,51 +240,65 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
             }
         }
 
-        if (replyTo != null) ReplyStrip(senderName(replyTo.senderId), CircleStore.messageSummary(replyTo)) { replyToId = null }
+        if (replyTo != null) ReplyStrip(senderName(replyTo), summary(replyTo.kind, replyTo.text)) { replyToId = null }
         Composer(draft, onChange = { draft = it }, onSend = ::send)
     }
 }
 
-private fun copyText(m: ChatMessage): String = when (m.kind) {
+/** What Copy puts on the clipboard: never more than the message shows (a snippet stays a snippet). */
+@Composable
+private fun copyText(m: MessageView): String = when (m.kind) {
     MessageKind.TEXT -> m.text
-    MessageKind.SHARED_NOTE -> m.postId?.let { CircleStore.post(it) }?.let {
-        "${it.author}: " + if (CircleStore.canOpenPost(it)) it.text else sharedSnippet(it.text)
-    } ?: "Shared a note"
-    MessageKind.EVENT_INVITE -> m.eventId?.let { id -> CircleStore.events.firstOrNull { it.id == id } }
-        ?.let { "${it.title}, ${it.whenLabel}, ${it.venue}" } ?: "Event invite"
+    MessageKind.SHARED_NOTE -> when (val n = m.sharedNote) {
+        is NoteView.Full -> "${n.note.author.name}: ${n.note.text}"
+        is NoteView.Snippet -> "${n.authorName}: ${n.text}"
+        else -> stringResource(R.string.chat_shared_a_note)
+    }
+    MessageKind.EVENT_INVITE -> m.event?.let { "${it.title}, ${eventWhen(it.startsAt)}" } ?: stringResource(R.string.chat_event_invite)
+}
+
+/** One-line summary of a message, for reply snippets and list previews. */
+@Composable
+fun summary(kind: MessageKind, text: String): String = when (kind) {
+    MessageKind.TEXT -> text
+    MessageKind.SHARED_NOTE -> stringResource(R.string.chat_shared_a_note)
+    MessageKind.EVENT_INVITE -> stringResource(R.string.chat_event_invite)
 }
 
 @Composable
-private fun ChatTopBar(nav: NavHostController, chat: Chat) {
+private fun ChatTopBar(nav: NavHostController, chat: ChatView) {
     val colors = CircleTheme.colors
-    val title = CircleStore.chatTitle(chat)
-    val group = chat.groupId?.let { CircleStore.groupOrNull(it) }
-    val person = chat.directPersonId?.let { CircleStore.person(it) }
-    val subline = when {
-        group != null -> "${group.memberCount} members"
-        person != null -> "Friends since ${person.sinceYear}"
-        else -> "You and ${chat.memberIds.size} friends"
+    val subline = when (chat.kind) {
+        ChatKind.GROUP -> androidx.compose.ui.res.pluralStringResource(R.plurals.members_count, chat.memberCount, chat.memberCount)
+        ChatKind.DIRECT -> chat.friendsSinceYear?.let { stringResource(R.string.chat_friends_since, it) }.orEmpty()
+        ChatKind.MULTI -> stringResource(R.string.chat_you_and_friends, chat.memberCount - 1)
     }
     Column {
         Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clip(CircleShape).clickable { nav.popBackStack() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colors.text)
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back), tint = colors.text)
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .then(if (group != null) Modifier.clickable(onClickLabel = "Open group") { nav.navigate(Routes.groupDetail(group.id)) } else Modifier)
+                    .then(
+                        when {
+                            chat.group != null -> Modifier.clickable(onClickLabel = stringResource(R.string.chat_open_group)) { nav.navigate(Routes.groupDetail(chat.group.id)) }
+                            chat.person != null -> Modifier.clickable(onClickLabel = stringResource(R.string.open_profile)) { nav.openPerson(chat.person.id) }
+                            else -> Modifier
+                        }
+                    )
                     .padding(4.dp)
             ) {
                 when {
-                    group != null -> GroupTile(group.initial, group.color, size = 40)
-                    person != null -> Avatar(person.initials, person.color, size = 40)
-                    else -> Avatar(title.take(1).uppercase(), AvatarTeal, size = 40)
+                    chat.group != null -> GroupTile(chat.group.initial, chat.group.color, size = 40)
+                    chat.person != null -> Avatar(chat.person.initials, chat.person.color, size = 40)
+                    else -> Avatar(chat.title.take(1).uppercase(), AvatarTeal, size = 40)
                 }
                 Spacer(Modifier.width(10.dp))
                 Column {
-                    Text(title, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 15.5.sp, maxLines = 1, modifier = Modifier.semantics { heading() })
+                    Text(chat.title, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 15.5.sp, maxLines = 1, modifier = Modifier.semantics { heading() })
                     Text(subline, color = colors.muted, fontSize = 11.5.sp, maxLines = 1)
                 }
             }
@@ -296,15 +326,12 @@ private fun DayPill(label: String) {
  */
 @Composable
 private fun MessageRow(
-    m: ChatMessage,
-    mine: Boolean,
+    m: MessageView,
     firstOfRun: Boolean,
     lastOfRun: Boolean,
     senderLabel: String?,
-    leadingPersonId: String?,
+    showLeadingAvatar: Boolean,
     onPerson: (String) -> Unit,
-    quoted: ChatMessage?,
-    quotedName: String?,
     onReply: () -> Unit,
     onCopy: () -> Unit,
     onDeleteForMe: () -> Unit,
@@ -321,12 +348,17 @@ private fun MessageRow(
     var menuOpen by remember { mutableStateOf(false) }
     val maxPx = with(density) { SwipeMax.toPx() }
     val triggerPx = with(density) { SwipeTrigger.toPx() }
+    val mine = m.mine
 
+    val replyLabel = stringResource(R.string.chat_reply)
+    val copyLabel = stringResource(R.string.chat_copy)
+    val deleteLabel = stringResource(R.string.chat_delete_for_me)
+    val unsendLabel = stringResource(R.string.chat_unsend)
     val actions = buildList {
-        add(CustomAccessibilityAction("Reply") { onReply(); true })
-        add(CustomAccessibilityAction("Copy") { onCopy(); true })
-        add(CustomAccessibilityAction("Delete for me") { onDeleteForMe(); true })
-        if (onUnsend != null) add(CustomAccessibilityAction("Unsend") { onUnsend(); true })
+        add(CustomAccessibilityAction(replyLabel) { onReply(); true })
+        add(CustomAccessibilityAction(copyLabel) { onCopy(); true })
+        add(CustomAccessibilityAction(deleteLabel) { onDeleteForMe(); true })
+        if (onUnsend != null) add(CustomAccessibilityAction(unsendLabel) { onUnsend(); true })
     }
 
     Column(
@@ -336,123 +368,125 @@ private fun MessageRow(
         if (senderLabel != null) {
             Text(
                 senderLabel, color = colors.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = if (leadingPersonId != null) 38.dp else 12.dp)
+                modifier = Modifier.padding(start = if (showLeadingAvatar) 38.dp else 12.dp)
                     .clip(RoundedCornerShape(6.dp))
-                    .then(if (leadingPersonId != null) Modifier.clickable(onClickLabel = "Open profile") { onPerson(leadingPersonId) } else Modifier)
+                    .then(if (showLeadingAvatar) Modifier.clickable(onClickLabel = stringResource(R.string.open_profile)) { onPerson(m.sender.id) } else Modifier)
                     .padding(horizontal = 2.dp, vertical = 3.dp)
             )
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        // Group-like chats: the first message of a run shows the sender's avatar (opens their profile).
-        if (leadingPersonId != null) {
-            val p = CircleStore.person(leadingPersonId)
-            Box(Modifier.width(34.dp), contentAlignment = Alignment.TopStart) {
-                if (firstOfRun && p != null) {
-                    Box(
-                        Modifier.size(34.dp).clip(CircleShape).clickable(onClickLabel = "Open ${p.firstName}'s profile") { onPerson(p.id) },
-                        contentAlignment = Alignment.CenterStart
-                    ) { Avatar(p.initials, p.color, size = 26) }
+            // Group-like chats: the first message of a run shows the sender's avatar (opens their profile).
+            if (showLeadingAvatar) {
+                val p = m.sender
+                Box(Modifier.width(34.dp), contentAlignment = Alignment.TopStart) {
+                    if (firstOfRun) {
+                        Box(
+                            Modifier.size(34.dp).clip(CircleShape).clickable(onClickLabel = stringResource(R.string.open_profile_of, p.firstName)) { onPerson(p.id) },
+                            contentAlignment = Alignment.CenterStart
+                        ) { Avatar(p.initials, p.color, size = 26) }
+                    }
                 }
             }
-        }
-        Box(Modifier.weight(1f), contentAlignment = if (mine) Alignment.CenterEnd else Alignment.CenterStart) {
-            // Reply icon revealed behind the message as it is dragged.
-            val progress = (offset.value / triggerPx).coerceIn(0f, 1f)
-            Box(
-                Modifier.align(Alignment.CenterStart).padding(start = 4.dp).size(30.dp).alpha(progress)
-                    .clip(CircleShape).background(if (progress >= 1f) colors.accent else colors.track),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Outlined.Reply, contentDescription = null,
-                    tint = if (progress >= 1f) colors.onAccent else colors.muted, modifier = Modifier.size(16.dp)
-                )
-            }
+            Box(Modifier.weight(1f), contentAlignment = if (mine) Alignment.CenterEnd else Alignment.CenterStart) {
+                // Reply icon revealed behind the message as it is dragged.
+                val progress = (offset.value / triggerPx).coerceIn(0f, 1f)
+                Box(
+                    Modifier.align(Alignment.CenterStart).padding(start = 4.dp).size(30.dp).alpha(progress)
+                        .clip(CircleShape).background(if (progress >= 1f) colors.accent else colors.track),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Outlined.Reply, contentDescription = null,
+                        tint = if (progress >= 1f) colors.onAccent else colors.muted, modifier = Modifier.size(16.dp)
+                    )
+                }
 
-            Box(
-                Modifier
-                    .offset { IntOffset(offset.value.roundToInt(), 0) }
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            val down = awaitFirstDown(requireUnconsumed = false)
-                            var horizontal = false
-                            // Only a mostly-horizontal drag to the right counts; otherwise the list scrolls.
-                            val start = awaitTouchSlopOrCancellation(down.id) { change, over ->
-                                if (over.x > 0f && abs(over.x) > abs(over.y) * 1.5f) {
-                                    horizontal = true
+                Box(
+                    Modifier
+                        .offset { IntOffset(offset.value.roundToInt(), 0) }
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                val down = awaitFirstDown(requireUnconsumed = false)
+                                var horizontal = false
+                                // Only a mostly-horizontal drag to the right counts; otherwise the list scrolls.
+                                val start = awaitTouchSlopOrCancellation(down.id) { change, over ->
+                                    if (over.x > 0f && abs(over.x) > abs(over.y) * 1.5f) {
+                                        horizontal = true
+                                        change.consume()
+                                    }
+                                }
+                                if (start == null || !horizontal) return@awaitEachGesture
+                                var armed = false
+                                horizontalDrag(start.id) { change ->
+                                    val next = (offset.value + change.positionChange().x).coerceIn(0f, maxPx)
+                                    scope.launch { offset.snapTo(next) }
+                                    if (!armed && next >= triggerPx) {
+                                        armed = true
+                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    } else if (armed && next < triggerPx) armed = false
                                     change.consume()
                                 }
-                            }
-                            if (start == null || !horizontal) return@awaitEachGesture
-                            var armed = false
-                            horizontalDrag(start.id) { change ->
-                                val next = (offset.value + change.positionChange().x).coerceIn(0f, maxPx)
-                                scope.launch { offset.snapTo(next) }
-                                if (!armed && next >= triggerPx) {
-                                    armed = true
-                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                } else if (armed && next < triggerPx) armed = false
-                                change.consume()
-                            }
-                            if (offset.value >= triggerPx) currentOnReply()
-                            scope.launch {
-                                if (reduceMotion) offset.snapTo(0f)
-                                else offset.animateTo(0f, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium))
+                                if (offset.value >= triggerPx) currentOnReply()
+                                scope.launch {
+                                    if (reduceMotion) offset.snapTo(0f)
+                                    else offset.animateTo(0f, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium))
+                                }
                             }
                         }
+                        .pointerInput(onOpen) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    menuOpen = true
+                                },
+                                onTap = onOpen?.let { open -> { _ -> open() } }
+                            )
+                        }
+                        .semantics { customActions = actions }
+                ) {
+                    when (m.kind) {
+                        MessageKind.TEXT -> Bubble(m, lastOfRun)
+                        MessageKind.SHARED_NOTE -> SharedNoteCard(m.sharedNote, onPerson)
+                        MessageKind.EVENT_INVITE -> EventInviteCard(m.event)
                     }
-                    .pointerInput(onOpen) {
-                        detectTapGestures(
-                            onLongPress = {
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                menuOpen = true
-                            },
-                            onTap = onOpen?.let { open -> { _ -> open() } }
-                        )
-                    }
-                    .semantics { customActions = actions }
-            ) {
-                when (m.kind) {
-                    MessageKind.TEXT -> Bubble(m, mine, lastOfRun, quoted, quotedName)
-                    MessageKind.SHARED_NOTE -> SharedNoteCard(m.postId?.let { CircleStore.post(it) }, onPerson)
-                    MessageKind.EVENT_INVITE -> EventInviteCard(m.eventId?.let { id -> CircleStore.events.firstOrNull { it.id == id } })
-                }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Copy") }, leadingIcon = { Icon(Icons.Outlined.ContentCopy, null) },
-                        onClick = { menuOpen = false; onCopy() }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Delete for me") }, leadingIcon = { Icon(Icons.Outlined.DeleteOutline, null) },
-                        onClick = { menuOpen = false; onDeleteForMe() }
-                    )
-                    if (onUnsend != null) {
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(
-                            text = { Text("Unsend") }, leadingIcon = { Icon(Icons.Outlined.Undo, null) },
-                            onClick = { menuOpen = false; onUnsend() }
+                            text = { Text(copyLabel) }, leadingIcon = { Icon(Icons.Outlined.ContentCopy, null) },
+                            onClick = { menuOpen = false; onCopy() }
                         )
+                        DropdownMenuItem(
+                            text = { Text(deleteLabel) }, leadingIcon = { Icon(Icons.Outlined.DeleteOutline, null) },
+                            onClick = { menuOpen = false; onDeleteForMe() }
+                        )
+                        if (onUnsend != null) {
+                            DropdownMenuItem(
+                                text = { Text(unsendLabel) }, leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Undo, null) },
+                                onClick = { menuOpen = false; onUnsend() }
+                            )
+                        }
                     }
                 }
             }
         }
-        }
         if (lastOfRun) {
+            val time = clockTime(m.createdAt)
             val status = when {
-                !mine -> m.time
-                m.seenAt != null -> "Seen ${m.seenAt}"
-                else -> "${m.time} · Sent"
+                !mine -> time
+                m.seenAt != null -> stringResource(R.string.chat_seen, clockTime(m.seenAt))
+                else -> stringResource(R.string.chat_sent, time)
             }
             Text(
                 status, color = colors.muted, fontSize = 10.5.sp,
-                modifier = Modifier.padding(start = if (leadingPersonId != null) 40.dp else 6.dp, end = 6.dp, top = 3.dp, bottom = 3.dp)
+                modifier = Modifier.padding(start = if (showLeadingAvatar) 40.dp else 6.dp, end = 6.dp, top = 3.dp, bottom = 3.dp)
             )
         }
     }
 }
 
 @Composable
-private fun Bubble(m: ChatMessage, mine: Boolean, lastOfRun: Boolean, quoted: ChatMessage?, quotedName: String?) {
+private fun Bubble(m: MessageView, lastOfRun: Boolean) {
     val colors = CircleTheme.colors
+    val mine = m.mine
     val small = if (lastOfRun) 5.dp else 18.dp
     val shape = if (mine) RoundedCornerShape(18.dp, 18.dp, small, 18.dp) else RoundedCornerShape(18.dp, 18.dp, 18.dp, small)
     val fg = if (mine) colors.onAccent else colors.text
@@ -464,90 +498,88 @@ private fun Bubble(m: ChatMessage, mine: Boolean, lastOfRun: Boolean, quoted: Ch
             .then(if (mine) Modifier else Modifier.border(1.dp, colors.border, shape))
             .padding(horizontal = 13.dp, vertical = 9.dp)
     ) {
-        if (m.replyToId != null) {
-            // Small quoted snippet of the message this one replies to.
-            Row(
-                Modifier.padding(bottom = 6.dp).clip(RoundedCornerShape(8.dp))
-                    .background((if (mine) colors.onAccent else colors.text).copy(alpha = 0.08f))
-                    .height(IntrinsicSize.Min)
-            ) {
-                Box(Modifier.width(3.dp).fillMaxHeight().background(if (mine) colors.onAccent else colors.accent))
-                Column(Modifier.padding(horizontal = 8.dp, vertical = 5.dp)) {
-                    Text(quotedName ?: "", color = fg, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        quoted?.let { CircleStore.messageSummary(it) } ?: "Message unavailable",
-                        color = fg.copy(alpha = 0.8f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
+        m.replyTo?.let { quoted -> QuotedSnippet(quoted, mine, fg) }
         Text(m.text, color = fg, fontSize = 14.5.sp, lineHeight = 20.3.sp)
     }
 }
 
-/** About 90 characters of a note, for people who can't open it. */
-private fun sharedSnippet(text: String): String =
-    if (text.length <= 90) text else text.take(90).trimEnd().trimEnd(',', '.', ';') + "\u2026"
+/** Small quoted snippet of the message this one replies to. */
+@Composable
+private fun QuotedSnippet(quoted: ReplySnippet, mine: Boolean, fg: androidx.compose.ui.graphics.Color) {
+    val colors = CircleTheme.colors
+    Row(
+        Modifier.padding(bottom = 6.dp).clip(RoundedCornerShape(8.dp))
+            .background((if (mine) colors.onAccent else colors.text).copy(alpha = 0.08f))
+            .height(IntrinsicSize.Min)
+    ) {
+        Box(Modifier.width(3.dp).fillMaxHeight().background(if (mine) colors.onAccent else colors.accent))
+        Column(Modifier.padding(horizontal = 8.dp, vertical = 5.dp)) {
+            Text(if (quoted.mine) stringResource(R.string.chat_you) else quoted.senderName, color = fg, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(
+                summary(quoted.kind, quoted.text),
+                color = fg.copy(alpha = 0.8f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
 
 /**
- * A post shared into the chat. If you can see its author's notes, tapping opens the thread.
- * If not, it shows who posted it and a ~90 character snippet only (photos blurred), with
- * "Not friends yet"; the tap opens the not-friends sheet instead. The author's name opens their profile.
+ * A note shared into the chat, exactly as the repository returned it. Full (you may open it):
+ * the text and "Open the thread". Snippet (not friends with the author): the author's name, at
+ * most 90 characters, no photo, a lock and "Not friends yet"; tapping opens the gate sheet.
  */
 @Composable
-private fun SharedNoteCard(post: Post?, onPerson: (String) -> Unit) {
+private fun SharedNoteCard(view: NoteView?, onPerson: (String) -> Unit) {
     val colors = CircleTheme.colors
-    val open = post != null && CircleStore.canOpenPost(post)
     Column(
         Modifier.widthIn(max = BubbleMaxWidth).fillMaxWidth(0.82f)
             .clip(RoundedCornerShape(16.dp)).background(colors.surface)
             .border(1.dp, colors.border, RoundedCornerShape(16.dp)).padding(12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("SHARED NOTE", color = colors.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.chat_shared_note_caps), color = colors.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp, modifier = Modifier.weight(1f))
             Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.muted, modifier = Modifier.size(16.dp))
         }
-        if (post == null) {
-            Text("This note is no longer available.", color = colors.muted, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-            return@Column
-        }
-        Row(
-            Modifier.padding(top = 4.dp).clip(RoundedCornerShape(8.dp))
-                .clickable(onClickLabel = "Open ${post.author}'s profile") { onPerson(post.authorId) }
-                .heightIn(min = 36.dp).padding(end = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Avatar(post.initials, post.color, size = 22)
-            Spacer(Modifier.width(7.dp))
-            Text(post.author, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-        }
-        Text(
-            if (open) post.text else sharedSnippet(post.text),
-            color = colors.body, fontSize = 13.5.sp, lineHeight = 19.sp, maxLines = 3, overflow = TextOverflow.Ellipsis
-        )
-        if (post.hasMedia) {
-            // Never reveal photos to people who can't open the note: a blurred-looking placeholder.
-            Box(
-                Modifier.padding(top = 8.dp).fillMaxWidth().height(70.dp).clip(RoundedCornerShape(10.dp))
-                    .background(if (open) colors.track else colors.track.copy(alpha = 0.6f)),
-                contentAlignment = Alignment.Center
-            ) { if (!open) Icon(Icons.Outlined.Lock, contentDescription = "Photo hidden", tint = colors.muted, modifier = Modifier.size(16.dp)) }
-        }
-        if (open) {
-            Text("Open the thread", color = colors.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-        } else {
-            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(12.dp))
-                Spacer(Modifier.width(5.dp))
-                Text("Not friends yet", color = colors.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        when (view) {
+            is NoteView.Full -> {
+                val note = view.note
+                AuthorLine(note.author.name, note.author.id, onPerson) { Avatar(note.author.initials, note.author.color, size = 22) }
+                Text(note.text, color = colors.body, fontSize = 13.5.sp, lineHeight = 19.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                if (note.hasMedia) {
+                    Box(Modifier.padding(top = 8.dp).fillMaxWidth().height(70.dp).clip(RoundedCornerShape(10.dp)).background(colors.track))
+                }
+                Text(stringResource(R.string.chat_open_thread), color = colors.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
             }
+            is NoteView.Snippet -> {
+                AuthorLine(view.authorName, view.authorId, onPerson, avatar = null)
+                Text(view.text, color = colors.body, fontSize = 13.5.sp, lineHeight = 19.sp)
+                Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(12.dp))
+                    Spacer(Modifier.width(5.dp))
+                    Text(stringResource(R.string.not_friends_yet), color = colors.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            else -> Text(stringResource(R.string.note_unavailable), color = colors.muted, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         }
+    }
+}
+
+@Composable
+private fun AuthorLine(name: String, personId: String, onPerson: (String) -> Unit, avatar: (@Composable () -> Unit)?) {
+    Row(
+        Modifier.padding(top = 4.dp).clip(RoundedCornerShape(8.dp))
+            .clickable(onClickLabel = stringResource(R.string.open_profile_of, name)) { onPerson(personId) }
+            .heightIn(min = 36.dp).padding(end = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (avatar != null) { avatar(); Spacer(Modifier.width(7.dp)) }
+        Text(name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
     }
 }
 
 /** An event invite. Tap opens the event (Back returns here). */
 @Composable
-private fun EventInviteCard(event: EventInfo?) {
+private fun EventInviteCard(event: EventCardView?) {
     val colors = CircleTheme.colors
     Row(
         Modifier.widthIn(max = BubbleMaxWidth).fillMaxWidth(0.82f)
@@ -556,21 +588,21 @@ private fun EventInviteCard(event: EventInfo?) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (event == null) {
-            Text("This event is no longer available.", color = colors.muted, fontSize = 13.sp)
+            Text(stringResource(R.string.chat_event_unavailable), color = colors.muted, fontSize = 13.sp)
             return@Row
         }
         Column(
             Modifier.size(44.dp).clip(CircleShape).background(colors.background).border(1.5.dp, colors.accent, CircleShape),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
         ) {
-            Text(event.day, color = colors.text, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 14.sp)
-            Text(event.month, color = colors.accent, fontSize = 8.sp, fontWeight = FontWeight.Bold, lineHeight = 9.sp)
+            Text(eventDay(event.startsAt), color = colors.text, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 14.sp)
+            Text(eventMonth(event.startsAt), color = colors.accent, fontSize = 8.sp, fontWeight = FontWeight.Bold, lineHeight = 9.sp)
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text("EVENT INVITE", color = colors.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+            Text(stringResource(R.string.chat_event_invite_caps), color = colors.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
             Text(event.title, color = colors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
-            Text(event.whenLabel, color = colors.muted, fontSize = 12.sp)
+            Text(eventWhen(event.startsAt), color = colors.muted, fontSize = 12.sp)
         }
         Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.muted, modifier = Modifier.size(16.dp))
     }
@@ -585,11 +617,11 @@ private fun ReplyStrip(name: String, snippet: String, onClose: () -> Unit) {
     ) {
         Box(Modifier.width(3.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(colors.accent))
         Column(Modifier.weight(1f).padding(start = 10.dp)) {
-            Text("Replying to $name", color = colors.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.chat_replying_to, name), color = colors.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Text(snippet, color = colors.muted, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box(Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
-            Icon(Icons.Outlined.Close, contentDescription = "Cancel reply", tint = colors.muted, modifier = Modifier.size(18.dp))
+            Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.chat_cancel_reply), tint = colors.muted, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -598,6 +630,8 @@ private fun ReplyStrip(name: String, snippet: String, onClose: () -> Unit) {
 private fun Composer(text: String, onChange: (String) -> Unit, onSend: () -> Unit) {
     val colors = CircleTheme.colors
     val canSend = text.isNotBlank()
+    val hint = stringResource(R.string.chat_message_hint)
+    val sendLabel = stringResource(R.string.chat_send)
     Row(
         Modifier.fillMaxWidth().background(colors.surface).padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.Bottom
@@ -607,19 +641,19 @@ private fun Composer(text: String, onChange: (String) -> Unit, onSend: () -> Uni
                 .border(1.dp, colors.border, RoundedCornerShape(21.dp)).padding(horizontal = 15.dp, vertical = 10.dp),
             contentAlignment = Alignment.CenterStart
         ) {
-            if (text.isEmpty()) Text("Message", color = colors.muted, fontSize = 14.5.sp)
+            if (text.isEmpty()) Text(hint, color = colors.muted, fontSize = 14.5.sp)
             BasicTextField(
                 value = text, onValueChange = onChange, maxLines = 4,
                 textStyle = TextStyle(color = colors.text, fontSize = 14.5.sp, lineHeight = 20.sp, fontFamily = Body),
                 cursorBrush = SolidColor(colors.accent),
-                modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Message" }
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = hint }
             )
         }
         Spacer(Modifier.width(8.dp))
         Box(
             Modifier.size(42.dp).clip(CircleShape).background(if (canSend) colors.accent else colors.track)
                 .clickable(enabled = canSend, onClick = onSend)
-                .semantics { contentDescription = "Send"; if (!canSend) disabled() },
+                .semantics { contentDescription = sendLabel; if (!canSend) disabled() },
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -629,6 +663,3 @@ private fun Composer(text: String, onChange: (String) -> Unit, onSend: () -> Uni
         }
     }
 }
-
-/** What the not-friends sheet should say. */
-private data class Gate(val personId: String, val title: String, val message: String, val requestLabel: String = "Send friend request")

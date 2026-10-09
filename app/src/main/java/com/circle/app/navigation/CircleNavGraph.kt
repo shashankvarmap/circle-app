@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.circle.app.data.session.Destination
 import com.circle.app.ui.launch.SessionViewModel
 import com.circle.app.ui.screens.*
@@ -112,25 +113,24 @@ fun CircleNavGraph(
                 onAccountDeleted = { session.accountDeleted { navController.resetTo(it) } }
             )
         }
-        composable(Routes.PERSON) { entry -> PersonProfileScreen(navController, entry.arguments?.getString("personId").orEmpty()) }
+        composable(Routes.PERSON, deepLinks = listOf(navDeepLink { uriPattern = "$DEEP_LINK_BASE/person/{personId}" })) { entry -> PersonProfileScreen(navController, entry.arguments?.getString("personId").orEmpty()) }
         composable(Routes.CHAT) { entry -> ChatScreen(navController, entry.arguments?.getString("chatId").orEmpty()) }
         composable(Routes.EDIT_PROFILE) { EditProfileScreen(navController) }
         composable(Routes.INFO) { entry -> InfoScreen(navController, entry.arguments?.getString("page").orEmpty()) }
         composable(Routes.PEOPLE_LIST) { entry -> PeopleListScreen(navController, entry.arguments?.getString("kind").orEmpty()) }
-        composable(Routes.THREAD) { entry ->
+        composable(Routes.THREAD, deepLinks = listOf(navDeepLink { uriPattern = "$DEEP_LINK_BASE/thread/{postId}" })) { entry ->
             ThreadScreen(navController, entry.arguments?.getString("postId").orEmpty())
         }
     }
 }
 
 /**
- * Opens someone's profile, rendered by your relationship to them. Yourself: your Profile tab.
- * Someone you blocked: nothing (they don't appear anywhere, so there is no profile to open).
+ * Opens someone's profile. Yourself: your Profile tab. Anyone else: the one profile screen, which
+ * asks the repository and renders Full, Limited or NotFound (blocked people have no profile).
  */
 fun NavHostController.openPerson(personId: String) {
-    when (com.circle.app.data.CircleStore.relationshipTo(personId)) {
-        com.circle.app.data.Relationship.SELF -> navigate(Routes.PROFILE)
-        com.circle.app.data.Relationship.BLOCKED -> Unit
-        else -> if (com.circle.app.data.CircleStore.person(personId) != null) navigate(Routes.person(personId))
-    }
+    if (personId == com.circle.app.data.ME) navigate(Routes.PROFILE) else navigate(Routes.person(personId))
 }
+
+/** Deep links (and notification taps) use the same routes, so they pass the same checks. */
+const val DEEP_LINK_BASE = "circle://app"

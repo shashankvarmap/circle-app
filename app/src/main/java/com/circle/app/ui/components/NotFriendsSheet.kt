@@ -15,11 +15,13 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -27,80 +29,113 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.circle.app.data.CircleStore
-import com.circle.app.data.Relationship
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.circle.app.R
+import com.circle.app.data.access.Relationship
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.ProfileView
+import com.circle.app.data.repo.isSuccess
 import com.circle.app.ui.theme.CircleTheme
 import com.circle.app.ui.theme.Display
+import com.circle.app.ui.vm.ActionsViewModel
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
 import kotlinx.coroutines.launch
+
+/** What the gate needs: who it is about (Limited at most) and the button state. */
+class GateViewModel(repo: CircleRepository, personId: String) : RepoViewModel(repo) {
+    val profile = repo.profile(personId).state(ProfileView.NotFound)
+    val relationship = repo.relationshipTo(personId).state(Relationship.NONE)
+}
+
+/** Which gate: a note's thread, or an event for the host's friends. */
+enum class GateKind { NOTE, EVENT }
 
 /**
  * The gate shown when something belongs to a person you aren't friends with (a shared note's
  * thread, a friends-only event). You can always see who they are and ask; never more.
+ * Actions: Send friend request, View profile (Limited), Not now.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotFriendsSheet(
     personId: String,
-    title: String,
-    message: String,
-    requestLabel: String = "Send friend request",
+    kind: GateKind = GateKind.NOTE,
     onViewProfile: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val colors = CircleTheme.colors
-    val context = LocalContext.current
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
-    val person = CircleStore.person(personId)
-    val rel = CircleStore.relationshipTo(personId)
-
     fun close(then: () -> Unit = {}) {
         scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss(); then() }
     }
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheet,
         shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
-        containerColor = colors.surface,
+        containerColor = CircleTheme.colors.surface,
     ) {
-        Column(
-            Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                Modifier.size(52.dp).clip(CircleShape).background(colors.accent.copy(alpha = 0.10f)),
-                contentAlignment = Alignment.Center
-            ) { Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.accent, modifier = Modifier.size(22.dp)) }
-            Text(
-                title, fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 21.sp, color = colors.text,
-                textAlign = TextAlign.Center, modifier = Modifier.padding(top = 14.dp).semantics { heading() }
-            )
-            Text(
-                message, color = colors.muted, fontSize = 13.5.sp, lineHeight = 19.sp, textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 6.dp)
-            )
-            Spacer(Modifier.height(18.dp))
-            when (rel) {
-                Relationship.NONE -> SheetButton(requestLabel, filled = true) {
-                    if (CircleStore.sendFriendRequest(personId)) Toast.makeText(context, "Friend request sent", Toast.LENGTH_SHORT).show()
-                    close()
-                }
-                Relationship.REQUEST_SENT -> SheetButton("Requested", filled = false, enabled = false) {}
-                Relationship.REQUEST_RECEIVED -> SheetButton("Accept ${person?.firstName ?: ""}'s request", filled = true) {
-                    CircleStore.acceptRequest(personId)
-                    Toast.makeText(context, "You're friends now", Toast.LENGTH_SHORT).show()
-                    close()
-                }
-                else -> Unit
+        GateBody(personId, kind, onViewProfile = { close(onViewProfile) }, onDone = { close() })
+    }
+}
+
+/** The gate's content, also shown in place of a thread that a route or deep link asked for. */
+@Composable
+fun GateBody(personId: String, kind: GateKind, onViewProfile: () -> Unit, onDone: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = CircleTheme.colors
+    val context = LocalContext.current
+    val gate = circleViewModel(key = "gate-$personId") { GateViewModel(it, personId) }
+    val actions = circleViewModel { ActionsViewModel(it) }
+    val profile by gate.profile.collectAsStateWithLifecycle()
+    val rel by gate.relationship.collectAsStateWithLifecycle()
+    val firstName = when (val p = profile) {
+        is ProfileView.Limited -> p.firstName
+        is ProfileView.Full -> p.person.firstName
+        ProfileView.NotFound -> ""
+    }
+    Column(
+        modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            Modifier.size(52.dp).clip(CircleShape).background(colors.accent.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center
+        ) { Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.accent, modifier = Modifier.size(22.dp)) }
+        Text(
+            if (kind == GateKind.NOTE) stringResource(R.string.gate_note_title, firstName) else stringResource(R.string.gate_event_title),
+            fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 21.sp, color = colors.text,
+            textAlign = TextAlign.Center, modifier = Modifier.padding(top = 14.dp).semantics { heading() }
+        )
+        Text(
+            if (kind == GateKind.NOTE) stringResource(R.string.gate_note_body) else stringResource(R.string.gate_event_body, firstName),
+            color = colors.muted, fontSize = 13.5.sp, lineHeight = 19.sp, textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+        Spacer(Modifier.height(18.dp))
+        when (rel) {
+            Relationship.NONE -> SheetButton(
+                stringResource(if (kind == GateKind.NOTE) R.string.gate_send_request else R.string.gate_send_request_host), filled = true
+            ) {
+                val sent = context.getString(R.string.toast_request_sent)
+                actions.sendFriendRequest(personId) { if (it.isSuccess) Toast.makeText(context, sent, Toast.LENGTH_SHORT).show() }
+                onDone()
             }
-            Spacer(Modifier.height(10.dp))
-            SheetButton("View ${person?.firstName ?: "their"}'s profile", filled = false) { close(onViewProfile) }
-            Text(
-                "Not now", color = colors.muted, fontWeight = FontWeight.Bold, fontSize = 13.5.sp,
-                modifier = Modifier.padding(top = 6.dp).clip(RoundedCornerShape(8.dp)).clickable { close() }.padding(horizontal = 16.dp, vertical = 14.dp)
-            )
+            Relationship.REQUEST_SENT -> SheetButton(stringResource(R.string.profile_requested), filled = false, enabled = false) {}
+            Relationship.REQUEST_RECEIVED -> SheetButton(stringResource(R.string.gate_accept, firstName), filled = true) {
+                val friends = context.getString(R.string.toast_now_friends)
+                actions.acceptRequest(personId) { if (it.isSuccess) Toast.makeText(context, friends, Toast.LENGTH_SHORT).show() }
+                onDone()
+            }
+            else -> Unit
         }
+        if (profile !is ProfileView.NotFound) {
+            Spacer(Modifier.height(10.dp))
+            SheetButton(stringResource(R.string.gate_view_profile, firstName), filled = false, onClick = onViewProfile)
+        }
+        Text(
+            stringResource(R.string.gate_not_now), color = colors.muted, fontWeight = FontWeight.Bold, fontSize = 13.5.sp,
+            modifier = Modifier.padding(top = 6.dp).clip(RoundedCornerShape(8.dp)).clickable(onClick = onDone).padding(horizontal = 16.dp, vertical = 14.dp)
+        )
     }
 }
 

@@ -23,7 +23,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.circle.app.navigation.Routes
-import com.circle.app.data.CircleStore
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.GroupRef
+import com.circle.app.ui.vm.RepoViewModel
+import com.circle.app.ui.vm.circleViewModel
 import com.circle.app.ui.components.*
 import com.circle.app.ui.theme.*
 import kotlinx.coroutines.delay
@@ -32,10 +36,20 @@ import kotlinx.coroutines.launch
 private enum class Feed { FRIENDS, GROUPS }
 private enum class Refresh { IDLE, CHECKING, DONE }
 
+class HomeViewModel(repo: CircleRepository) : RepoViewModel(repo) {
+    val friends = repo.homeFeed().state(emptyList())
+    val groups = repo.groupFeed().state(emptyList())
+    val memberGroups = repo.memberGroups().state(emptyList())
+}
+
 @Composable
 fun HomeScreen(nav: NavHostController) {
     var feed by rememberSaveable { mutableStateOf(Feed.FRIENDS) }
     var refresh by remember { mutableStateOf(Refresh.IDLE) }
+    val vm = circleViewModel { HomeViewModel(it) }
+    val friendFeed by vm.friends.collectAsStateWithLifecycle()
+    val groupPosts by vm.groups.collectAsStateWithLifecycle()
+    val memberGroups by vm.memberGroups.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     val header = rememberCollapsingHeaderState { listState.canScrollForward || listState.canScrollBackward }
     val scope = rememberCoroutineScope()
@@ -80,7 +94,7 @@ fun HomeScreen(nav: NavHostController) {
                         }
                     }
                     item(key = "compose") { ComposeRow(nav) }
-                    items(CircleStore.homeFeed, key = { it.id }) { post -> FeedCard(nav, post) }
+                    items(friendFeed, key = { it.id }) { post -> FeedCard(nav, post) }
                     item(key = "caught-up") {
                         Text(
                             "You're all caught up", color = CircleTheme.colors.muted, fontSize = 12.sp,
@@ -88,15 +102,13 @@ fun HomeScreen(nav: NavHostController) {
                         )
                     }
                 } else {
-                    val memberGroups = CircleStore.groups.filter { it.isMember }
-                    if (memberGroups.isNotEmpty()) item(key = "chips") { GroupsChipRow(nav) }
+                    if (memberGroups.isNotEmpty()) item(key = "chips") { GroupsChipRow(nav, memberGroups) }
                     item(key = "note") {
                         Text(
                             "Group posts stay in the group. No repost, no quote.",
                             color = CircleTheme.colors.muted, fontSize = 11.sp
                         )
                     }
-                    val groupPosts = CircleStore.groupFeed
                     if (groupPosts.isEmpty()) {
                         item(key = "empty") {
                             Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -189,9 +201,9 @@ private fun ComposeRow(nav: NavHostController) {
 }
 
 @Composable
-private fun GroupsChipRow(nav: NavHostController) {
+private fun GroupsChipRow(nav: NavHostController, groups: List<GroupRef>) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        items(CircleStore.groups.filter { it.isMember }, key = { it.id }) { g ->
+        items(groups, key = { it.id }) { g ->
             GroupChip(g.initial, g.color) { nav.navigate(Routes.groupDetail(g.id)) }
         }
     }

@@ -6,7 +6,7 @@ import org.junit.Test
 
 class EventSeatsTest {
     private fun event(capacity: Int, going: Int, host: String = "PK") =
-        EventInfo("e", "E", "SEP", "1", "SOCIAL", 0f, "", "", "FRIENDS", host, "", capacity = capacity, goingBase = going, joined = false)
+        EventInfo("e", "E", "SOCIAL", 0f, java.time.Instant.EPOCH, "", com.circle.app.data.access.EventVisibility.FRIENDS, host, "", capacity = capacity, goingBase = going, joined = false)
 
     @Test
     fun oneSeatPerPlaceHostFirstThenPeopleThenEmpty() {

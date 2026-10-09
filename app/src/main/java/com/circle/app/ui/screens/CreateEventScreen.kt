@@ -22,12 +22,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.circle.app.data.CircleStore
+import com.circle.app.data.access.EventVisibility
+import com.circle.app.data.repo.Outcome
+import com.circle.app.ui.vm.circleViewModel
 import com.circle.app.ui.components.SectionLabel
 import com.circle.app.ui.theme.*
 
 @Composable
 fun CreateEventScreen(nav: NavHostController) {
+    val vm = circleViewModel { CreateViewModel(it) }
     var capacity by remember { mutableStateOf(12) }
     var visibility by remember { mutableStateOf(0) } // 0 friends, 1 fof, 2 open
     var title by remember { mutableStateOf("") }
@@ -45,8 +48,7 @@ fun CreateEventScreen(nav: NavHostController) {
             Box(
                 modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(if (canCreate) CircleTheme.colors.accent else CircleTheme.colors.track)
                     .clickable(enabled = canCreate) {
-                        CircleStore.createEvent(title, venue = "", visibility = visibilityLabels[visibility], description = description, capacity = capacity)
-                        nav.popBackStack()
+                        vm.createEvent(title, EventVisibility.entries[visibility], description, capacity) { if (it is Outcome.Success) nav.popBackStack() }
                     }
                     .padding(horizontal = 16.dp, vertical = 7.dp)
             ) { Text("Create", color = if (canCreate) CircleTheme.colors.onAccent else CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 13.sp) }

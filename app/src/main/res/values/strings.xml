@@ -13,4 +13,142 @@
     <string name="welcome_agree_prefix">"By continuing you agree to the "</string>
     <string name="welcome_agree_link">Terms and Privacy Policy</string>
     <string name="welcome_agree_suffix">.</string>
+
+    <!-- Times (relative, shown on notes and comments) -->
+    <string name="time_now">now</string>
+    <string name="time_minutes">%1$dm</string>
+    <string name="time_hours">%1$dh</string>
+    <string name="time_yesterday">yesterday</string>
+    <string name="time_days">%1$dd</string>
+    <string name="time_today_caps">TODAY</string>
+    <string name="time_yesterday_caps">YESTERDAY</string>
+
+    <!-- Why something can't be done (shown where an action is disabled) -->
+    <string name="deny_not_friends">You\'re not friends yet</string>
+    <string name="deny_not_available">This isn\'t available</string>
+    <string name="deny_audience">Only their inner circle can see this</string>
+    <string name="deny_group_not_member">Join the group to see this</string>
+    <string name="deny_event_locked">The conversation opens when you take a seat</string>
+    <string name="deny_inner_circle">Inner circle notes can\'t be reposted</string>
+    <string name="deny_group_post">Group posts stay in the group</string>
+
+    <!-- Notes and cards -->
+    <string name="note_you_reposted">You reposted</string>
+    <string name="note_inner_circle_tag">INNER CIRCLE ONLY</string>
+    <string name="note_photo">Photo</string>
+    <string name="note_unavailable">This note is no longer available.</string>
+    <string name="not_friends_yet">Not friends yet</string>
+
+    <!-- The "not friends yet" gate (NOT_FRIENDS_YET 4 and 5) -->
+    <string name="gate_note_title">You\'re not friends with %1$s yet</string>
+    <string name="gate_note_body">Send a friend request to open this thread. You can still see who posted it.</string>
+    <string name="gate_event_title">This event is for the host\'s friends</string>
+    <string name="gate_event_body">Send %1$s a friend request to see it. You can still see who\'s hosting.</string>
+    <string name="gate_send_request">Send friend request</string>
+    <string name="gate_send_request_host">Send friend request to the host</string>
+    <string name="gate_accept">Accept %1$s\'s request</string>
+    <string name="gate_view_profile">View %1$s\'s profile</string>
+    <string name="gate_not_now">Not now</string>
+    <string name="profile_requested">Requested</string>
+    <string name="toast_request_sent">Friend request sent</string>
+    <string name="toast_request_cancelled">Request cancelled</string>
+    <string name="toast_now_friends">You\'re friends now</string>
+    <string name="toast_request_declined">Request declined</string>
+
+    <!-- Shared -->
+    <string name="back">Back</string>
+
+    <!-- Thread -->
+    <string name="thread_title">Thread</string>
+    <string name="thread_no_replies">NO REPLIES YET</string>
+    <string name="thread_unavailable">This note isn\'t available.</string>
+    <string name="thread_reply_denied">You can\'t reply to this note.</string>
+
+    <!-- Shared -->
+    <string name="cancel">Cancel</string>
+    <string name="handle_format">@%1$s</string>
+
+    <!-- Someone's profile (NOT_FRIENDS_YET 2) -->
+    <string name="profile_title">Profile</string>
+    <string name="profile_unavailable">This profile isn\'t available.</string>
+    <string name="profile_more_options">More options for %1$s</string>
+    <string name="profile_pinned_caps">PINNED</string>
+    <string name="profile_nothing_pinned">Nothing pinned yet.</string>
+    <string name="profile_message">Message</string>
+    <string name="profile_friends_check">✓ Friends</string>
+    <string name="profile_notes_caps">NOTES</string>
+    <string name="profile_no_notes">%1$s hasn\'t posted yet.</string>
+    <string name="profile_add_friend">Add friend</string>
+    <string name="profile_cancel_request">Cancel request</string>
+    <string name="profile_accept">Accept</string>
+    <string name="profile_decline">Decline</string>
+    <string name="profile_mute">Mute</string>
+    <string name="profile_unmute">Unmute</string>
+    <string name="profile_unfriend">Unfriend</string>
+    <string name="profile_block">Block</string>
+    <string name="profile_report">Report</string>
+    <string name="profile_unfriend_title">Unfriend %1$s?</string>
+    <string name="profile_unfriend_body">%1$s leaves your circle and your friend count. They aren\'t told, but you\'ll need to send a new request to be friends again.</string>
+    <string name="profile_block_title">Block %1$s?</string>
+    <string name="profile_block_body">They won\'t be able to see you or reach you, and they disappear from your feeds, search, groups, chats and event seats. Any friendship or request ends.</string>
+    <string name="profile_report_title">Report %1$s?</string>
+    <string name="profile_report_body">We\'ll look at this profile. %1$s won\'t know who reported them.</string>
+    <string name="profile_locked_panel">You\'re not friends yet. You\'ll see their notes and friends once they accept. Until then you see only their photo and pinned thought.</string>
+    <string name="toast_unfriended">Unfriended</string>
+    <string name="toast_blocked">Blocked</string>
+    <string name="toast_reported">Thanks. We\'ll look at this.</string>
+    <string name="toast_muted">Muted. They aren\'t told.</string>
+    <string name="toast_unmuted">Unmuted</string>
+
+    <!-- Shared -->
+    <string name="open_profile">Open profile</string>
+    <string name="open_profile_of">Open %1$s\'s profile</string>
+
+    <!-- Chat -->
+    <string name="chat_title">Chat</string>
+    <string name="chat_you">You</string>
+    <string name="chat_removed_for_you">Removed from your chat only</string>
+    <string name="chat_shared_a_note">Shared a note</string>
+    <string name="chat_event_invite">Event invite</string>
+    <string name="chat_friends_since">Friends since %1$d</string>
+    <string name="chat_you_and_friends">You and %1$d friends</string>
+    <string name="chat_open_group">Open group</string>
+    <string name="chat_reply">Reply</string>
+    <string name="chat_copy">Copy</string>
+    <string name="chat_delete_for_me">Delete for me</string>
+    <string name="chat_unsend">Unsend</string>
+    <string name="chat_seen">Seen %1$s</string>
+    <string name="chat_sent">%1$s · Sent</string>
+    <string name="chat_shared_note_caps">SHARED NOTE</string>
+    <string name="chat_open_thread">Open the thread</string>
+    <string name="chat_event_unavailable">This event is no longer available.</string>
+    <string name="chat_event_invite_caps">EVENT INVITE</string>
+    <string name="chat_replying_to">Replying to %1$s</string>
+    <string name="chat_cancel_reply">Cancel reply</string>
+    <string name="chat_message_hint">Message</string>
+    <string name="chat_send">Send</string>
+
+    <!-- Messages list -->
+    <string name="messages_no_messages">No messages yet</string>
+    <string name="messages_preview_you">You: %1$s</string>
+    <string name="messages_preview_named">%1$s: %2$s</string>
+
+    <!-- Alerts -->
+    <string name="alerts_title">Alerts</string>
+    <string name="alerts_tab_notifications">Notifications</string>
+    <string name="alerts_tab_activity">Activity</string>
+    <string name="alerts_friend_requests_caps">FRIEND REQUESTS</string>
+    <string name="alerts_recent_caps">RECENT</string>
+    <string name="alerts_no_requests">No friend requests right now.</string>
+    <string name="alerts_now_friends">Now friends</string>
+    <string name="alerts_asked">Asked %1$s ago</string>
+    <string name="alert_liked_your_note">liked your note</string>
+    <string name="alert_commented">commented on your note</string>
+    <string name="alert_commented_quote">commented: \"%1$s\"</string>
+    <string name="alert_reposted_your_note">reposted your note</string>
+    <string name="alert_quoted">quoted your note</string>
+    <string name="alert_quoted_quote">quoted your note: \"%1$s\"</string>
+    <string name="alert_friend_commented">commented on %1$s\'s note</string>
+    <string name="alert_friend_commented_quote">commented on %1$s\'s note: \"%2$s\"</string>
+    <string name="alert_friend_reposted">reposted a note from %1$s</string>
 </resources>

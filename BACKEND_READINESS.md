@@ -5,24 +5,28 @@ Started early so rules land here as they are built. Completed at the "front end 
 
 ## Privacy rules the server must enforce (not just the app)
 
-### Relationship is the single gate for people and their content
+**The full table is in `PRIVACY_RULES.md`. The server must implement exactly that table.** The app's checks are for the
+experience; the server's checks are for security: a modified client must still never receive private data.
 
-The app decides what to show from one function, `CircleStore.relationshipTo(personId)`, returning
-`SELF`, `FRIEND`, `REQUEST_SENT`, `REQUEST_RECEIVED`, `NONE` or `BLOCKED`. The server must compute
-the same relationship for every request and filter responses by it. A client that skips the check
-must still never receive private data.
+### One policy, redacted responses
 
-| Data | SELF / FRIEND | REQUEST_SENT / REQUEST_RECEIVED / NONE | BLOCKED |
-|---|---|---|---|
-| Photo, name, handle, pinned thought | yes | yes | no (the person doesn't exist for you) |
-| Mutual-friend count (a number, never names) | yes | yes | no |
-| Notes and their threads | yes (inner-circle notes only for the author's inner circle) | no | no |
-| Friends list, counts, groups, inner circle, activity | owner only | no | no |
-| Direct messages | friends only | no | no |
+The app decides every access question in one pure function set, `data/access/AccessPolicy.kt` (deny by default, tested cell
+by cell in `AccessPolicyTableTest`), from one relationship value: `SELF`, `FRIEND`, `REQUEST_SENT`, `REQUEST_RECEIVED`, `NONE`,
+`BLOCKED_BY_ME`, `BLOCKED_ME`. The repository (`data/repo/CircleRepository`) is the only data access and returns
+**redacted types**, which is the shape the API should return too:
 
-- Friend requests are never auto-accepted. Accepting is the recipient's action only.
-- Blocking ends any friendship or pending request and hides the blocker from the blocked person
-  (and vice versa) in feeds, search, group lists, chats and event seats.
+- `ProfileView`: `Full` (you, friends), `Limited` (photo, name, handle, pinned thought, and no field for anything else) or
+  `NotFound` (blocked either way). The limited profile endpoint must not even load the other fields.
+- `NoteView`: `Full`, `Snippet` (author name + at most 90 characters, cut on the server, `canOpen = false`) or `Hidden`.
+- `ThreadResult`: `Opened(thread)` or `Denied(NOT_FRIENDS | BLOCKED | AUDIENCE | GROUP_NOT_MEMBER | EVENT_LOCKED)`.
+  Opening a thread, loading comments, commenting, liking, reposting, quoting and sharing all return `Denied` for non-friends.
+- There is **no mutual-friends number** anywhere, and no endpoint returns another person's friends, counts, groups or
+  inner circle.
+- Friend requests are never auto-accepted. Accepting is the recipient's action only. Blocking ends any friendship or pending
+  request and hides each person from the other everywhere.
+- On unfriend or block the client purges cached content by that person; the server must stop serving it at once.
+- Note, comment and message text never go into logs, crash reports, analytics or notification payloads for people who can't
+  see them.
 
 ### Sharing a note into a chat
 
