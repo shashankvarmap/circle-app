@@ -22,6 +22,7 @@ import androidx.navigation.compose.rememberNavController
 import com.circle.app.navigation.CircleNavGraph
 import com.circle.app.ui.launch.SessionViewModel
 import com.circle.app.ui.theme.CircleTheme
+import com.circle.app.ui.vm.FailureMessages
 import com.circle.app.ui.vm.LocalMe
 import com.circle.app.ui.vm.RepoViewModel
 import com.circle.app.ui.vm.circleViewModel
@@ -63,6 +64,7 @@ fun CircleApp(session: SessionViewModel, navController: NavHostController = reme
             color = CircleTheme.colors.background,
             contentColor = CircleTheme.colors.text
         ) {
+            FailureMessages()
             start?.let { CircleNavGraph(session, it, navController) }
         }
     } }

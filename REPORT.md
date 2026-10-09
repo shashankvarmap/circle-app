@@ -140,3 +140,18 @@ this). Group and event screens keep their earlier design until Phase 7.
 - A friend's `Full` profile has no counts or friends fields; your own counts come only from `circleSummary()`.
 - The UI test for scenario 5 uses the sheet button's click action rather than a tap, because Robolectric can tap the sheet's
   scrim while it is still animating in (a test artefact, not an app bug).
+
+---
+
+## Phase 3: Repository + ViewModel layer (FRONTEND_COMPLETE 8)
+
+**Works now** (most of this phase landed in Phase 2, see there): `CircleRepository` with Flows and suspend actions,
+`FakeCircleRepository`, a ViewModel per screen, `Outcome` (Success / Denied / Error) on every action, string ids (UUIDs for
+new records) and `Instant` timestamps. Added now:
+- `data/media/MediaStore` with `LocalMediaStore` (keeps picker URIs; refuses videos over 30 seconds). A backend version uploads.
+- Every action runs through `RepoViewModel.run`, which reports any failure app-wide (`UiMessages`); the root shows it as a short
+  message ("Couldn't do that. Try again.", or the rule that refused it), so no tap fails silently.
+
+**Still a stub:** the debug switch that makes the fake fail (Phase 11) and full-screen loading/error states (Phase 8).
+
+**Decisions:** a hand-written `AppGraph` provides the repository, session and media store (no DI library).

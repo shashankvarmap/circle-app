@@ -151,4 +151,9 @@
     <string name="alert_friend_commented">commented on %1$s\'s note</string>
     <string name="alert_friend_commented_quote">commented on %1$s\'s note: \"%2$s\"</string>
     <string name="alert_friend_reposted">reposted a note from %1$s</string>
+
+    <!-- Failed actions -->
+    <string name="deny_inner_circle_share">Inner circle notes stay in the inner circle</string>
+    <string name="error_event_full">Event full</string>
+    <string name="error_try_again">Couldn\'t do that. Try again.</string>
 </resources>

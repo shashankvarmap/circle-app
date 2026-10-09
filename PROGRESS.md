@@ -40,9 +40,9 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] `CircleRepository` interface (Flows + suspend actions), `FakeCircleRepository` (landed in Phase 2)
 - [x] ViewModels per screen; screens talk only to ViewModels (landed in Phase 2)
 - [x] `Outcome` (Success / Denied / Error) on every action (landed in Phase 2)
-- [ ] UI error states for Outcome.Error (with Phase 8 states)
+- [x] Failed actions (Outcome.Error / Denied) surface app-wide as a short message (`UiMessages` + `FailureMessages`); full-screen error states come with Phase 8
 - [x] String ids (UUID for new items), `Instant` timestamps (landed in Phase 2)
-- [ ] `MediaStore` abstraction for media URIs
+- [x] `MediaStore` abstraction for media URIs (`LocalMediaStore`, 30-second video limit, test)
 - [ ] Debug "fail" switch on the fake (Phase 11)
 
 ## Phase 4: Posts and threads (F1)

@@ -2,6 +2,8 @@ package com.circle.app
 
 import android.app.Application
 import android.content.Context
+import com.circle.app.data.media.LocalMediaStore
+import com.circle.app.data.media.MediaStore
 import com.circle.app.data.repo.CircleRepository
 import com.circle.app.data.repo.FakeCircleRepository
 import com.circle.app.data.session.DataStoreSessionStore
@@ -14,6 +16,10 @@ import com.circle.app.data.session.SessionStore
 object AppGraph {
     private var session: SessionStore? = null
     private var repo: CircleRepository? = null
+    private var media: MediaStore? = null
+
+    /** Where picked photos and videos go (the fake keeps their URIs). */
+    val mediaStore: MediaStore get() = media ?: LocalMediaStore().also { media = it }
 
     /** The only door to data for the UI (through ViewModels). */
     val repository: CircleRepository
