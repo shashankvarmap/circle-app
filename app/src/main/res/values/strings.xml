@@ -156,4 +156,66 @@
     <string name="deny_inner_circle_share">Inner circle notes stay in the inner circle</string>
     <string name="error_event_full">Event full</string>
     <string name="error_try_again">Couldn\'t do that. Try again.</string>
+
+    <!-- Comments -->
+    <string name="thread_hide_replies">Hide replies</string>
+    <string name="thread_replying_to">Replying to %1$s</string>
+    <string name="comment_like">Like</string>
+    <string name="comment_unlike">Remove like</string>
+    <string name="comment_liked">Liked. Only they see this</string>
+    <string name="comment_reply">Reply</string>
+    <string name="comment_delete">Delete</string>
+    <string name="comment_delete_title">Delete this comment?</string>
+    <string name="comment_report">Report</string>
+
+    <!-- Note menu (FRONTEND_COMPLETE 3) -->
+    <string name="note_more_options">More options for this note</string>
+    <string name="note_edit">Edit</string>
+    <string name="note_change_audience">Change audience</string>
+    <string name="note_delete">Delete</string>
+    <string name="note_delete_title">Delete this note?</string>
+    <string name="note_delete_body">It\'s removed from Home and your profile, and from any chat it was shared in. This can\'t be undone.</string>
+    <string name="note_send_in_message">Send in a message</string>
+    <string name="note_mute_friend">Mute this friend</string>
+    <string name="note_report_title">Report this note?</string>
+    <string name="note_report_body">We\'ll look at it. %1$s won\'t know who reported it.</string>
+    <string name="note_audience_note">Inner circle notes can\'t be reposted or quoted, so any repost of this note is removed.</string>
+    <string name="note_share_inner_only">An inner circle note can only go to someone in your inner circle.</string>
+    <string name="note_share_search">Search your friends</string>
+    <string name="toast_sent_to">Sent to %1$s</string>
+    <string name="compose_audience_friends">Friends</string>
+    <string name="compose_audience_inner">Inner circle</string>
+
+    <!-- Compose -->
+    <string name="compose_post">Post</string>
+    <string name="compose_save">Save</string>
+    <string name="compose_hint">What\'s on your mind?</string>
+    <string name="compose_hint_quote">Add your thoughts…</string>
+    <string name="compose_hint_group">Post to %1$s…</string>
+    <string name="compose_note_friends">All your friends can see this.</string>
+    <string name="compose_note_group">Only members of %1$s can see this. It stays in the group.</string>
+    <string name="compose_edit_inner">Edit who\'s in your inner circle</string>
+    <string name="compose_add_media">Add photos or a video</string>
+    <string name="compose_remove_media">Remove this photo or video</string>
+    <string name="compose_remove_quote">Remove the quoted note</string>
+    <string name="compose_chars_left">%1$d characters left</string>
+    <string name="compose_video_too_long">That video is longer than 30 seconds. Choose one up to 30 seconds long.</string>
+    <string name="compose_discard_title">Discard this note?</string>
+    <string name="compose_discard_changes_title">Discard your changes?</string>
+    <string name="compose_discard_body">What you\'ve written will be lost.</string>
+    <string name="compose_discard">Discard</string>
+    <string name="compose_keep_editing">Keep editing</string>
+
+    <!-- Media -->
+    <string name="media_open">Open photo</string>
+    <string name="media_video">Video</string>
+    <string name="media_close">Close</string>
+
+    <!-- Home -->
+    <string name="home_checking">Checking for new notes…</string>
+    <string name="home_nothing_to_refresh">Nothing to refresh. You\'re caught up.</string>
+    <string name="home_caught_up">You\'re all caught up.</string>
+    <string name="home_nothing_below">Nothing below this line.</string>
+    <string name="home_new_pill">New</string>
+    <string name="home_new_pill_label">Show the new notes at the top</string>
 </resources>

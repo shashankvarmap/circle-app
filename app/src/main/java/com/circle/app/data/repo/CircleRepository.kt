@@ -63,11 +63,29 @@ interface CircleRepository {
     fun note(noteId: String): Flow<NoteView>
     fun thread(noteId: String): Flow<ThreadResult>
     suspend fun toggleLike(noteId: String): Outcome<Boolean>
-    suspend fun addComment(noteId: String, text: String): Outcome<Unit>
+    /** A comment, or (with [replyToCommentId]) a reply nested under that comment's top-level comment. */
+    suspend fun addComment(noteId: String, text: String, replyToCommentId: String? = null): Outcome<Unit>
+    suspend fun toggleCommentLike(noteId: String, commentId: String): Outcome<Boolean>
+    /** Deletes your own comment (and, for a top-level one, its replies). */
+    suspend fun deleteComment(noteId: String, commentId: String): Outcome<Unit>
     suspend fun repost(noteId: String): Outcome<Unit>
     suspend fun undoRepost(noteId: String): Outcome<Unit>
-    /** Posts a note (or a quote, or into a group). Returns the new note's id. */
-    suspend fun post(text: String, audience: Audience, quotedNoteId: String? = null, groupId: String? = null): Outcome<String>
+    /** Posts a note (or a quote, or into a group). Returns the new note's id. Text or media is required. */
+    suspend fun post(
+        text: String,
+        audience: Audience,
+        quotedNoteId: String? = null,
+        groupId: String? = null,
+        media: List<com.circle.app.data.media.MediaRef> = emptyList(),
+    ): Outcome<String>
+    /** Your own notes only. */
+    suspend fun editNote(noteId: String, text: String): Outcome<Unit>
+    suspend fun setAudience(noteId: String, audience: Audience): Outcome<Unit>
+    suspend fun deleteNote(noteId: String): Outcome<Unit>
+    /** Friends this note may be sent to in a direct message (inner-circle notes: your inner circle only). */
+    fun shareCandidates(noteId: String): Flow<List<PersonRef>>
+    /** Sends the note into your 1:1 chat with [friendId]; returns the chat id. */
+    suspend fun shareNoteWithFriend(noteId: String, friendId: String): Outcome<String>
 
     // ---- Chats ----
     fun chats(): Flow<List<ChatRowView>>

@@ -81,7 +81,8 @@ class FakeCircleRepository(
             author = author,
             createdAt = p.createdAt,
             text = p.text,
-            hasMedia = p.hasMedia,
+            hasMedia = p.hasMedia || p.media.isNotEmpty(),
+            media = p.media,
             audience = p.audience,
             group = p.groupId?.let { store.group(it) }?.let { GroupRef(it.id, it.name, it.initial, it.color) },
             quoted = p.quotedPostId?.let { embedded(it) },
@@ -150,7 +151,7 @@ class FakeCircleRepository(
 
     private fun comments(list: List<Comment>): List<CommentView> = list.mapNotNull { c ->
         val author = ref(c.authorId) ?: return@mapNotNull null
-        CommentView(c.id, author, c.createdAt, c.text, comments(c.replies))
+        CommentView(c.id, author, c.createdAt, c.text, comments(c.replies), c.id in store.likedCommentIds)
     }
 
     private fun denied(d: Decision): Outcome.Denied? = (d as? Decision.Deny)?.let { Outcome.Denied(it.reason) }
@@ -163,12 +164,46 @@ class FakeCircleRepository(
         return Outcome.Success(nowLiked)
     }
 
-    override suspend fun addComment(noteId: String, text: String): Outcome<Unit> {
+    override suspend fun addComment(noteId: String, text: String, replyToCommentId: String?): Outcome<Unit> {
         val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         denied(decide(p, NoteAction.COMMENT))?.let { return it }
         val t = text.trim()
         if (t.isEmpty()) return Outcome.Error("empty")
-        p.comments.add(Comment(newId("c"), ME, Clock.now(), t))
+        val comment = Comment(newId("c"), ME, Clock.now(), t)
+        if (replyToCommentId == null) {
+            p.comments.add(comment)
+            return Outcome.Success(Unit)
+        }
+        // One nested level: a reply to a reply joins the same top-level comment.
+        val index = p.comments.indexOfFirst { top -> top.id == replyToCommentId || top.replies.any { it.id == replyToCommentId } }
+        if (index < 0) return Outcome.Denied(DenyReason.NOT_FOUND)
+        val top = p.comments[index]
+        if (hiddenFromMe(top.authorId)) return Outcome.Denied(DenyReason.NOT_FOUND)
+        p.comments[index] = top.copy(replies = top.replies + comment)
+        return Outcome.Success(Unit)
+    }
+
+    private fun findComment(p: Post, commentId: String): Comment? =
+        p.comments.firstOrNull { it.id == commentId } ?: p.comments.flatMap { it.replies }.firstOrNull { it.id == commentId }
+
+    override suspend fun toggleCommentLike(noteId: String, commentId: String): Outcome<Boolean> {
+        val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        denied(decide(p, NoteAction.LIKE))?.let { return it }
+        val c = findComment(p, commentId)?.takeIf { !hiddenFromMe(it.authorId) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        val nowLiked = !store.likedCommentIds.remove(c.id)
+        if (nowLiked) store.likedCommentIds.add(c.id)
+        return Outcome.Success(nowLiked)
+    }
+
+    override suspend fun deleteComment(noteId: String, commentId: String): Outcome<Unit> {
+        val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        val c = findComment(p, commentId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (c.authorId != ME) return Outcome.Error("not yours")
+        if (!p.comments.removeAll { it.id == commentId }) {
+            val index = p.comments.indexOfFirst { top -> top.replies.any { it.id == commentId } }
+            val top = p.comments[index]
+            p.comments[index] = top.copy(replies = top.replies.filterNot { it.id == commentId })
+        }
         return Outcome.Success(Unit)
     }
 
@@ -185,9 +220,15 @@ class FakeCircleRepository(
         return Outcome.Success(Unit)
     }
 
-    override suspend fun post(text: String, audience: Audience, quotedNoteId: String?, groupId: String?): Outcome<String> {
+    override suspend fun post(
+        text: String,
+        audience: Audience,
+        quotedNoteId: String?,
+        groupId: String?,
+        media: List<com.circle.app.data.media.MediaRef>,
+    ): Outcome<String> {
         val t = text.trim()
-        if (t.isEmpty()) return Outcome.Error("empty")
+        if (t.isEmpty() && media.isEmpty()) return Outcome.Error("empty")
         val quoted = quotedNoteId?.let { id -> store.post(id)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND) }
         if (quoted != null) {
             if (groupId != null) return Outcome.Denied(DenyReason.GROUP_POST)
@@ -197,10 +238,63 @@ class FakeCircleRepository(
         val p = Post(
             newId("note"), ME, Clock.now(), t,
             audience = if (groupId != null) Audience.FRIENDS else audience,
-            quotedPostId = quoted?.id, groupId = groupId,
+            quotedPostId = quoted?.id, groupId = groupId, media = media,
         )
         store.posts.add(0, p)
         return Outcome.Success(p.id)
+    }
+
+    /** Your own note, or a refusal. */
+    private fun ownNote(noteId: String): Pair<Int, Post>? {
+        val i = store.posts.indexOfFirst { it.id == noteId && it.authorId == ME && !it.isRepost }
+        return if (i < 0) null else i to store.posts[i]
+    }
+
+    override suspend fun editNote(noteId: String, text: String): Outcome<Unit> {
+        val (i, p) = ownNote(noteId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        val t = text.trim()
+        if (t.isEmpty() && p.media.isEmpty() && !p.hasMedia) return Outcome.Error("empty")
+        store.posts[i] = p.edited(text = t)
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun setAudience(noteId: String, audience: Audience): Outcome<Unit> {
+        val (i, p) = ownNote(noteId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        if (p.groupId != null) return Outcome.Denied(DenyReason.GROUP_POST)
+        store.posts[i] = p.edited(audience = audience)
+        // An inner-circle note can't stay reposted.
+        if (audience == Audience.INNER_CIRCLE) store.posts.removeAll { it.repostOfId == noteId }
+        return Outcome.Success(Unit)
+    }
+
+    override suspend fun deleteNote(noteId: String): Outcome<Unit> {
+        val (_, p) = ownNote(noteId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        store.posts.remove(p)
+        store.posts.removeAll { it.repostOfId == noteId } // its "You reposted" cards go with it
+        store.likedPostIds.remove(noteId)
+        return Outcome.Success(Unit)
+    }
+
+    override fun shareCandidates(noteId: String): Flow<List<PersonRef>> = observe {
+        val p = store.post(noteId)?.let { original(it) }
+        if (p == null || p.groupId != null || !decide(p, NoteAction.SHARE).allowed) emptyList()
+        else store.friendIds
+            .filter { p.audience == Audience.FRIENDS || it in store.innerCircle }
+            .mapNotNull { ref(it) }
+    }
+
+    override suspend fun shareNoteWithFriend(noteId: String, friendId: String): Outcome<String> {
+        val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        // Check before creating a chat, as if sharing into a 1:1 chat with this friend.
+        val allInner = p.authorId == ME && friendId in store.innerCircle
+        denied(AccessPolicy.shareInto(rel(p.authorId), facts(p), null, allInner))?.let { return it }
+        val chat = openDirectChat(friendId)
+        if (chat !is Outcome.Success) return chat
+        return when (val shared = shareNote(chat.value, noteId)) {
+            is Outcome.Success -> Outcome.Success(chat.value)
+            is Outcome.Denied -> shared
+            is Outcome.Error -> shared
+        }
     }
 
     // =========================================================================== people

@@ -84,14 +84,17 @@ private fun NoteBody(nav: NavHostController, note: Note, embedQuote: Boolean) {
         ) { if (author.isMe) MeAvatar(AVATAR) else Avatar(author.initials, author.color, size = AVATAR) }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Box(
-                Modifier.clip(RoundedCornerShape(6.dp))
-                    .clickable(onClickLabel = "Open ${author.name}'s profile") { nav.openPerson(author.id) }
-            ) { NoteHeader(note) }
+            Row(verticalAlignment = Alignment.Top) {
+                Box(
+                    Modifier.weight(1f).clip(RoundedCornerShape(6.dp))
+                        .clickable(onClickLabel = "Open ${author.name}'s profile") { nav.openPerson(author.id) }
+                ) { NoteHeader(note) }
+                Box(Modifier.offset(x = 8.dp, y = (-10).dp)) { NoteMenuButton(nav, note) }
+            }
             if (note.text.isNotEmpty()) {
                 Text(note.text, color = CircleTheme.colors.body, style = CircleTheme.postText, modifier = Modifier.padding(top = 2.dp))
             }
-            if (note.hasMedia) MediaBlock(Modifier.padding(top = 8.dp))
+            if (note.hasMedia) NoteMedia(note.media, Modifier.padding(top = 8.dp)) { i -> nav.navigate(Routes.viewer(note.id, i)) }
             if (embedQuote) note.quoted?.let { quoted ->
                 EmbeddedPost(quoted, Modifier.padding(top = 10.dp)) {
                     val id = when (quoted) {
@@ -109,9 +112,9 @@ private fun NoteBody(nav: NavHostController, note: Note, embedQuote: Boolean) {
 @Composable
 private fun NoteHeader(note: Note) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(note.author.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+        Text(note.author.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, maxLines = 1)
         Spacer(Modifier.width(6.dp))
-        Text("· ${relativeTime(note.createdAt)}", color = CircleTheme.colors.muted, fontSize = 12.sp)
+        Text("· ${relativeTime(note.createdAt)}", color = CircleTheme.colors.muted, fontSize = 12.sp, maxLines = 1)
         if (note.isMine && note.audience == Audience.INNER_CIRCLE) {
             Spacer(Modifier.width(8.dp))
             InnerCircleTag()
@@ -125,14 +128,6 @@ fun InnerCircleTag() {
         stringResource(R.string.note_inner_circle_tag), color = CircleTheme.colors.accent, fontSize = 10.sp,
         fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp, maxLines = 1
     )
-}
-
-@Composable
-fun MediaBlock(modifier: Modifier = Modifier, height: Int = 180) {
-    Box(
-        modifier = modifier.fillMaxWidth().height(height.dp).clip(RoundedCornerShape(11.dp)).background(CircleTheme.colors.track),
-        contentAlignment = Alignment.Center
-    ) { Icon(Icons.Outlined.Image, contentDescription = stringResource(R.string.note_photo), tint = CircleTheme.colors.muted) }
 }
 
 /**
@@ -176,7 +171,7 @@ fun EmbeddedPost(view: NoteView, modifier: Modifier = Modifier, onClick: (() -> 
                         maxLines = 4, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp)
                     )
                 }
-                if (post.hasMedia) MediaBlock(Modifier.padding(top = 8.dp), height = 90)
+                if (post.hasMedia) NoteMedia(post.media, Modifier.padding(top = 8.dp), height = 90, onOpen = null)
             }
         }
     }

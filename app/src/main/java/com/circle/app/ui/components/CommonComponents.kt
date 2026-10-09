@@ -108,63 +108,6 @@ fun UnderlineTabs(tabs: List<String>, selected: Int, spacing: Dp = 22.dp, onSele
     }
 }
 
-/** One comment in a thread. Top-level comments are always visible; their own replies
- *  stay collapsed behind a "View N replies" link that expands just this comment, in place. */
-@Composable
-fun ThreadComment(comment: CommentView, onPerson: (String) -> Unit = {}) {
-    var showReplies by rememberSaveable(comment.id) { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        CommentRow(comment, avatarSize = 32, onPerson = onPerson)
-        if (comment.replies.isNotEmpty()) {
-            val n = comment.replies.size
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(start = 42.dp).clickable { showReplies = !showReplies }
-            ) {
-                Text(
-                    if (showReplies) "Hide replies" else "View $n ${if (n == 1) "reply" else "replies"}",
-                    color = CircleTheme.colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 11.5.sp
-                )
-                Icon(
-                    if (showReplies) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
-                    contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(16.dp)
-                )
-            }
-            if (showReplies) {
-                Column(
-                    modifier = Modifier.padding(start = 42.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) { comment.replies.forEach { CommentRow(it, avatarSize = 26, onPerson = onPerson) } }
-            }
-        }
-    }
-}
-
-/** A comment. The commenter may not be your friend: avatar and name open their profile by relationship. */
-@Composable
-private fun CommentRow(comment: CommentView, avatarSize: Int, onPerson: (String) -> Unit) {
-    val author = comment.author
-    Row {
-        Box(
-            Modifier.size(maxOf(avatarSize, 40).dp).clip(CircleShape)
-                .clickable(onClickLabel = "Open ${author.name}'s profile") { onPerson(author.id) },
-            contentAlignment = Alignment.TopCenter
-        ) { Avatar(author.initials, author.color, size = avatarSize) }
-        Spacer(Modifier.width(6.dp))
-        Column {
-            Row(
-                Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClickLabel = "Open ${author.name}'s profile") { onPerson(author.id) },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(author.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Spacer(Modifier.width(6.dp))
-                Text("· ${relativeTime(comment.createdAt)}", color = CircleTheme.colors.muted, fontSize = 11.5.sp)
-            }
-            Text(comment.text, color = CircleTheme.colors.body, fontSize = 13.sp)
-        }
-    }
-}
-
 /**
  * Comment / repost / like row on every note. All three act on the original note (so a
  * "You reposted" card likes and opens the original). The heart is a private like: no count.
@@ -260,9 +203,12 @@ fun PrimaryButton(text: String, modifier: Modifier = Modifier, onClick: () -> Un
     }
 }
 
-/** Pill-shaped reply input with a send action. Calls [onSend] with trimmed text, then clears. */
+/**
+ * Pill-shaped reply input with a send action. Calls [onSend] with trimmed text, then clears.
+ * [above] sits over the input (the "Replying to" chip).
+ */
 @Composable
-fun ReplyComposer(placeholder: String = "Add a reply…", onSend: (String) -> Unit) {
+fun ReplyComposer(placeholder: String = "Add a reply…", above: (@Composable () -> Unit)? = null, onSend: (String) -> Unit) {
     var text by rememberSaveable { mutableStateOf("") }
     val canSend = text.isNotBlank()
     fun send() {
@@ -271,6 +217,8 @@ fun ReplyComposer(placeholder: String = "Add a reply…", onSend: (String) -> Un
             text = ""
         }
     }
+    Column {
+    above?.invoke()
     Row(verticalAlignment = Alignment.CenterVertically) {
         MeAvatar(28)
         Spacer(Modifier.width(9.dp))
@@ -310,6 +258,7 @@ fun ReplyComposer(placeholder: String = "Add a reply…", onSend: (String) -> Un
                 )
             }
         }
+    }
     }
 }
 

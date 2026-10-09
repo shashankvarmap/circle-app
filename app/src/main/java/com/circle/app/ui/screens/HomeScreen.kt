@@ -22,6 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import androidx.compose.ui.res.stringResource
+import com.circle.app.R
 import com.circle.app.navigation.Routes
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.circle.app.data.repo.CircleRepository
@@ -42,6 +44,7 @@ class HomeViewModel(repo: CircleRepository) : RepoViewModel(repo) {
     val memberGroups = repo.memberGroups().state(emptyList())
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(nav: NavHostController) {
     var feed by rememberSaveable { mutableStateOf(Feed.FRIENDS) }
@@ -54,14 +57,23 @@ fun HomeScreen(nav: NavHostController) {
     val header = rememberCollapsingHeaderState { listState.canScrollForward || listState.canScrollBackward }
     val scope = rememberCoroutineScope()
 
-    // Tapping the wordmark scrolls to the top, brings the header back and checks for new notes.
-    fun doRefresh() {
+    // "New" pill: newer notes arrived at the top while you were further down. Never moves your place.
+    var seenTopId by rememberSaveable { mutableStateOf<String?>(null) }
+    val topId = friendFeed.firstOrNull()?.id
+    val atTop by remember { derivedStateOf { listState.firstVisibleItemIndex <= 1 } }
+    LaunchedEffect(topId, atTop) { if (atTop || seenTopId == null) seenTopId = topId }
+    val showNew = feed == Feed.FRIENDS && topId != null && seenTopId != null && topId != seenTopId && !atTop
+
+    // Pull to refresh, or tap the wordmark: scroll to the top, bring the header back and check.
+    // The feed is live, so a check only confirms it: "Nothing to refresh. You're caught up."
+    fun doRefresh(pulled: Boolean = false) {
         scope.launch {
             launch { header.reveal() }
-            listState.animateScrollToItem(0)
+            if (!pulled) listState.animateScrollToItem(0)
             refresh = Refresh.CHECKING
             delay(700)
             refresh = Refresh.DONE
+            listState.animateScrollToItem(0)
             delay(2000)
             refresh = Refresh.IDLE
         }
@@ -79,6 +91,11 @@ fun HomeScreen(nav: NavHostController) {
                 )
             }
         ) {
+          androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+            isRefreshing = refresh == Refresh.CHECKING,
+            onRefresh = { doRefresh(pulled = true) },
+            modifier = Modifier.fillMaxSize()
+          ) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -86,21 +103,16 @@ fun HomeScreen(nav: NavHostController) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (feed == Feed.FRIENDS) {
-                    item {
+                    item(key = "refresh") {
                         when (refresh) {
-                            Refresh.CHECKING -> RefreshRow("Checking for new posts…", CircleTheme.colors.muted)
-                            Refresh.DONE -> RefreshRow("Nothing to refresh — you're caught up", CircleTheme.colors.accent, showCheck = true)
+                            Refresh.CHECKING -> RefreshRow(stringResource(R.string.home_checking), CircleTheme.colors.muted)
+                            Refresh.DONE -> RefreshRow(stringResource(R.string.home_nothing_to_refresh), CircleTheme.colors.accent, showCheck = true)
                             Refresh.IDLE -> {}
                         }
                     }
                     item(key = "compose") { ComposeRow(nav) }
                     items(friendFeed, key = { it.id }) { post -> FeedCard(nav, post) }
-                    item(key = "caught-up") {
-                        Text(
-                            "You're all caught up", color = CircleTheme.colors.muted, fontSize = 12.sp,
-                            modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-                    }
+                    item(key = "caught-up") { CaughtUp() }
                 } else {
                     if (memberGroups.isNotEmpty()) item(key = "chips") { GroupsChipRow(nav, memberGroups) }
                     item(key = "note") {
@@ -126,6 +138,19 @@ fun HomeScreen(nav: NavHostController) {
                     items(groupPosts, key = { it.id }) { post -> GroupPostCard(nav, post, showGroup = true) }
                 }
             }
+            if (showNew) {
+                Box(Modifier.fillMaxWidth().padding(top = 10.dp), contentAlignment = Alignment.TopCenter) {
+                    Text(
+                        stringResource(R.string.home_new_pill), color = CircleTheme.colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.5.sp,
+                        modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(CircleTheme.colors.accent)
+                            .clickable(onClickLabel = stringResource(R.string.home_new_pill_label)) {
+                                scope.launch { listState.animateScrollToItem(0); seenTopId = topId }
+                            }
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+            }
+          }
         }
 
         CircleBottomNav(nav, NavTab.HOME, onHomeIconHold = {
@@ -168,6 +193,15 @@ private fun HomeHeader(feed: Feed, onWordmark: () -> Unit, onFeed: (Feed) -> Uni
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
+    }
+}
+
+/** The calm ending of the feed: it ends, and says so. */
+@Composable
+private fun CaughtUp() {
+    Column(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(stringResource(R.string.home_caught_up), fontFamily = Display, fontWeight = FontWeight.Medium, fontSize = 19.sp, color = CircleTheme.colors.text)
+        Text(stringResource(R.string.home_nothing_below), fontSize = 12.sp, color = CircleTheme.colors.muted, modifier = Modifier.padding(top = 3.dp))
     }
 }
 

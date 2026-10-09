@@ -72,10 +72,17 @@ class Post(
     val repostOfId: String? = null,
     /** Posted in a group: stays in the group (comment and like only). */
     val groupId: String? = null,
-    comments: List<Comment> = emptyList()
+    comments: List<Comment> = emptyList(),
+    /** Photos and videos picked in Compose (seed photo posts have [hasMedia] and no items). */
+    val media: List<com.circle.app.data.media.MediaRef> = emptyList(),
 ) {
     val comments: SnapshotStateList<Comment> = mutableStateListOf<Comment>().apply { addAll(comments) }
     val isRepost: Boolean get() = repostOfId != null
+
+    /** Copy with new text or audience (editing your own note); comments are carried over. */
+    fun edited(text: String = this.text, audience: Audience = this.audience) = Post(
+        id, authorId, createdAt, text, hasMedia, audience, quotedPostId, repostOfId, groupId, comments.toList(), media
+    )
 }
 
 class GroupInfo(

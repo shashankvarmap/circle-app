@@ -155,3 +155,41 @@ new records) and `Instant` timestamps. Added now:
 **Still a stub:** the debug switch that makes the fake fail (Phase 11) and full-screen loading/error states (Phase 8).
 
 **Decisions:** a hand-written `AppGraph` provides the repository, session and media store (no DI library).
+
+---
+
+## Phase 4: Posts and threads (F1)
+
+**Why Quote was broken** (found and fixed in f2886fb, before this run): the Quote menu item navigated to the plain Compose
+route, which took no argument, so the quoted note was dropped; Compose had no real text field and Post did nothing; a quote
+was stored as an author/text string pair with no link to the original; Repost was a per-card `remember {}` flag (lost on
+scroll or rotation, never created a card); and Home was hard-coded cards, so new posts could never appear. Now Quote opens
+Compose with the original embedded, and both live in the store behind the repository and its rules.
+
+**Works now**
+- Thread: each comment has a private Like and Reply. Reply shows a "Replying to Priya" chip above the composer; the reply
+  nests under that comment (a reply to a reply joins the same top-level comment, one level deep) and its replies open to show
+  it. "View N replies" in accent per the prototype, replies indented with a left rule. Long-press your own comment: Delete
+  (confirmed); someone else's: Report.
+- ⋯ menu on every card. Others' notes: Send in a message (a friend picker showing only friends the note may go to; an
+  inner-circle note only to your inner circle), Mute this friend, Report, Block. Your notes: Edit (Compose in edit mode),
+  Change audience (making a note inner-circle removes its reposts), Delete (confirmed; its repost cards go too).
+- Photo viewer: full screen, pinch to zoom, double-tap to reset, swipe between items, close; videos play. It loads the note
+  through the repository, so a note you can't see can't be opened by route.
+- Compose: photos and videos from the system picker (up to 10; a video over 30 seconds is refused with a clear message),
+  removable previews that survive rotation, Post enabled with text or media, edit mode with "Discard your changes?".
+- Home: pull to refresh and the wordmark both reveal the header, check, and say "Nothing to refresh. You're caught up." when
+  nothing is new; a "New" pill appears if newer notes arrive while you are scrolled down (your place is kept); the feed ends
+  with "You're all caught up." (Fraunces 19) and "Nothing below this line."
+- Deep links now also work while the app is already open (found on the device: the intent reached the running activity and
+  was ignored).
+- Tests: `PostsAndThreadsTest` (reply nesting, comment likes, deleting only your own comments, edit/audience/delete only on
+  your notes, reposts removed when a note becomes inner-circle, share candidates, refused shares create no chat, media).
+  Verified on the emulator: reply chip, nested replies, ⋯ menus, deep link into a thread and into a gated thread.
+
+**Stubs:** the fake keeps picked media as device URIs (no upload); seed photo posts show a placeholder. Report is a simple
+confirm until the reason-list flow in Phase 8.
+
+**Decisions**
+- Group posts get Report / Block only in the ⋯ menu (no "Send in a message": they stay in the group).
+- "Mute this friend" appears on personal notes only (their authors are your friends by the rules); group-post authors may not be.

@@ -33,7 +33,11 @@ import androidx.navigation.NavHostController
 import com.circle.app.R
 import com.circle.app.data.access.Audience
 import com.circle.app.data.access.DenyReason
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import com.circle.app.data.repo.CircleRepository
+import com.circle.app.data.repo.CommentView
 import com.circle.app.data.repo.Note
 import com.circle.app.data.repo.NoteView
 import com.circle.app.data.repo.Outcome
@@ -56,7 +60,10 @@ class ThreadViewModel(repo: CircleRepository, noteId: String) : RepoViewModel(re
     /** Null while loading. */
     val thread = repo.thread(noteId).state(null)
     private val id = noteId
-    fun reply(text: String, then: (Outcome<Unit>) -> Unit) = run({ addComment(id, text) }, then)
+    fun reply(text: String, replyTo: String?, then: (Outcome<Unit>) -> Unit) = run({ addComment(id, text, replyTo) }, then)
+    fun likeComment(commentId: String) = run({ toggleCommentLike(id, commentId) })
+    fun deleteComment(commentId: String) = run({ deleteComment(id, commentId) })
+    fun reportComment(commentId: String, then: (Outcome<Unit>) -> Unit) = run({ report("comment", commentId) }, then)
 }
 
 /** A post's thread: the root post, then its top-level comments (always visible). */
@@ -68,6 +75,24 @@ fun ThreadScreen(nav: NavHostController, postId: String) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val colors = CircleTheme.colors
+    // Which comments show their replies, and which comment the composer replies to.
+    var expanded by rememberSaveable { mutableStateOf(setOf<String>()) }
+    var replyTo by rememberSaveable { mutableStateOf<String?>(null) }
+    var confirmDelete by rememberSaveable { mutableStateOf<String?>(null) }
+    val thanks = stringResource(R.string.toast_reported)
+
+    confirmDelete?.let { id ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text(stringResource(R.string.comment_delete_title)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { vm.deleteComment(id); confirmDelete = null }) {
+                    Text(stringResource(R.string.comment_delete), color = colors.alertDot)
+                }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.cancel), color = colors.text) } }
+        )
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(colors.background)) {
         Row(modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -109,17 +134,38 @@ fun ThreadScreen(nav: NavHostController, postId: String) {
                         val n = thread.comments.size
                         SectionLabel(if (n == 0) stringResource(R.string.thread_no_replies) else pluralStringResourceCaps(n))
                     }
-                    items(thread.comments, key = { it.id }) { comment -> ThreadComment(comment) { nav.openPerson(it) } }
+                    val actions = object : CommentActions {
+                        override fun like(comment: CommentView) = vm.likeComment(comment.id)
+                        override fun reply(comment: CommentView) { replyTo = comment.id }
+                        override fun delete(comment: CommentView) { confirmDelete = comment.id }
+                        override fun report(comment: CommentView) = vm.reportComment(comment.id) {
+                            if (it is Outcome.Success) Toast.makeText(context, thanks, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    items(thread.comments, key = { it.id }) { comment ->
+                        ThreadComment(
+                            comment,
+                            expanded = comment.id in expanded,
+                            onToggleReplies = { expanded = if (comment.id in expanded) expanded - comment.id else expanded + comment.id },
+                            onPerson = { nav.openPerson(it) },
+                            actions = actions,
+                        )
+                    }
                 }
-                // New replies land as top-level comments at the end of this thread's list.
+                // The comment being replied to (a reply to a reply joins the same top-level comment).
+                val allComments = thread.comments + thread.comments.flatMap { it.replies }
+                val target = replyTo?.let { id -> allComments.firstOrNull { it.id == id } }
+                val targetTop = target?.let { t -> thread.comments.firstOrNull { top -> top.id == t.id || top.replies.any { it.id == t.id } } }
                 Box(Modifier.fillMaxWidth().background(colors.background).padding(horizontal = 14.dp, vertical = 10.dp)) {
-                    ReplyComposer { text ->
-                        vm.reply(text) { outcome ->
-                            when (outcome) {
-                                is Outcome.Success -> scope.launch { listState.animateScrollToItem(thread.comments.size + 1) }
-                                is Outcome.Denied -> Toast.makeText(context, context.getString(R.string.thread_reply_denied), Toast.LENGTH_SHORT).show()
-                                is Outcome.Error -> Unit
-                            }
+                    ReplyComposer(
+                        above = target?.let { t -> { ReplyingToChip(t.author.firstName) { replyTo = null } } }
+                    ) { text ->
+                        vm.reply(text, target?.id) { outcome ->
+                            if (outcome !is Outcome.Success) return@reply
+                            if (targetTop != null) {
+                                expanded = expanded + targetTop.id // show the reply where it landed
+                                replyTo = null
+                            } else scope.launch { listState.animateScrollToItem(thread.comments.size + 1) }
                         }
                     }
                 }
@@ -143,9 +189,10 @@ private fun RootPost(nav: NavHostController, post: Note) {
             .background(colors.surface)
             .padding(16.dp)
     ) {
+        Row(verticalAlignment = Alignment.Top) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClickLabel = "Open ${post.author.name}'s profile") { nav.openPerson(post.author.id) }
+            modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable(onClickLabel = "Open ${post.author.name}'s profile") { nav.openPerson(post.author.id) }
         ) {
             if (post.isMine) MeAvatar(44) else Avatar(post.author.initials, post.author.color, size = 44)
             Spacer(Modifier.width(11.dp))
@@ -159,6 +206,8 @@ private fun RootPost(nav: NavHostController, post: Note) {
                 Text(relativeTime(post.createdAt), color = colors.muted, fontSize = 12.sp)
             }
         }
+        NoteMenuButton(nav, post)
+        }
         if (post.text.isNotEmpty()) {
             Text(
                 post.text, color = colors.text,
@@ -166,7 +215,7 @@ private fun RootPost(nav: NavHostController, post: Note) {
                 modifier = Modifier.padding(top = 12.dp)
             )
         }
-        if (post.hasMedia) MediaBlock(Modifier.padding(top = 12.dp), height = 200)
+        if (post.hasMedia) NoteMedia(post.media, Modifier.padding(top = 12.dp), height = 200) { i -> nav.navigate(Routes.viewer(post.id, i)) }
         post.quoted?.let { quoted ->
             EmbeddedPost(quoted, Modifier.padding(top = 12.dp)) {
                 when (quoted) {

@@ -8,4 +8,12 @@
         <item quantity="one">%1$d member</item>
         <item quantity="other">%1$d members</item>
     </plurals>
+    <plurals name="thread_view_replies">
+        <item quantity="one">View %1$d reply</item>
+        <item quantity="other">View %1$d replies</item>
+    </plurals>
+    <plurals name="compose_note_inner">
+        <item quantity="one">Only your %1$d inner-circle friend can see this.</item>
+        <item quantity="other">Only your %1$d inner-circle friends can see this.</item>
+    </plurals>
 </resources>

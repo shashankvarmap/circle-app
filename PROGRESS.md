@@ -50,13 +50,14 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] Repost/Quote popover (89e3078)
 - [x] Header hides on scroll on Home, Messages, Alerts (a1fe900)
 - [x] Private likes, comment opens Thread, inner-circle tag
-- [~] Thread: "View N replies" works; missing: per-comment Like + Reply (reply-to-reply chip, nesting), long-press Delete/Report
-- [ ] ⋯ menus on cards (others: Send in a message, Mute, Report, Block; own: Edit, Change audience, Delete)
-- [ ] Photo viewer (pinch-zoom, close)
-- [ ] Compose: photo/video picker (video max 30s), removable preview
+- [x] Thread: per-comment Like + Reply ("Replying to" chip, one nested level, reply-to-reply joins the comment), "View N replies" (accent), long-press Delete (yours, confirmed) / Report
+- [x] ⋯ menus on cards (others: Send in a message, Mute, Report, Block; own: Edit, Change audience, Delete)
+- [x] Photo viewer (pinch-zoom, double-tap reset, swipe, close, video playback), re-checked through the repository
+- [x] Compose: photo/video picker (video max 30s, clear message), removable previews, edit mode, Post enabled with text or media
 - [x] Compose: audience pill, soft 500 limit + counter, discard dialog, group posting
-- [~] Home: wordmark refresh exists; missing pull-to-refresh, "New" pill
-- [ ] Record the Quote cause in REPORT.md
+- [x] Home: pull to refresh ("Nothing to refresh. You're caught up."), wordmark refresh, "New" pill, Fraunces caught-up ending
+- [x] Deep links also work while the app is open (onNewIntent -> NavController)
+- [x] Quote cause recorded in REPORT.md
 
 ## Phase 5: Profiles and the friend graph (F2)
 - [~] Person profile by relationship exists (d5e7ac4); must be driven by `ProfileView`, no mutual count

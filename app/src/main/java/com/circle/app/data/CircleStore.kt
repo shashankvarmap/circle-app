@@ -53,6 +53,9 @@ object CircleStore {
     /** Post ids you liked. Private: never counted or shown to anyone but the author. */
     val likedPostIds = mutableStateListOf<String>()
 
+    /** Comment ids you liked. Private in the same way. */
+    val likedCommentIds = mutableStateListOf<String>()
+
     val groups = mutableStateListOf<GroupInfo>()
     val events = mutableStateListOf<EventInfo>()
     val chats = mutableStateListOf<Chat>()
@@ -90,6 +93,7 @@ object CircleStore {
 
         posts.clear(); posts.addAll(Seed.posts())
         likedPostIds.clear(); likedPostIds.addAll(Seed.initialLikes)
+        likedCommentIds.clear()
         groups.clear(); groups.addAll(Seed.groups())
         events.clear(); events.addAll(Seed.events())
         chats.clear(); chats.addAll(ChatSeed.chats()); hiddenMessageIds.clear()

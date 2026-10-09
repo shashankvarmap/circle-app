@@ -145,7 +145,7 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                     is EventThreadView.Open -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         val n = thread.comments.size
                         com.circle.app.ui.components.SectionLabel(if (n == 0) "THREAD · NO REPLIES YET" else "THREAD · $n ${if (n == 1) "REPLY" else "REPLIES"}")
-                        thread.comments.forEach { ThreadComment(it) { id -> nav.openPerson(id) } }
+                        thread.comments.forEach { c -> ThreadComment(c, expanded = true, onToggleReplies = {}, onPerson = { id -> nav.openPerson(id) }, actions = null) }
                         ReplyComposer { text -> vm.comment(text) }
                     }
                     is EventThreadView.Locked -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

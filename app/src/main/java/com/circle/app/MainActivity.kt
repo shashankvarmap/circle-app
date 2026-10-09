@@ -58,6 +58,13 @@ fun CircleApp(session: SessionViewModel, navController: NavHostController = reme
         ThemeMode.DAY -> false
     }
     val start by session.start.collectAsStateWithLifecycle()
+    // Deep links that arrive while the app is open go through the same routes (and the same checks).
+    val activity = androidx.compose.ui.platform.LocalContext.current as? ComponentActivity
+    androidx.compose.runtime.DisposableEffect(activity, navController) {
+        val listener = androidx.core.util.Consumer<android.content.Intent> { navController.handleDeepLink(it) }
+        activity?.addOnNewIntentListener(listener)
+        onDispose { activity?.removeOnNewIntentListener(listener) }
+    }
     CircleTheme(night = night) { CompositionLocalProvider(LocalMe provides me) {
         Surface(
             modifier = Modifier.fillMaxSize(),

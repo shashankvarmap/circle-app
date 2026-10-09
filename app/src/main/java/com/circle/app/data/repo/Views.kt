@@ -104,6 +104,8 @@ data class Note(
     val createdAt: Instant,
     val text: String,
     val hasMedia: Boolean,
+    /** Picked photos and videos (empty for seed photo posts, which show a placeholder). */
+    val media: List<com.circle.app.data.media.MediaRef>,
     val audience: Audience,
     val group: GroupRef?,
     val quoted: NoteView?,
@@ -139,7 +141,11 @@ data class CommentView(
     val createdAt: Instant,
     val text: String,
     val replies: List<CommentView>,
-)
+    /** Your private like on this comment (no counts anywhere). */
+    val likedByMe: Boolean = false,
+) {
+    val isMine: Boolean get() = author.isMe
+}
 
 data class Thread(val root: Note, val comments: List<CommentView>)
 

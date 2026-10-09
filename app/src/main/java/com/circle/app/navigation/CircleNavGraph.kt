@@ -42,12 +42,16 @@ object Routes {
     fun peopleList(kind: String) = "people/$kind"
 
     fun thread(postId: String) = "thread/$postId"
-    /** Compose; [quote] embeds that note as a quote, [group] posts into that group. */
-    fun compose(quote: String? = null, group: String? = null) = buildString {
+    /** Compose; [quote] embeds that note as a quote, [group] posts into that group, [edit] edits your note. */
+    fun compose(quote: String? = null, group: String? = null, edit: String? = null) = buildString {
         append(COMPOSE_POST)
-        val args = listOfNotNull(quote?.let { "quote=$it" }, group?.let { "group=$it" })
+        val args = listOfNotNull(quote?.let { "quote=$it" }, group?.let { "group=$it" }, edit?.let { "edit=$it" })
         if (args.isNotEmpty()) append("?").append(args.joinToString("&"))
     }
+
+    const val VIEWER = "viewer/{noteId}?index={index}"
+    /** Full-screen photo viewer for a note's media (re-checked through the repository). */
+    fun viewer(noteId: String, index: Int = 0) = "viewer/$noteId?index=$index"
     fun groupDetail(groupId: String) = "$GROUP_DETAIL?groupId=$groupId"
     fun eventDetail(eventId: String) = "$EVENT_DETAIL?eventId=$eventId"
 }
@@ -86,13 +90,17 @@ fun CircleNavGraph(
         composable(Routes.MESSAGES) { MessagesScreen(navController) }
         composable(Routes.PROFILE) { ProfileScreen(navController) }
         composable(
-            "${Routes.COMPOSE_POST}?quote={quote}&group={group}",
+            "${Routes.COMPOSE_POST}?quote={quote}&group={group}&edit={edit}",
             arguments = listOf(
                 navArgument("quote") { nullable = true; defaultValue = null },
-                navArgument("group") { nullable = true; defaultValue = null }
+                navArgument("group") { nullable = true; defaultValue = null },
+                navArgument("edit") { nullable = true; defaultValue = null }
             )
         ) { entry ->
-            ComposePostScreen(navController, entry.arguments?.getString("quote"), entry.arguments?.getString("group"))
+            ComposePostScreen(navController, entry.arguments?.getString("quote"), entry.arguments?.getString("group"), entry.arguments?.getString("edit"))
+        }
+        composable(Routes.VIEWER, arguments = listOf(navArgument("index") { type = androidx.navigation.NavType.IntType; defaultValue = 0 })) { entry ->
+            PhotoViewerScreen(navController, entry.arguments?.getString("noteId").orEmpty(), entry.arguments?.getInt("index") ?: 0)
         }
         composable(
             "${Routes.GROUP_DETAIL}?groupId={groupId}",
