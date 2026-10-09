@@ -1,5 +1,7 @@
 package com.circle.app.ui.screens
 
+import com.circle.app.ui.format.text
+import com.circle.app.ui.a11y.label
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -95,7 +97,6 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
     val colors = CircleTheme.colors
     val context = LocalContext.current
     var confirmLogout by rememberSaveable { mutableStateOf(false) }
-    var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var inviting by rememberSaveable { mutableStateOf(false) }
     if (inviting) com.circle.app.ui.components.InviteSheet { inviting = false }
     val vm = circleViewModel { SettingsViewModel(it) }
@@ -113,77 +114,56 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
     if (confirmLogout) {
         AlertDialog(
             onDismissRequest = { confirmLogout = false },
-            title = { Text("Log out of Circle?") },
-            text = { Text("You'll go back to the Welcome screen. Everything stays as it is for when you log back in.") },
-            confirmButton = { TextButton(onClick = { confirmLogout = false; onLogOut() }) { Text("Log out", color = colors.accent) } },
-            dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text("Cancel", color = colors.text) } }
+            title = { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_log_out_of_circle)) },
+            text = { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_you_ll_go_back_to)) },
+            confirmButton = { TextButton(onClick = { confirmLogout = false; onLogOut() }) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_log_out), color = colors.accent) } },
+            dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.cancel), color = colors.text) } }
         )
     }
-    if (confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text("Delete your account?") },
-            text = {
-                Text(
-                    "This permanently removes your profile, photo and pinned thought; your notes, reposts, quotes and " +
-                        "comments; your likes; your friends list and inner circle; your messages; and your group and " +
-                        "event memberships. Your friends are not told why. This can't be undone."
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmDelete = false
-                    vm.deleteAccount(onAccountDeleted)
-                }) { Text("Delete account", color = colors.alertDot) }
-            },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Keep my account", color = colors.text) } }
-        )
-    }
-
     Column(Modifier.fillMaxSize().background(colors.background)) {
-        DetailHeader("Settings") { nav.popBackStack() }
+        DetailHeader(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_settings)) { nav.popBackStack() }
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(bottom = 32.dp)) {
-            item { SectionHeading("Account") }
-            item { NavRow("Edit profile", "Name, username, photo and pinned thought") { nav.navigate(Routes.EDIT_PROFILE) } }
-            item { NavRow("Your circle", "${circle.friendCount} friends · ${circle.innerCount} inner circle") { nav.navigate(Routes.YOUR_CIRCLE) } }
-            item { NavRow("Blocked users", countLabel(blockedList.size, "person", "people", "Nobody")) { nav.navigate(Routes.peopleList("blocked")) } }
-            item { NavRow("Muted friends", countLabel(mutedList.size, "friend", "friends", "Nobody")) { nav.navigate(Routes.peopleList("muted")) } }
+            item { SectionHeading(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_account)) }
+            item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_edit_profile), "Name, username, photo and pinned thought") { nav.navigate(Routes.EDIT_PROFILE) } }
+            item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_your_circle), "${circle.friendCount} friends · ${circle.innerCount} inner circle") { nav.navigate(Routes.YOUR_CIRCLE) } }
+            item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_blocked_users), countLabel(blockedList.size, com.circle.app.R.plurals.count_people)) { nav.navigate(Routes.peopleList("blocked")) } }
+            item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_muted_friends), countLabel(mutedList.size, com.circle.app.R.plurals.count_friends)) { nav.navigate(Routes.peopleList("muted")) } }
             item { NavRow(stringResource(R.string.settings_your_data), stringResource(R.string.settings_your_data_sub)) { nav.navigate(Routes.YOUR_DATA) } }
             item { NavRow(stringResource(R.string.settings_membership), stringResource(R.string.settings_membership_sub)) { nav.navigate(Routes.MEMBERSHIP) } }
             item { NavRow(stringResource(R.string.settings_invite), null) { inviting = true } }
 
-            item { SectionHeading("Privacy") }
+            item { SectionHeading(androidx.compose.ui.res.stringResource(com.circle.app.R.string.legal_privacy)) }
             item {
                 ToggleRow(
-                    "Let people find me by name or username",
-                    "People who find you see your photo and pinned thought only.",
+                    androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_let_people_find_me_by),
+                    androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_findable_sub),
                     privacy.findableByName
                 ) { vm.setPrivacy(privacy.copy(findableByName = it)) }
             }
             item {
-                ToggleRow("Let friends find me from their phone contacts", null, privacy.findableFromContacts) {
+                ToggleRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_let_friends_find_me_from), null, privacy.findableFromContacts) {
                     vm.setPrivacy(privacy.copy(findableFromContacts = it))
                 }
             }
             item {
-                SegmentedRow("Who can send me friend requests", RequestsFrom.entries, privacy.requestsFrom, { it.label }) {
+                SegmentedRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_who_can_send_me_friend), RequestsFrom.entries, privacy.requestsFrom, { it.text() }) {
                     vm.setPrivacy(privacy.copy(requestsFrom = it))
                 }
             }
             item {
-                SegmentedRow("Who can invite me to events and groups", InvitesFrom.entries, privacy.invitesFrom, { it.label }) {
+                SegmentedRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_who_can_invite_me_to), InvitesFrom.entries, privacy.invitesFrom, { it.text() }) {
                     vm.setPrivacy(privacy.copy(invitesFrom = it))
                 }
             }
             item {
-                ToggleRow("Read receipts in messages", "Friends see when you've read their message, and you see theirs.", privacy.readReceipts) {
+                ToggleRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_read_receipts_in_messages), "Friends see when you've read their message, and you see theirs.", privacy.readReceipts) {
                     vm.setPrivacy(privacy.copy(readReceipts = it))
                 }
             }
             item { AlwaysPrivateBox() }
 
 
-            item { SectionHeading("Notifications") }
+            item { SectionHeading(androidx.compose.ui.res.stringResource(com.circle.app.R.string.notif_title)) }
             item {
                 // One row; the switches, pause and quiet hours live on their own screen (V2 4).
                 val summary = if (notif.pause != PauseAll.OFF) stringResource(R.string.settings_notifications_paused)
@@ -191,30 +171,30 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
                 NavRow(stringResource(R.string.notif_title), summary) { nav.navigate(Routes.NOTIFICATION_SETTINGS) }
             }
 
-            item { SectionHeading("Appearance") }
+            item { SectionHeading(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_appearance)) }
             item {
-                SegmentedRow("Theme", ThemeMode.entries, theme, { it.label }, note = "System follows your phone's day and night setting.") {
+                SegmentedRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_theme), ThemeMode.entries, theme, { it.text() }, note = androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_system_follows_your_phone_s)) {
                     vm.setTheme(it)
                 }
             }
 
-            item { SectionHeading("About") }
-            item { NavRow("About Circle", null) { nav.navigate(Routes.info("about")) } }
-            item { NavRow("Why I built it", null) { nav.navigate(Routes.info("why")) } }
+            item { SectionHeading(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_about)) }
+            item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_about_circle), null) { nav.navigate(Routes.info("about")) } }
+            item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_why_i_built_it), null) { nav.navigate(Routes.info("why")) } }
             item { NavRow(stringResource(R.string.settings_legal), null) { nav.navigate(Routes.LEGAL) } }
-            item { NavRow("Open-source licenses", "Fraunces and Public Sans (SIL Open Font License)") { nav.navigate(Routes.info("licenses")) } }
-            item { InfoRow("Version", version) }
+            item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_open_source_licenses), "Fraunces and Public Sans (SIL Open Font License)") { nav.navigate(Routes.info("licenses")) } }
+            item { InfoRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_version), version) }
 
             item { Spacer(Modifier.height(20.dp)) }
-            item { ActionRow("Log out", colors.text) { confirmLogout = true } }
-            item { ActionRow("Delete account", colors.alertDot, weight = FontWeight.Normal) { nav.navigate(Routes.DELETE_ACCOUNT) } }
+            item { ActionRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_log_out), colors.text) { confirmLogout = true } }
+            item { ActionRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_delete_account), colors.alertDot, weight = FontWeight.Normal) { nav.navigate(Routes.DELETE_ACCOUNT) } }
         }
     }
 }
 
-private fun countLabel(n: Int, one: String, many: String, none: String) = when (n) {
-    0 -> none; 1 -> "1 $one"; else -> "$n $many"
-}
+@Composable
+private fun countLabel(n: Int, plural: Int) =
+    if (n == 0) androidx.compose.ui.res.stringResource(com.circle.app.R.string.count_nobody) else androidx.compose.ui.res.pluralStringResource(plural, n, n)
 
 // ---------------------------------------------------------------- Edit profile
 
@@ -240,7 +220,7 @@ fun EditProfileScreen(nav: NavHostController) {
 
     val cleanHandle = handle.trim().removePrefix("@").lowercase()
     val handleProblem = HandleRules.problem(cleanHandle)
-    val nameProblem = if (name.isBlank()) "Add a display name" else null
+    val nameProblem = if (name.isBlank()) androidx.compose.ui.res.stringResource(com.circle.app.R.string.edit_add_display_name) else null
     val changed = name != saved.displayName || cleanHandle != saved.handle || pinned != saved.pinnedThought || avatar != saved.avatarUri
     val canSave = changed && handleProblem == null && nameProblem == null && pinned.length <= 160
 
@@ -251,9 +231,9 @@ fun EditProfileScreen(nav: NavHostController) {
     if (confirmDiscard) {
         AlertDialog(
             onDismissRequest = { confirmDiscard = false },
-            title = { Text("Discard your changes?") },
-            confirmButton = { TextButton(onClick = { confirmDiscard = false; leave() }) { Text("Discard", color = colors.accent) } },
-            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Keep editing", color = colors.text) } }
+            title = { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.compose_discard_changes_title)) },
+            confirmButton = { TextButton(onClick = { confirmDiscard = false; leave() }) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.compose_discard), color = colors.accent) } },
+            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.compose_keep_editing), color = colors.text) } }
         )
     }
 
@@ -262,9 +242,9 @@ fun EditProfileScreen(nav: NavHostController) {
             Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Cancel", color = colors.body, fontSize = 14.5.sp, modifier = Modifier.clickable(onClick = ::cancel).padding(vertical = 10.dp))
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.cancel), color = colors.body, fontSize = 14.5.sp, modifier = Modifier.clickable(onClick = ::cancel).padding(vertical = 10.dp))
             Text(
-                "Edit profile", color = colors.text, fontWeight = FontWeight.Bold, fontSize = 16.sp,
+                androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_edit_profile), color = colors.text, fontWeight = FontWeight.Bold, fontSize = 16.sp,
                 modifier = Modifier.weight(1f).semantics { heading() }, textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
             Box(
@@ -277,7 +257,7 @@ fun EditProfileScreen(nav: NavHostController) {
                     }
                     .semantics { if (!canSave) disabled() }
                     .padding(horizontal = 18.dp, vertical = 8.dp)
-            ) { Text("Save", color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 13.5.sp) }
+            ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.compose_save), color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 13.5.sp) }
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(colors.border))
 
@@ -289,14 +269,14 @@ fun EditProfileScreen(nav: NavHostController) {
                 MeAvatar(
                     88, uri = avatar,
                     modifier = Modifier
-                        .clickable(onClickLabel = "Change photo") {
+                        .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.signup_change_photo)) {
                             picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                         }
-                        .semantics { contentDescription = if (avatar == null) "Your initial. Tap to add a photo" else "Your photo. Tap to change it" }
+                        .then(Modifier.label(if (avatar == null) androidx.compose.ui.res.stringResource(com.circle.app.R.string.edit_avatar_add_label) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.edit_avatar_change_label)))
                 )
                 Row(Modifier.padding(top = 6.dp)) {
                     Text(
-                        if (avatar == null) "Add photo" else "Change photo",
+                        if (avatar == null) androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_add_photo) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.signup_change_photo),
                         color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                         modifier = Modifier.clickable {
                             picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -304,30 +284,30 @@ fun EditProfileScreen(nav: NavHostController) {
                     )
                     if (avatar != null) {
                         Text(
-                            "Remove", color = colors.muted, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                            androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_remove), color = colors.muted, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                             modifier = Modifier.clickable { avatar = null }.padding(10.dp)
                         )
                     }
                 }
             }
 
-            LabeledField("DISPLAY NAME", name, { name = it.take(40) }, "Your name")
+            LabeledField(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_display_name), name, { name = it.take(40) }, androidx.compose.ui.res.stringResource(com.circle.app.R.string.signup_name_hint))
             nameProblem?.let { FieldError(it) }
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                LabeledField("USERNAME", "@$cleanHandle", { handle = it }, "@yourname")
+                LabeledField(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_username), "@$cleanHandle", { handle = it }, androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_yourname))
                 if (handleProblem != null) FieldError(handleProblem)
-                else Text("Friends can find you by @$cleanHandle.", color = colors.muted, fontSize = 11.5.sp)
+                else Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.edit_find_by_handle, cleanHandle), color = colors.muted, fontSize = 11.5.sp)
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                LabeledField("PINNED THOUGHT", pinned, { pinned = it }, "A line about you", multiline = true)
+                LabeledField(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_pinned_thought), pinned, { pinned = it }, androidx.compose.ui.res.stringResource(com.circle.app.R.string.signup_pinned_hint), multiline = true)
                 Row {
                     Text(
-                        "This is your bio. With your photo, it's all a stranger sees.",
+                        androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_this_is_your_bio_with),
                         color = colors.muted, fontSize = 11.5.sp, modifier = Modifier.weight(1f)
                     )
-                    Text("${pinned.length}/160", color = if (pinned.length > 160) colors.alertDot else colors.muted, fontSize = 11.5.sp)
+                    Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.count_of, pinned.length, 160), color = if (pinned.length > 160) colors.alertDot else colors.muted, fontSize = 11.5.sp)
                 }
             }
         }
@@ -351,15 +331,15 @@ fun PeopleListScreen(nav: NavHostController, kind: String) {
     val people = if (blocked) blockedList else mutedList
 
     Column(Modifier.fillMaxSize().background(colors.background)) {
-        DetailHeader(if (blocked) "Blocked users" else "Muted friends") { nav.popBackStack() }
+        DetailHeader(if (blocked) androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_blocked_users) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_muted_friends)) { nav.popBackStack() }
         Text(
-            if (blocked) "People you block can't see you or reach you, and they disappear from your feeds, search, groups, chats and event seats."
-            else "Muted friends stay friends. Their notes just don't show on your Home. They're never told.",
+            if (blocked) androidx.compose.ui.res.stringResource(com.circle.app.R.string.blocked_note)
+            else androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_muted_friends_stay_friends_their),
             color = colors.muted, fontSize = 12.sp, modifier = Modifier.padding(16.dp)
         )
         if (people.isEmpty()) {
             Text(
-                if (blocked) "You haven't blocked anyone." else "You haven't muted anyone.",
+                if (blocked) androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_you_haven_t_blocked_anyone) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_you_haven_t_muted_anyone),
                 color = colors.muted, fontSize = 13.sp, modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
@@ -377,7 +357,7 @@ fun PeopleListScreen(nav: NavHostController, kind: String) {
                         Modifier.clip(RoundedCornerShape(999.dp)).border(1.dp, colors.border, RoundedCornerShape(999.dp))
                             .clickable { if (blocked) vm.unblock(p.id) else vm.unmute(p.id) }
                             .padding(horizontal = 14.dp, vertical = 8.dp)
-                    ) { Text(if (blocked) "Unblock" else "Unmute", color = colors.text, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
+                    ) { Text(if (blocked) androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_unblock) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.messages_unmute), color = colors.text, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
                 }
             }
         }
@@ -390,11 +370,11 @@ fun PeopleListScreen(nav: NavHostController, kind: String) {
 fun InfoScreen(nav: NavHostController, page: String) {
     val colors = CircleTheme.colors
     val title = when (page) {
-        "about" -> "About Circle"
-        "why" -> "Why I built it"
-        "privacy" -> "Privacy policy"
-        "terms" -> "Terms"
-        else -> "Open-source licenses"
+        "about" -> androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_about_circle)
+        "why" -> androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_why_i_built_it)
+        "privacy" -> androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_privacy_policy)
+        "terms" -> androidx.compose.ui.res.stringResource(com.circle.app.R.string.legal_terms)
+        else -> androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_open_source_licenses)
     }
     Column(Modifier.fillMaxSize().background(colors.background)) {
         DetailHeader(title) { nav.popBackStack() }
@@ -406,8 +386,7 @@ fun InfoScreen(nav: NavHostController, page: String) {
                 "about" -> AboutCircle()
                 "why" -> WhyIBuiltIt()
                 "privacy", "terms" -> Paragraph(
-                    "The full ${title.lowercase()} will be published here before Circle launches, together with the backend. " +
-                        "Until then, the short version is in Settings under \"Always private\"."
+                    androidx.compose.ui.res.stringResource(com.circle.app.R.string.legal_placeholder_page, title.lowercase())
                 )
                 else -> Licenses()
             }
@@ -534,7 +513,7 @@ fun DetailHeader(title: String, onBack: () -> Unit) {
     Column {
         Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onBack), contentAlignment = Alignment.Center) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colors.text)
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = androidx.compose.ui.res.stringResource(com.circle.app.R.string.back), tint = colors.text)
             }
             Text(
                 title, fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 21.sp, letterSpacing = (-0.21).sp,
@@ -611,7 +590,7 @@ private fun ToggleRow(title: String, subtitle: String?, checked: Boolean, onChan
 
 /** A choice of three or fewer options. */
 @Composable
-private fun <T> SegmentedRow(title: String, options: List<T>, selected: T, label: (T) -> String, note: String? = null, onSelect: (T) -> Unit) {
+private fun <T> SegmentedRow(title: String, options: List<T>, selected: T, label: @Composable (T) -> String, note: String? = null, onSelect: (T) -> Unit) {
     val colors = CircleTheme.colors
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
         Text(title, color = colors.text, fontSize = 15.sp)
@@ -650,10 +629,10 @@ private fun AlwaysPrivateBox() {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.accent, modifier = Modifier.size(14.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Always private", color = colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_always_private), color = colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
         Text(
-            "Your friends list and counts. Your likes. Who is in your inner circle.",
+            androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_your_friends_list_and_counts),
             color = colors.body, fontSize = 13.5.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp)
         )
     }

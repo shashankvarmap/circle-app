@@ -134,7 +134,7 @@ fun HomeScreen(nav: NavHostController) {
                     if (memberGroups.isNotEmpty()) item(key = "chips") { GroupsChipRow(nav, memberGroups) }
                     item(key = "note") {
                         Text(
-                            "Group posts stay in the group. No repost, no quote.",
+                            androidx.compose.ui.res.stringResource(com.circle.app.R.string.home_group_posts_stay_in_the),
                             color = CircleTheme.colors.muted, fontSize = 11.sp
                         )
                     }
@@ -183,20 +183,20 @@ private fun HomeHeader(feed: Feed, onWordmark: () -> Unit, onFeed: (Feed) -> Uni
     ) {
         Text(today, color = colors.muted, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.9.sp)
         Text(
-            "Circle.", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 24.sp,
+            androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_circle), fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 24.sp,
             letterSpacing = (-0.48).sp, color = colors.text,
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .clickable(onClickLabel = "Scroll to top and refresh", onClick = onWordmark)
+                .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.home_scroll_to_top_and_refresh), onClick = onWordmark)
                 .padding(horizontal = 8.dp)
         )
         Box(Modifier.padding(top = 4.dp)) {
-            UnderlineTabs(listOf("Friends", "Groups"), if (feed == Feed.FRIENDS) 0 else 1, spacing = 28.dp) {
+            UnderlineTabs(listOf(androidx.compose.ui.res.stringResource(com.circle.app.R.string.compose_audience_friends), androidx.compose.ui.res.stringResource(com.circle.app.R.string.messages_tab_groups)), if (feed == Feed.FRIENDS) 0 else 1, spacing = 28.dp) {
                 onFeed(if (it == 0) Feed.FRIENDS else Feed.GROUPS)
             }
         }
         Text(
-            "Tip: press & hold the Home icon below to flip feeds too",
+            androidx.compose.ui.res.stringResource(com.circle.app.R.string.home_tip_press_hold_the_home),
             color = colors.muted, fontSize = 9.5.sp,
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -237,8 +237,8 @@ private fun ComposeRow(nav: NavHostController) {
     ) {
         MeAvatar(32)
         Spacer(Modifier.width(10.dp))
-        Text("What's on your mind?", color = CircleTheme.colors.muted, fontSize = 14.sp, modifier = Modifier.weight(1f))
-        Icon(Icons.Outlined.Image, contentDescription = "Attach media", tint = CircleTheme.colors.muted, modifier = Modifier.size(18.dp))
+        Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.compose_hint), color = CircleTheme.colors.muted, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Icon(Icons.Outlined.Image, contentDescription = androidx.compose.ui.res.stringResource(com.circle.app.R.string.home_attach_media), tint = CircleTheme.colors.muted, modifier = Modifier.size(18.dp))
     }
 }
 

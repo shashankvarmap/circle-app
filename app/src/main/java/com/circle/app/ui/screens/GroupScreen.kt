@@ -64,13 +64,15 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
     val loaded by vm.group.collectAsStateWithLifecycle()
     val groupPosts by vm.posts.collectAsStateWithLifecycle()
     val group = loaded ?: run {
-        Column(Modifier.fillMaxSize().background(CircleTheme.colors.background)) { DetailHeader("Group") { nav.popBackStack() } }
+        Column(Modifier.fillMaxSize().background(CircleTheme.colors.background)) { DetailHeader(androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_title)) { nav.popBackStack() } }
         return
     }
     val isMember = group.isMember
     var tab by rememberSaveable { mutableStateOf(0) } // 0 Posts, 1 People
     val screenReader = com.circle.app.ui.a11y.rememberScreenReaderOn()
-    var showMap by rememberSaveable { mutableStateOf(!screenReader) }
+    val fits = com.circle.app.ui.orbit.rememberOrbitFits()
+    var showMapChoice by rememberSaveable { mutableStateOf(!screenReader) }
+    val showMap = showMapChoice && fits
     var dialog by rememberSaveable { mutableStateOf<GroupDialog?>(null) }
     var removing by rememberSaveable { mutableStateOf<String?>(null) }
     var menu by remember { mutableStateOf(false) }
@@ -138,12 +140,12 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                         Text(group.category, color = CircleTheme.colors.muted, fontSize = 12.sp)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (group.isPublic) {
-                                Text("PUBLIC", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.exploresearch_public), color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                             } else {
-                                Text("PRIVATE", color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_private), color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                             }
                             Spacer(Modifier.width(7.dp))
-                            Text("${group.memberCount} ${if (group.memberCount == 1) "member" else "members"}", color = CircleTheme.colors.muted, fontSize = 11.5.sp)
+                            Text(androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.members_count, group.memberCount, group.memberCount), color = CircleTheme.colors.muted, fontSize = 11.5.sp)
                         }
                     }
                 }
@@ -157,11 +159,11 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                         Box(
                             modifier = Modifier.weight(1f).clip(RoundedCornerShape(999.dp)).border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp)).padding(vertical = 9.dp),
                             contentAlignment = Alignment.Center
-                        ) { Text("✓ Member", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
+                        ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.common_member), color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
                         Spacer(Modifier.width(10.dp))
                         Text(
                             stringResource(R.string.group_leave), color = CircleTheme.colors.muted, fontSize = 12.sp,
-                            modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { dialog = GroupDialog.LEAVE }.padding(12.dp)
+                            modifier = Modifier.weight(1f, fill = false).clip(RoundedCornerShape(8.dp)).clickable { dialog = GroupDialog.LEAVE }.padding(12.dp)
                         )
                     }
                 } else {
@@ -169,21 +171,25 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                         if (group.isPublic) {
                             JoinRequestButton(group, modifier = Modifier.fillMaxWidth())
                             Text(
-                                if (group.joinRequested) "Request sent — every member can see it. You'll get access once someone approves it."
-                                else "Groups default to private. This one is public — your request will be visible to every member.",
+                                if (group.joinRequested) androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_request_sent_note)
+                                else androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_groups_default_to_private_this),
                                 color = CircleTheme.colors.muted, fontSize = 11.sp
                             )
                         } else {
-                            Text("This group is private — members add new people directly.", color = CircleTheme.colors.muted, fontSize = 11.sp)
+                            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_this_group_is_private_members), color = CircleTheme.colors.muted, fontSize = 11.sp)
                         }
                     }
                 }
             }
             if (isMember) {
                 item {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.weight(1f)) { UnderlineTabs(listOf("Posts", "People"), tab) { tab = it } }
-                        if (tab == 1) com.circle.app.ui.orbit.MapListToggle(showMap, { showMap = it })
+                    val stack = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f
+                    if (stack) Column(Modifier.fillMaxWidth()) {
+                        UnderlineTabs(listOf(androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_posts), androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_people)), tab) { tab = it }
+                        if (tab == 1 && fits) com.circle.app.ui.orbit.MapListToggle(showMap, { showMapChoice = it }, Modifier.align(Alignment.End).padding(top = 8.dp))
+                    } else Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) { UnderlineTabs(listOf(androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_posts), androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_people)), tab) { tab = it } }
+                        if (tab == 1 && fits) com.circle.app.ui.orbit.MapListToggle(showMap, { showMapChoice = it })
                     }
                 }
             }
@@ -201,11 +207,11 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                 item { ComposeToGroupRow(nav, group.id) }
 
                 if (groupPosts.isEmpty()) {
-                    item { Text("Nothing posted here yet. Be the first.", color = CircleTheme.colors.muted, fontSize = 13.sp) }
+                    item { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_nothing_posted_here_yet_be), color = CircleTheme.colors.muted, fontSize = 13.sp) }
                 }
                 items(groupPosts, key = { it.id }) { post -> GroupPostCard(nav, post, showGroup = false) }
             } else {
-                item { LockedPanel("Join to see what's being posted here.") }
+                item { LockedPanel(androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_join_to_see_what_s)) }
             }
         }
     }
@@ -241,7 +247,7 @@ private fun ComposeToGroupRow(nav: NavHostController, groupId: String) {
     ) {
         MeAvatar(28)
         Spacer(Modifier.width(10.dp))
-        Text("Post to the group…", color = CircleTheme.colors.muted, fontSize = 13.sp)
+        Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_post_to_the_group), color = CircleTheme.colors.muted, fontSize = 13.sp)
     }
 }
 

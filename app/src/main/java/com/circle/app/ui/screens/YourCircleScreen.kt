@@ -1,5 +1,6 @@
 package com.circle.app.ui.screens
 
+import com.circle.app.ui.a11y.label
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
@@ -73,7 +74,9 @@ fun YourCircleScreen(nav: NavHostController) {
     val reduceMotion = rememberReduceMotion()
     val screenReader = rememberScreenReaderOn()
 
-    var showMap by rememberSaveable { mutableStateOf(!screenReader) }
+    val fits = com.circle.app.ui.orbit.rememberOrbitFits()
+    var showMapChoice by rememberSaveable { mutableStateOf(!screenReader) }
+    val showMap = showMapChoice && fits
     var selectedId by rememberSaveable { mutableStateOf("EK") }
     var query by rememberSaveable { mutableStateOf("") }
     // Outer-ring people picked from the list (or just moved out), kept visible on the map.
@@ -118,27 +121,27 @@ fun YourCircleScreen(nav: NavHostController) {
             Box(
                 modifier = Modifier.size(44.dp).clip(CircleShape).clickable { nav.popBackStack() },
                 contentAlignment = Alignment.Center
-            ) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colors.text) }
+            ) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = androidx.compose.ui.res.stringResource(com.circle.app.R.string.back), tint = colors.text) }
             Column(modifier = Modifier.weight(1f).padding(start = 2.dp)) {
                 Text(
-                    "Your circle", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 21.sp,
+                    androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_your_circle), fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 21.sp,
                     letterSpacing = (-0.21).sp, color = colors.text, modifier = Modifier.semantics { heading() }
                 )
                 Text(
-                    "${summary.friendCount} friends · ${summary.innerCount} inner circle",
+                    androidx.compose.ui.res.stringResource(com.circle.app.R.string.circle_summary, summary.friendCount, summary.innerCount),
                     color = colors.muted, fontSize = 11.5.sp
                 )
             }
             Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(13.dp))
             Spacer(Modifier.width(5.dp))
-            Text("Only you", color = colors.muted, fontSize = 11.sp)
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.yourcircle_only_you), color = colors.muted, fontSize = 11.sp)
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(colors.border))
 
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
             item(key = "toggle") {
                 Box(Modifier.fillMaxWidth().padding(top = 10.dp, end = 14.dp), contentAlignment = Alignment.CenterEnd) {
-                    MapListToggle(showMap, { showMap = it })
+                    if (fits) MapListToggle(showMap, { showMapChoice = it })
                 }
             }
             if (showMap && friends.isNotEmpty() && friends.none { it.isInner }) {
@@ -146,7 +149,7 @@ fun YourCircleScreen(nav: NavHostController) {
                     EmptyState(
                         EmptyKind.YOUR_CIRCLE,
                         action = androidx.compose.ui.res.stringResource(com.circle.app.R.string.empty_circle_action),
-                        onAction = { showMap = false }
+                        onAction = { showMapChoice = false }
                     )
                 }
             }
@@ -161,9 +164,9 @@ fun YourCircleScreen(nav: NavHostController) {
 
             item(key = "all-header") {
                 Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 6.dp)) {
-                    SectionLabel(if (showMap) "ALL FRIENDS · ${summary.friendCount}" else "YOUR CIRCLE · ${summary.friendCount}")
+                    SectionLabel(androidx.compose.ui.res.stringResource(if (showMap) com.circle.app.R.string.circle_all_friends_caps else com.circle.app.R.string.circle_your_circle_caps, summary.friendCount))
                     Spacer(Modifier.height(10.dp))
-                    SearchField(query, onChange = { query = it }, placeholder = "Search your friends")
+                    SearchField(query, onChange = { query = it }, placeholder = androidx.compose.ui.res.stringResource(com.circle.app.R.string.note_share_search))
                 }
             }
             if (filtered.isEmpty()) {
@@ -172,10 +175,10 @@ fun YourCircleScreen(nav: NavHostController) {
                         Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("No friends match \"${query.trim()}\".", color = colors.muted, fontSize = 13.sp)
+                        Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.circle_no_match, query.trim()), color = colors.muted, fontSize = 13.sp)
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "Clear search", color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                            androidx.compose.ui.res.stringResource(com.circle.app.R.string.exploresearch_clear_search), color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                             modifier = Modifier.clickable { query = "" }.padding(8.dp)
                         )
                     }
@@ -192,7 +195,7 @@ fun YourCircleScreen(nav: NavHostController) {
             }
             if (!showMap) item(key = "footnote") {
                 Text(
-                    "They're never told, and there's no badge. It only decides who sees your inner-circle notes.",
+                    androidx.compose.ui.res.stringResource(com.circle.app.R.string.yourcircle_they_re_never_told_and),
                     color = colors.muted, fontSize = 11.sp, textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp)
                 )
@@ -223,7 +226,7 @@ private fun CircleMap(
             orbitRing(c, px(g.INNER_R), colors.border, dashed = false)
         }
         // You, in the middle
-        MeAvatar(g.ME_NODE.toInt(), Modifier.centeredAt(Pt(g.CX, g.CY), g.ME_NODE.dp).semantics { contentDescription = "You" })
+        MeAvatar(g.ME_NODE.toInt(), Modifier.centeredAt(Pt(g.CX, g.CY), g.ME_NODE.dp).then(Modifier.label(androidx.compose.ui.res.stringResource(com.circle.app.R.string.chat_you))))
 
         targets.forEach { (f, target, isInner) ->
             val p = f.person
@@ -240,8 +243,8 @@ private fun CircleMap(
                     fill = p.color,
                     description = buildString {
                         append(p.name)
-                        append(if (isInner) ", inner circle" else ", friend")
-                        if (isSelected) append(", selected")
+                        append(if (isInner) androidx.compose.ui.res.stringResource(com.circle.app.R.string.yourcircle_inner_circle_2) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.yourcircle_friend))
+                        if (isSelected) append(androidx.compose.ui.res.stringResource(com.circle.app.R.string.a11y_selected_suffix))
                     },
                     selected = isSelected,
                     halo = 2.dp,
@@ -254,9 +257,9 @@ private fun CircleMap(
             }
         }
         // Drawn after the nodes, as in the prototype, so it stays on top.
-        OrbitLabel("INNER CIRCLE", 8.5f, Modifier.placedAt(145f, 201f).width((100 * scale).dp))
+        OrbitLabel(androidx.compose.ui.res.stringResource(com.circle.app.R.string.yourcircle_inner_circle), 8.5f, Modifier.placedAt(145f, 201f).width((100 * scale).dp))
         Text(
-            "Tap a person. Move them between rings.",
+            androidx.compose.ui.res.stringResource(com.circle.app.R.string.yourcircle_tap_a_person_move_them),
             color = colors.muted, fontSize = 10.5.sp,
             modifier = Modifier.placedAt(14f, g.HEIGHT - 20f)
         )
@@ -290,14 +293,16 @@ private fun DetailCard(friend: FriendView, onToggle: () -> Unit) {
         MoveButton(isInner, fill = true, onClick = onToggle, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(9.dp))
         Text(
-            "They're never told, and there's no badge. It only decides who sees your inner-circle notes.",
+            androidx.compose.ui.res.stringResource(com.circle.app.R.string.yourcircle_they_re_never_told_and),
             color = colors.muted, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
         )
     }
 }
 
-private fun statusLine(sinceYear: Int, isInner: Boolean) =
-    (if (isInner) "In your inner circle" else "Friend") + " · since $sinceYear"
+@androidx.compose.runtime.Composable
+private fun statusLine(sinceYear: Int, isInner: Boolean): String = androidx.compose.ui.res.stringResource(
+    if (isInner) com.circle.app.R.string.yourcircle_status_inner else com.circle.app.R.string.yourcircle_status_friend, sinceYear
+)
 
 /** "Move to inner circle" (accent fill) or "Move back to friends" (outlined). */
 @Composable
@@ -314,7 +319,7 @@ private fun MoveButton(isInner: Boolean, fill: Boolean, onClick: () -> Unit, mod
         contentAlignment = Alignment.Center
     ) {
         Text(
-            if (isInner) "Move back to friends" else "Move to inner circle",
+            if (isInner) androidx.compose.ui.res.stringResource(com.circle.app.R.string.yourcircle_move_back_to_friends) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.yourcircle_move_to_inner_circle),
             color = if (isInner) colors.text else colors.onAccent,
             fontSize = if (fill) 13.sp else 12.sp,
             fontWeight = FontWeight.Bold
@@ -339,7 +344,7 @@ private fun FriendRow(
             .background(if (isSelected) colors.surface else Color.Transparent)
             .then(
                 if (showMoveButton) Modifier
-                else Modifier.clickable(onClickLabel = "Show on the map", onClick = onClick)
+                else Modifier.clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.yourcircle_show_on_the_map), onClick = onClick)
             )
             .semantics(mergeDescendants = !showMoveButton) {}
             .padding(horizontal = 16.dp, vertical = 9.dp),
@@ -350,7 +355,7 @@ private fun FriendRow(
         Column(Modifier.weight(1f)) {
             Text(person.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
             Text(
-                statusLine(friend.sinceYear, isInner) + if (isSelected) " · selected" else "",
+                statusLine(friend.sinceYear, isInner) + if (isSelected) androidx.compose.ui.res.stringResource(com.circle.app.R.string.circle_selected_suffix) else "",
                 color = colors.muted, fontSize = 11.5.sp
             )
         }
@@ -389,7 +394,7 @@ fun SearchField(value: String, onChange: (String) -> Unit, placeholder: String, 
         }
         if (value.isNotEmpty()) {
             Text(
-                "Clear", color = colors.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                androidx.compose.ui.res.stringResource(com.circle.app.R.string.yourcircle_clear), color = colors.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.clickable { onChange("") }.padding(start = 8.dp)
             )
         }

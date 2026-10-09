@@ -100,10 +100,11 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] CLAIMS.md; "no ads" only in About, Membership small print, Privacy short version and one sentence in the story's pricing slide
 
 ## Phase 10: Scaling, strings, accessibility, device pass
-- [~] Orbits take a scale already (OrbitMap); missing clamp 0.8-1.25 + list fallback, screenshot tests 320/360/390/430 x themes x font 1.0/2.0
-- [ ] All text in resources; HardcodedText lint as error; plurals
+- [x] Orbit scale clamp 0.8-1.25 with list fallback (orbitFit), node visuals scale, 48dp touch kept, orbit text capped at 1.3x
+- [x] Screenshot tests (Roborazzi) 4 orbits x 320/360/390/430dp x night/day x font 1.0/2.0 = 64 images
+- [x] All UI text in resources (plurals, format args), HardcodedText lint error + HardcodedTextTest for Compose, pseudolocales
 - [x] Map | List toggles (default list with TalkBack), reduce motion on orbit moves
-- [ ] 48dp target audit, device-pass table
+- [x] 48dp audit (TouchTargetTest over 14 screens), device-pass table in REPORT.md, large-font/landscape/RTL fixes
 
 ## Phase 11: Persistence (F6)
 - [ ] Room/DataStore so state survives restarts

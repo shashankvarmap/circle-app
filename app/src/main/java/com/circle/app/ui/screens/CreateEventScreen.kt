@@ -62,7 +62,7 @@ fun CreateEventScreen(nav: NavHostController) {
     var dateDay by rememberSaveable { mutableStateOf(LocalDate.now(zone).plusDays(1).toEpochDay()) }
     var minutes by rememberSaveable { mutableStateOf(18 * 60) }
     var picking by rememberSaveable { mutableStateOf<String?>(null) } // "date" | "time"
-    val visibilityLabels = listOf("Friends", "Friends of friends", "Open nearby")
+    val visibilityLabels = listOf(androidx.compose.ui.res.stringResource(com.circle.app.R.string.visibility_friends), androidx.compose.ui.res.stringResource(com.circle.app.R.string.visibility_fof), androidx.compose.ui.res.stringResource(com.circle.app.R.string.visibility_open))
     val startsAt = LocalDate.ofEpochDay(dateDay).atTime(LocalTime.of(minutes / 60, minutes % 60)).atZone(zone).toInstant()
     val inPast = startsAt.isBefore(java.time.Instant.now())
 
@@ -96,8 +96,8 @@ fun CreateEventScreen(nav: NavHostController) {
             modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Cancel", color = CircleTheme.colors.body, fontSize = 14.5.sp, modifier = Modifier.clickable { nav.popBackStack() })
-            Text("New event", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.cancel), color = CircleTheme.colors.body, fontSize = 14.5.sp, modifier = Modifier.clickable { nav.popBackStack() })
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_new_event), color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             val canCreate = title.isNotBlank() && !inPast
             Box(
                 modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(if (canCreate) CircleTheme.colors.accent else CircleTheme.colors.track)
@@ -107,28 +107,28 @@ fun CreateEventScreen(nav: NavHostController) {
                         }
                     }
                     .padding(horizontal = 16.dp, vertical = 7.dp)
-            ) { Text("Create", color = if (canCreate) CircleTheme.colors.onAccent else CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+            ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.newchat_create), color = if (canCreate) CircleTheme.colors.onAccent else CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
         }
 
         Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            LabeledField("TITLE", title, { title = it }, "e.g. Board Game Night")
+            LabeledField(androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_title), title, { title = it }, androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_e_g_board_game_night))
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionLabel("DATE")
+                    SectionLabel(androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_date))
                     PickerRow(Icons.Outlined.CalendarToday, LocalDate.ofEpochDay(dateDay).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))) { picking = "date" }
                 }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionLabel("TIME")
+                    SectionLabel(androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_time))
                     PickerRow(Icons.Outlined.Schedule, com.circle.app.ui.format.clockTime(startsAt)) { picking = "time" }
                 }
             }
             if (inPast) Text(stringResource(R.string.event_in_past), color = CircleTheme.colors.alertDot, fontSize = 12.sp)
 
-            LabeledField("VENUE", venue, { venue = it.take(80) }, "A public place, e.g. Kaffeehaus Zeitlos")
+            LabeledField(androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_venue), venue, { venue = it.take(80) }, androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_a_public_place_e_g))
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionLabel("TOPIC")
+                SectionLabel(androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_topic))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Topics.forEach { t -> VisibilityChip(t.lowercase().replaceFirstChar { it.uppercase() }, topic == t) { topic = t } }
                 }
@@ -136,12 +136,12 @@ fun CreateEventScreen(nav: NavHostController) {
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionLabel("CAPACITY")
+                SectionLabel(androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_capacity))
                 Row(
                     modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(11.dp)).background(CircleTheme.colors.surface).padding(horizontal = 14.dp, vertical = 9.dp),
                     horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Max attendees", color = CircleTheme.colors.body, fontSize = 13.5.sp)
+                    Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_max_attendees), color = CircleTheme.colors.body, fontSize = 13.5.sp)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         Box(
                             modifier = Modifier.size(26.dp).clip(CircleShape).background(CircleTheme.colors.track)
@@ -159,7 +159,7 @@ fun CreateEventScreen(nav: NavHostController) {
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionLabel("WHO CAN SEE THIS")
+                SectionLabel(androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_who_can_see_this))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     visibilityLabels.forEachIndexed { i, label ->
                         VisibilityChip(label, visibility == i) { visibility = i }
@@ -167,10 +167,10 @@ fun CreateEventScreen(nav: NavHostController) {
                 }
             }
 
-            LabeledField("DESCRIPTION", description, { description = it }, "What should people know before joining?", multiline = true)
+            LabeledField(androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_description), description, { description = it }, androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_what_should_people_know_before), multiline = true)
 
             Text(
-                "The conversation opens only for people who take a seat. It isn't a public comment section. Report and block are on every event.",
+                androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_the_conversation_opens_only_for),
                 color = CircleTheme.colors.muted, fontSize = 11.sp
             )
         }

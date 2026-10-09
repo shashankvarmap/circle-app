@@ -130,7 +130,7 @@ private fun CommentRow(comment: CommentView, avatarSize: Int, onPerson: (String)
             ) {
                 Text(author.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
                 Spacer(Modifier.width(6.dp))
-                Text("· ${relativeTime(comment.createdAt)}", color = colors.muted, fontSize = 12.sp)
+                Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.dot_time, relativeTime(comment.createdAt)), color = colors.muted, fontSize = 12.sp)
             }
             Text(comment.text, color = colors.body, fontSize = 13.5.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 2.dp))
             if (actions != null) {

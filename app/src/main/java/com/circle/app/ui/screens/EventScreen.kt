@@ -66,14 +66,16 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
     val vm = circleViewModel(key = "event-$eventId") { EventViewModel(it, eventId.orEmpty()) }
     val loaded by vm.event.collectAsStateWithLifecycle()
     val view = loaded ?: run {
-        Column(Modifier.fillMaxSize().background(CircleTheme.colors.background)) { DetailHeader("Event") { nav.popBackStack() } }
+        Column(Modifier.fillMaxSize().background(CircleTheme.colors.background)) { DetailHeader(androidx.compose.ui.res.stringResource(com.circle.app.R.string.event_title)) { nav.popBackStack() } }
         return
     }
     val event = view.summary
     val host = view.host
     val isJoined = view.hasSeat
     val screenReader = com.circle.app.ui.a11y.rememberScreenReaderOn()
-    var showMap by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!screenReader) }
+    val fits = com.circle.app.ui.orbit.rememberOrbitFits()
+    var showMapChoice by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!screenReader) }
+    val showMap = showMapChoice && fits
     var dialog by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<EventDialog?>(null) }
     var menu by remember { mutableStateOf(false) }
     var replyTo by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
@@ -142,10 +144,17 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
         LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(event.title, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
-                        Text(view.visibility.name.replace('_', ' '), color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                    }
+                    Text(
+                        stringResource(
+                            when (view.visibility) {
+                                com.circle.app.data.access.EventVisibility.FRIENDS -> R.string.visibility_friends
+                                com.circle.app.data.access.EventVisibility.FRIENDS_OF_FRIENDS -> R.string.visibility_fof
+                                com.circle.app.data.access.EventVisibility.OPEN_NEARBY -> R.string.visibility_open
+                            }
+                        ).uppercase(),
+                        color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp
+                    )
+                    Text(event.title, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.CalendarToday, contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(8.dp))
@@ -163,14 +172,14 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                             color = CircleTheme.colors.accent, trackColor = CircleTheme.colors.border
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text("${event.going} of ${event.capacity} going", color = CircleTheme.colors.muted, fontSize = 11.5.sp)
+                        Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.event_going_of, event.going, event.capacity), color = CircleTheme.colors.muted, fontSize = 11.5.sp)
                     }
                 }
             }
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) { com.circle.app.ui.components.SectionLabel("AT THE TABLE") }
-                    com.circle.app.ui.orbit.MapListToggle(showMap, { showMap = it })
+                    Box(Modifier.weight(1f)) { com.circle.app.ui.components.SectionLabel(androidx.compose.ui.res.stringResource(com.circle.app.R.string.event_at_the_table)) }
+                    if (fits) com.circle.app.ui.orbit.MapListToggle(showMap, { showMapChoice = it })
                 }
             }
             item { EventTable(view, showMap) { nav.openPerson(it) } }
@@ -178,12 +187,12 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                        .clickable(onClickLabel = "Open ${host.name}'s profile") { nav.openPerson(host.id) }
+                        .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.open_profile_of, host.name)) { nav.openPerson(host.id) }
                         .heightIn(min = 48.dp).padding(end = 8.dp)
                 ) {
                     Avatar(host.initials, host.color, size = 28)
                     Spacer(Modifier.width(9.dp))
-                    Text("Hosted by ${host.name} · ${view.seatsLeft} ${if (view.seatsLeft == 1) "seat" else "seats"} left", color = CircleTheme.colors.body, fontSize = 12.5.sp)
+                    Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.event_hosted_by, host.name, androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.event_seats_left, view.seatsLeft, view.seatsLeft)), color = CircleTheme.colors.body, fontSize = 12.5.sp)
                 }
             }
             item {
@@ -196,22 +205,22 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                             Box(
                                 modifier = Modifier.weight(1f).clip(RoundedCornerShape(999.dp)).border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp)).padding(vertical = 9.dp),
                                 contentAlignment = Alignment.Center
-                            ) { Text("✓ You're going", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
+                            ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.event_you_re_going), color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
                             Spacer(Modifier.width(10.dp))
                             if (!view.iAmHost) {
-                                Text("Leave seat", color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.clickable { vm.leaveSeat() })
+                                Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.event_leave_seat), color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.clickable { vm.leaveSeat() })
                             }
                         }
-                        Text(if (view.iAmHost) "You're hosting this one." else "Leaving your seat locks the conversation again and quietly lets ${host.firstName} know.", color = CircleTheme.colors.muted, fontSize = 11.sp)
+                        Text(if (view.iAmHost) androidx.compose.ui.res.stringResource(com.circle.app.R.string.event_hosting) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.event_leave_note, host.firstName), color = CircleTheme.colors.muted, fontSize = 11.sp)
                     }
                 } else {
                     if (view.isFull) {
                         Box(
                             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(999.dp)).border(1.dp, CircleTheme.colors.border, RoundedCornerShape(999.dp)).padding(vertical = 12.dp),
                             contentAlignment = Alignment.Center
-                        ) { Text("Event full", color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+                        ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.error_event_full), color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
                     } else {
-                        com.circle.app.ui.components.PrimaryButton("Take a seat", modifier = Modifier.fillMaxWidth()) { vm.takeSeat() }
+                        com.circle.app.ui.components.PrimaryButton(androidx.compose.ui.res.stringResource(com.circle.app.R.string.event_take_a_seat), modifier = Modifier.fillMaxWidth()) { vm.takeSeat() }
                     }
                 }
             }
@@ -219,7 +228,7 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                 when (val thread = view.thread) {
                     is EventThreadView.Open -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         val n = thread.comments.size
-                        com.circle.app.ui.components.SectionLabel(if (n == 0) "THREAD · NO REPLIES YET" else "THREAD · $n ${if (n == 1) "REPLY" else "REPLIES"}")
+                        com.circle.app.ui.components.SectionLabel(if (n == 0) androidx.compose.ui.res.stringResource(com.circle.app.R.string.event_thread_empty_caps) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.event_thread_caps, androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.thread_replies_caps, n, n)))
                         val actions = object : CommentActions {
                             override fun like(comment: com.circle.app.data.repo.CommentView) = vm.likeComment(comment.id)
                             override fun reply(comment: com.circle.app.data.repo.CommentView) { replyTo = comment.id }
@@ -243,9 +252,9 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                         }
                     }
                     is EventThreadView.Locked -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        LockedPanel("The conversation opens when you take a seat.", "${thread.replyCount} replies so far")
+                        LockedPanel(androidx.compose.ui.res.stringResource(com.circle.app.R.string.event_the_conversation_opens_when_you), "${thread.replyCount} replies so far")
                         Text(
-                            "Only the people actually coming can see or post here — not a public comment section.",
+                            androidx.compose.ui.res.stringResource(com.circle.app.R.string.event_only_the_people_actually_coming),
                             color = CircleTheme.colors.muted, fontSize = 11.sp
                         )
                     }

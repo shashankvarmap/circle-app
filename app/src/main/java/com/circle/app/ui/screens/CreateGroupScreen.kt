@@ -53,8 +53,8 @@ fun CreateGroupScreen(nav: NavHostController) {
             modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Cancel", color = CircleTheme.colors.body, fontSize = 14.5.sp, modifier = Modifier.clickable { nav.popBackStack() })
-            Text("New group", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.cancel), color = CircleTheme.colors.body, fontSize = 14.5.sp, modifier = Modifier.clickable { nav.popBackStack() })
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.creategroup_new_group), color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             val canCreate = name.isNotBlank()
             androidx.compose.foundation.layout.Box(
                 modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(if (canCreate) CircleTheme.colors.accent else CircleTheme.colors.track)
@@ -62,7 +62,7 @@ fun CreateGroupScreen(nav: NavHostController) {
                         vm.createGroup(name, category, description, isPublic = !isPrivate) { if (it is Outcome.Success) nav.navigate(com.circle.app.navigation.Routes.groupDetail(it.value)) { popUpTo(com.circle.app.navigation.Routes.CREATE_GROUP) { inclusive = true } } }
                     }
                     .padding(horizontal = 16.dp, vertical = 7.dp)
-            ) { Text("Create", color = if (canCreate) CircleTheme.colors.onAccent else CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+            ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.newchat_create), color = if (canCreate) CircleTheme.colors.onAccent else CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
         }
 
         Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -70,26 +70,26 @@ fun CreateGroupScreen(nav: NavHostController) {
                 androidx.compose.foundation.layout.Box(
                     modifier = Modifier.size(72.dp).clip(RoundedCornerShape(20.dp)).background(AvatarOrange),
                     contentAlignment = Alignment.Center
-                ) { Icon(Icons.Outlined.Image, contentDescription = "Add group icon", tint = avatarTextColor(AvatarOrange)) }
+                ) { Icon(Icons.Outlined.Image, contentDescription = androidx.compose.ui.res.stringResource(com.circle.app.R.string.creategroup_add_group_icon), tint = avatarTextColor(AvatarOrange)) }
             }
-            LabeledField("GROUP NAME", name, { name = it }, "e.g. Aachen Photo Walk")
-            LabeledField("CATEGORY", category, { category = it }, "e.g. Photography, Fitness & Sports")
-            LabeledField("DESCRIPTION", description, { description = it }, "What's this group about?", multiline = true)
+            LabeledField(androidx.compose.ui.res.stringResource(com.circle.app.R.string.creategroup_group_name), name, { name = it }, androidx.compose.ui.res.stringResource(com.circle.app.R.string.creategroup_e_g_aachen_photo_walk))
+            LabeledField(androidx.compose.ui.res.stringResource(com.circle.app.R.string.creategroup_category), category, { category = it }, androidx.compose.ui.res.stringResource(com.circle.app.R.string.creategroup_e_g_photography_fitness_sports))
+            LabeledField(androidx.compose.ui.res.stringResource(com.circle.app.R.string.createevent_description), description, { description = it }, androidx.compose.ui.res.stringResource(com.circle.app.R.string.creategroup_what_s_this_group_about), multiline = true)
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                com.circle.app.ui.components.SectionLabel("VISIBILITY")
+                com.circle.app.ui.components.SectionLabel(androidx.compose.ui.res.stringResource(com.circle.app.R.string.creategroup_visibility))
                 VisibilityOption(
-                    icon = Icons.Outlined.Lock, title = "Private", subtitle = "Only visible to members. Default for every group.",
+                    icon = Icons.Outlined.Lock, title = androidx.compose.ui.res.stringResource(com.circle.app.R.string.creategroup_private), subtitle = androidx.compose.ui.res.stringResource(com.circle.app.R.string.creategroup_only_visible_to_members_default),
                     selected = isPrivate
                 ) { isPrivate = true }
                 VisibilityOption(
-                    icon = Icons.Outlined.Public, title = "Public", subtitle = "Listed in Explore. Join requests are visible to every member.",
+                    icon = Icons.Outlined.Public, title = androidx.compose.ui.res.stringResource(com.circle.app.R.string.creategroup_public), subtitle = androidx.compose.ui.res.stringResource(com.circle.app.R.string.creategroup_listed_in_explore_join_requests),
                     selected = !isPrivate
                 ) { isPrivate = false }
             }
 
             Text(
-                "You can switch this later from the group's settings. Every group also gets a linked chat, in Messages → Groups, once it's created.",
+                androidx.compose.ui.res.stringResource(com.circle.app.R.string.creategroup_you_can_switch_this_later),
                 color = CircleTheme.colors.muted, fontSize = 11.sp
             )
         }

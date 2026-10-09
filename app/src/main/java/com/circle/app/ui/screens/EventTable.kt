@@ -1,5 +1,6 @@
 package com.circle.app.ui.screens
 
+import com.circle.app.ui.a11y.label
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -52,7 +53,7 @@ private fun TableOrbit(view: EventView, seats: List<SeatView>, onPerson: (String
         Box(
             Modifier.centeredAt(Pt(g.CX, g.CY), (g.TABLE_R * 2).dp).size((g.TABLE_R * 2).dp)
                 .clip(CircleShape).background(colors.surface).border(1.dp, colors.border, CircleShape)
-                .semantics { contentDescription = "${e.going} of ${e.capacity} seats taken" },
+                .then(Modifier.label(androidx.compose.ui.res.stringResource(com.circle.app.R.string.table_seats_taken_of, e.going, e.capacity))),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -63,7 +64,7 @@ private fun TableOrbit(view: EventView, seats: List<SeatView>, onPerson: (String
                     },
                     fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 40.sp, lineHeight = 42.sp, color = colors.text
                 )
-                Text("at the table", color = colors.muted, fontSize = 11.sp)
+                Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.eventtable_at_the_table), color = colors.muted, fontSize = 11.sp)
             }
         }
         seats.forEachIndexed { i, seat ->
@@ -77,9 +78,9 @@ private fun TableOrbit(view: EventView, seats: List<SeatView>, onPerson: (String
                     OrbitNode(
                         center = pt, size = size, shape = NodeShape.Circle, fill = fill,
                         description = when {
-                            p == null -> "Seat taken"
-                            isMe -> if (seat.isHost) "You, host" else "You"
-                            else -> p.name + if (seat.isHost) ", host" else ""
+                            p == null -> androidx.compose.ui.res.stringResource(com.circle.app.R.string.table_seat_taken)
+                            isMe -> if (seat.isHost) androidx.compose.ui.res.stringResource(com.circle.app.R.string.eventtable_you_host) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.chat_you)
+                            else -> if (seat.isHost) androidx.compose.ui.res.stringResource(com.circle.app.R.string.table_name_host, p.name) else p.name
                         },
                         accentRing = seat.isHost || isMe, halo = 2.dp, reduceMotion = reduceMotion,
                         onClick = if (p == null || isMe) null else ({ onPerson(p.id) })
@@ -94,12 +95,12 @@ private fun TableOrbit(view: EventView, seats: List<SeatView>, onPerson: (String
                 }
                 SeatKind.EMPTY -> OrbitNode(
                     center = pt, size = size, shape = NodeShape.Circle, fill = colors.background,
-                    border = NodeBorder(2.dp, colors.muted, dashed = true), description = "Empty seat",
+                    border = NodeBorder(2.dp, colors.muted, dashed = true), description = androidx.compose.ui.res.stringResource(com.circle.app.R.string.table_empty_seat),
                     reduceMotion = reduceMotion, alpha = 0.6f
                 ) {}
                 SeatKind.MORE -> OrbitNode(
                     center = pt, size = size, shape = NodeShape.Circle, fill = colors.track,
-                    description = "${seat.moreCount} more seats", reduceMotion = reduceMotion
+                    description = androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.table_more_seats, seat.moreCount, seat.moreCount), reduceMotion = reduceMotion
                 ) { Text("+${seat.moreCount}", color = colors.muted, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
             }
         }
@@ -112,19 +113,19 @@ private fun TableList(seats: List<SeatView>, onPerson: (String) -> Unit) {
         seats.filter { it.kind == SeatKind.PERSON || it.kind == SeatKind.ME }.forEach { seat ->
             val p = seat.person ?: return@forEach
             val label = buildString {
-                append(if (seat.kind == SeatKind.ME) "You" else "At the table")
-                if (seat.isHost) append(" · host")
+                append(if (seat.kind == SeatKind.ME) androidx.compose.ui.res.stringResource(com.circle.app.R.string.chat_you) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.eventtable_at_the_table_2))
+                if (seat.isHost) append(" · " + androidx.compose.ui.res.stringResource(com.circle.app.R.string.table_host))
             }
             PersonListRow(p, label, onPerson)
         }
         val taken = seats.count { it.kind == SeatKind.TAKEN }
         if (taken > 0) Text(
-            if (taken == 1) "1 seat taken" else "$taken seats taken",
+            androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.table_taken_seats, taken, taken),
             color = CircleTheme.colors.muted, fontSize = 12.5.sp, modifier = Modifier.padding(vertical = 4.dp)
         )
         val empty = seats.count { it.kind == SeatKind.EMPTY } + (seats.firstOrNull { it.kind == SeatKind.MORE }?.moreCount ?: 0)
         if (empty > 0) Text(
-            if (empty == 1) "1 empty seat" else "$empty empty seats",
+            androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.table_empty_seats, empty, empty),
             color = CircleTheme.colors.muted, fontSize = 12.5.sp, modifier = Modifier.padding(vertical = 8.dp)
         )
     }

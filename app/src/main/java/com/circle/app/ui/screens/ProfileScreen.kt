@@ -76,7 +76,7 @@ fun ProfileScreen(nav: NavHostController) {
                     Box(
                         modifier = Modifier.size(44.dp).clip(CircleShape).clickable { nav.navigate(Routes.SETTINGS) },
                         contentAlignment = Alignment.Center
-                    ) { Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = CircleTheme.colors.text) }
+                    ) { Icon(Icons.Outlined.Settings, contentDescription = androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_settings), tint = CircleTheme.colors.text) }
                 }
             }
             item {
@@ -84,17 +84,17 @@ fun ProfileScreen(nav: NavHostController) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.PushPin, contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(13.dp))
                         Spacer(Modifier.width(5.dp))
-                        Text("PINNED", color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.messages_pinned_caps), color = CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                     }
                     Text(
-                        me?.pinnedThought.orEmpty().ifBlank { "No pinned thought yet. Add one in Settings → Edit profile." },
+                        me?.pinnedThought.orEmpty().ifBlank { androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_no_pinned) },
                         color = CircleTheme.colors.body, fontSize = 14.5.sp
                     )
                 }
             }
             item { FriendsRow(circle, onOpen = { nav.navigate(Routes.YOUR_CIRCLE) }) }
             item {
-                UnderlineTabs(listOf("All", "Thoughts", "Posts"), tab.ordinal) { tab = ProfileTab.entries[it] }
+                UnderlineTabs(listOf(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_all), androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_thoughts), androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_posts)), tab.ordinal) { tab = ProfileTab.entries[it] }
             }
             if (visiblePosts.isEmpty()) {
                 item {
@@ -110,13 +110,13 @@ fun ProfileScreen(nav: NavHostController) {
             val photoNotes = mine.filter { it.hasMedia && !it.isRepost }
             if (photoNotes.isNotEmpty()) item(key = "photos") {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SectionLabel("PHOTOS")
+                    SectionLabel(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_photos))
                     photoNotes.take(9).chunked(3).forEach { row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             row.forEach { n ->
                                 Box(
                                     Modifier.weight(1f).height(100.dp).clip(RoundedCornerShape(12.dp)).background(CircleTheme.colors.track)
-                                        .clickable(onClickLabel = "Open photo") { nav.navigate(Routes.viewer(n.id)) },
+                                        .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.media_open)) { nav.navigate(Routes.viewer(n.id)) },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     val first = n.media.firstOrNull()
@@ -134,10 +134,10 @@ fun ProfileScreen(nav: NavHostController) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.Lock, contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Private by default", color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_private_by_default), color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                     Text(
-                        "If someone who isn't a friend finds their way here, all they see is your avatar and your pinned thought — nothing else on this page is visible until you're connected.",
+                        androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_if_someone_who_isn_t),
                         color = CircleTheme.colors.muted, fontSize = 12.sp
                     )
                 }
@@ -153,6 +153,7 @@ private fun FriendsRow(circle: CircleSummary, onOpen: () -> Unit) {
     val colors = CircleTheme.colors
     val friends = circle.friendCount
     val inner = circle.innerCount
+    val friendsRowLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_friends_row, friends, inner)
     Column {
         Row(
             modifier = Modifier
@@ -160,27 +161,38 @@ private fun FriendsRow(circle: CircleSummary, onOpen: () -> Unit) {
                 .clip(RoundedCornerShape(13.dp))
                 .background(colors.surface)
                 .border(1.5.dp, colors.accent, RoundedCornerShape(13.dp))
-                .clickable(onClickLabel = "Open your circle", onClick = onOpen)
+                .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_open_your_circle), onClick = onOpen)
                 .semantics(mergeDescendants = true) {
-                    contentDescription = "$friends friends, $inner inner circle. See your circle"
+                    contentDescription = friendsRowLabel
                 }
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("$friends", color = colors.text, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
-            Text("friends", color = colors.muted, fontSize = 13.sp)
-            Text("·", color = colors.muted, fontSize = 13.sp)
-            Text("$inner", color = colors.text, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
-            Text("inner circle", color = colors.muted, fontSize = 13.sp)
-            Spacer(Modifier.weight(1f))
-            Text("See your circle", color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
+            // The counts wrap onto a second line at large font sizes, so "See your circle" always fits.
+            @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+            androidx.compose.foundation.layout.FlowRow(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("$friends", color = colors.text, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                    Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_friends), color = colors.muted, fontSize = 13.sp)
+                    Text("·", color = colors.muted, fontSize = 13.sp)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("$inner", color = colors.text, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                    Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_inner_circle), color = colors.muted, fontSize = 13.sp)
+                }
+            }
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_see_your_circle), color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
             Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.accent, modifier = Modifier.size(16.dp))
         }
         Row(Modifier.padding(start = 2.dp, top = 7.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.muted, modifier = Modifier.size(12.dp))
             Spacer(Modifier.width(5.dp))
-            Text("Only you see this. Tap it to open your circle.", color = colors.muted, fontSize = 11.sp)
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_only_you_see_this_tap), color = colors.muted, fontSize = 11.sp)
         }
     }
 }

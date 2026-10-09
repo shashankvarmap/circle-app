@@ -173,7 +173,11 @@ fun ComposePostScreen(nav: NavHostController, quoteId: String? = null, groupId: 
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(colors.background).imePadding()) {
+    // Landscape with the keyboard up leaves very little height: then the whole screen scrolls as one,
+    // so the text field never collapses to nothing.
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().background(colors.background).imePadding()) {
+    val compact = maxHeight < 260.dp
+    Column(modifier = if (compact) Modifier.fillMaxSize().verticalScroll(rememberScrollState()) else Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
@@ -193,7 +197,7 @@ fun ComposePostScreen(nav: NavHostController, quoteId: String? = null, groupId: 
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(colors.border))
 
-        Column(modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Column(modifier = (if (compact) Modifier else Modifier.weight(1f).verticalScroll(rememberScrollState())).fillMaxWidth().padding(16.dp)) {
             Row {
                 MeAvatar(38)
                 Spacer(Modifier.width(12.dp))
@@ -307,6 +311,7 @@ fun ComposePostScreen(nav: NavHostController, quoteId: String? = null, groupId: 
                 }
             }
         }
+    }
     }
 }
 

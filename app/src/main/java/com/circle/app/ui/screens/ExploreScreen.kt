@@ -1,5 +1,6 @@
 package com.circle.app.ui.screens
 
+import com.circle.app.ui.format.text
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -83,7 +84,9 @@ class ExploreViewModel(repo: CircleRepository) : RepoViewModel(repo) {
 fun ExploreScreen(nav: NavHostController) {
     val colors = CircleTheme.colors
     val screenReader = rememberScreenReaderOn()
-    var showMap by rememberSaveable { mutableStateOf(!screenReader) }
+    val fits = com.circle.app.ui.orbit.rememberOrbitFits()
+    var showMapChoice by rememberSaveable { mutableStateOf(!screenReader) }
+    val showMap = showMapChoice && fits
     var selectedKey by rememberSaveable { mutableStateOf("e:board-game-night") }
     var topic by rememberSaveable { mutableStateOf<String?>(null) } // Sector name, null = all
 
@@ -114,21 +117,28 @@ fun ExploreScreen(nav: NavHostController) {
                 }
             } else if (showMap) {
                 item(key = "map") {
-                    Box {
+                    Column {
+                        Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_squares_groups_circles_events),
+                                color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.26.sp,
+                                modifier = Modifier.weight(1f).padding(end = 8.dp)
+                            )
+                            if (fits) MapListToggle(showMap, { showMapChoice = it })
+                        }
                         ExploreMap(onMap, selected?.key) { selectedKey = it.key }
-                        MapListToggle(showMap, { showMap = it }, Modifier.align(Alignment.TopEnd).padding(end = 14.dp))
                     }
                 }
                 if (selected != null) item(key = "preview") { PreviewCard(selected) { open(selected) } }
                 item(key = "foot") {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            "Placed by topic and how soon. Nothing here is ranked.",
+                            androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_placed_by_topic_and_how),
                             color = colors.muted, fontSize = 11.sp, textAlign = TextAlign.Center
                         )
                         Text(
-                            "See all", color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.5.sp,
-                            modifier = Modifier.clickable(onClickLabel = "See everything as a list") { showMap = false }.padding(10.dp)
+                            androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_see_all), color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.5.sp,
+                            modifier = Modifier.clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_see_everything_as_a_list)) { showMapChoice = false }.padding(10.dp)
                         )
                     }
                 }
@@ -139,10 +149,10 @@ fun ExploreScreen(nav: NavHostController) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Everything nearby", color = colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                            androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_everything_nearby), color = colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp,
                             modifier = Modifier.weight(1f).semantics { heading() }
                         )
-                        MapListToggle(showMap, { showMap = it })
+                        if (fits) MapListToggle(showMap, { showMapChoice = it })
                     }
                 }
                 item(key = "chips") { TopicChips(topic) { topic = it } }
@@ -156,26 +166,26 @@ fun ExploreScreen(nav: NavHostController) {
                 if (listEvents.isEmpty() && listGroups.isEmpty()) {
                     item(key = "empty") {
                         Column(Modifier.fillMaxWidth().padding(vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            val name = Sector.entries.firstOrNull { it.name == topic }?.label?.lowercase() ?: ""
-                            Text("Nothing in $name this week.", color = colors.muted, fontSize = 13.sp)
+                            val name = Sector.entries.firstOrNull { it.name == topic }?.text()?.lowercase() ?: ""
+                            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_nothing_in, name), color = colors.muted, fontSize = 13.sp)
                             Text(
-                                "Show all topics", color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                                androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_show_all_topics), color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                                 modifier = Modifier.clickable { topic = null }.padding(8.dp)
                             )
                         }
                     }
                 }
                 if (listEvents.isNotEmpty()) {
-                    item(key = "events-label") { ListSection("EVENTS · THIS WEEK") }
+                    item(key = "events-label") { ListSection(androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_events_this_week)) }
                     listEvents.forEach { item -> item(key = item.key) { EventListRow(item.e) { open(item) } } }
                 }
                 if (listGroups.isNotEmpty()) {
-                    item(key = "groups-label") { ListSection("GROUPS") }
+                    item(key = "groups-label") { ListSection(androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_groups)) }
                     listGroups.forEach { item -> item(key = item.key) { GroupListRow(item.g) { open(item) } } }
                 }
                 item(key = "list-foot") {
                     Text(
-                        "Placed by topic and how soon. Nothing here is ranked.",
+                        androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_placed_by_topic_and_how),
                         color = colors.muted, fontSize = 11.sp, textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth().padding(24.dp)
                     )
@@ -194,9 +204,9 @@ private fun ExploreHeader(nav: NavHostController) {
 
     Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "Explore", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 24.sp,
-                letterSpacing = (-0.48).sp, color = colors.text,
+            com.circle.app.ui.components.FitText(
+                androidx.compose.ui.res.stringResource(com.circle.app.R.string.bottomnavbar_explore),
+                androidx.compose.ui.text.TextStyle(fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 24.sp, letterSpacing = (-0.48).sp, color = colors.text),
                 modifier = Modifier.weight(1f).semantics { heading() }
             )
             Box {
@@ -205,23 +215,23 @@ private fun ExploreHeader(nav: NavHostController) {
                         .clip(RoundedCornerShape(999.dp))
                         .background(colors.surface)
                         .border(1.dp, colors.border, RoundedCornerShape(999.dp))
-                        .clickable(onClickLabel = "Change city") { cityMenu = true }
+                        .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_change_city)) { cityMenu = true }
                         .padding(horizontal = 11.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = colors.text, modifier = Modifier.size(13.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Aachen", color = colors.text, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
+                    Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_aachen), color = colors.text, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.width(6.dp))
                     Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null, tint = colors.muted, modifier = Modifier.size(12.dp))
                 }
                 DropdownMenu(expanded = cityMenu, onDismissRequest = { cityMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text("Aachen") },
-                        trailingIcon = { Icon(Icons.Outlined.Check, contentDescription = "Current city", tint = colors.accent) },
+                        text = { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_aachen)) },
+                        trailingIcon = { Icon(Icons.Outlined.Check, contentDescription = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_current_city), tint = colors.accent) },
                         onClick = { cityMenu = false }
                     )
-                    DropdownMenuItem(text = { Text("Other cities aren't available yet") }, enabled = false, onClick = {})
+                    DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_other_cities_aren_t_available)) }, enabled = false, onClick = {})
                 }
             }
             Spacer(Modifier.width(6.dp))
@@ -229,12 +239,12 @@ private fun ExploreHeader(nav: NavHostController) {
                 Box(
                     modifier = Modifier.size(40.dp).clip(CircleShape).clickable { createMenu = true },
                     contentAlignment = Alignment.Center
-                ) { Icon(Icons.Outlined.Add, contentDescription = "Create a group or event", tint = colors.accent) }
+                ) { Icon(Icons.Outlined.Add, contentDescription = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_create_a_group_or_event), tint = colors.accent) }
                 DropdownMenu(expanded = createMenu, onDismissRequest = { createMenu = false }) {
-                    DropdownMenuItem(text = { Text("Create group") }, onClick = {
+                    DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_create_group)) }, onClick = {
                         createMenu = false; nav.navigate(Routes.CREATE_GROUP)
                     })
-                    DropdownMenuItem(text = { Text("Create event") }, onClick = {
+                    DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_create_event)) }, onClick = {
                         createMenu = false; nav.navigate(Routes.CREATE_EVENT)
                     })
                 }
@@ -247,13 +257,13 @@ private fun ExploreHeader(nav: NavHostController) {
                 .clip(RoundedCornerShape(12.dp))
                 .background(colors.surface)
                 .border(1.dp, colors.border, RoundedCornerShape(12.dp))
-                .clickable(role = Role.Button, onClickLabel = "Open search") { nav.navigate(Routes.EXPLORE_SEARCH) }
+                .clickable(role = Role.Button, onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_open_search)) { nav.navigate(Routes.EXPLORE_SEARCH) }
                 .padding(horizontal = 14.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(Icons.Outlined.Search, contentDescription = null, tint = colors.muted, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(9.dp))
-            Text("Search", color = colors.muted, fontSize = 13.5.sp)
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_search), color = colors.muted, fontSize = 13.5.sp)
         }
     }
 }
@@ -280,14 +290,14 @@ private fun ExploreMap(items: List<ExploreItem>, selectedKey: String?, onSelect:
         }
         Sector.entries.forEach { s ->
             val p = compassPoint(g.CX, g.CY, g.LABEL_R, s.labelDeg)
-            OrbitLabel(s.label, 8.5f, Modifier.placedAt(p.x - 34f, p.y - 6f).width((68 * scale).dp))
+            OrbitLabel(s.text().uppercase(), 8.5f, Modifier.placedAt(p.x - 48f, p.y - 6f).width((96 * scale).dp))
         }
         Box(
             modifier = Modifier.centeredAt(Pt(g.CX, g.CY), g.CENTER_PIN.dp).size(g.CENTER_PIN.dp)
                 .clip(CircleShape).background(colors.accent),
             contentAlignment = Alignment.Center
-        ) { Icon(Icons.Outlined.LocationOn, contentDescription = "Aachen, the centre of the map", tint = colors.onAccent, modifier = Modifier.size(21.dp)) }
-        OrbitLabel("AACHEN", 9f, Modifier.placedAt(155f, 196f).width((80 * scale).dp))
+        ) { Icon(Icons.Outlined.LocationOn, contentDescription = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_aachen_the_centre_of_the), tint = colors.onAccent, modifier = Modifier.size(21.dp)) }
+        OrbitLabel(androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_aachen_2), 9f, Modifier.placedAt(155f, 196f).width((80 * scale).dp))
 
         items.forEach { item ->
             val isSelected = item.key == selectedKey
@@ -300,8 +310,8 @@ private fun ExploreMap(items: List<ExploreItem>, selectedKey: String?, onSelect:
                         shape = NodeShape.Circle,
                         fill = colors.surface,
                         border = NodeBorder(1.5.dp, colors.accent),
-                        description = "${e.title}, event, ${e.dateSpoken()}, ${e.going} of ${e.capacity} going" +
-                            if (isSelected) ", selected" else "",
+                        description = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_event_node, e.title, e.dateSpoken(), e.going, e.capacity) +
+                            if (isSelected) androidx.compose.ui.res.stringResource(com.circle.app.R.string.a11y_selected_suffix) else "",
                         selected = isSelected,
                         selectedGap = 3.dp,
                         selectedScale = g.SELECTED_SCALE,
@@ -324,7 +334,7 @@ private fun ExploreMap(items: List<ExploreItem>, selectedKey: String?, onSelect:
                         size = g.GROUP_NODE.dp,
                         shape = NodeShape.Rounded(g.GROUP_NODE_RADIUS.dp),
                         fill = grp.color,
-                        description = "${grp.name}, group, ${grp.memberCount} members" + if (isSelected) ", selected" else "",
+                        description = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_group_node, grp.name, grp.memberCount) + if (isSelected) androidx.compose.ui.res.stringResource(com.circle.app.R.string.a11y_selected_suffix) else "",
                         selected = isSelected,
                         selectedGap = 3.dp,
                         selectedScale = g.SELECTED_SCALE,
@@ -336,11 +346,6 @@ private fun ExploreMap(items: List<ExploreItem>, selectedKey: String?, onSelect:
                 }
             }
         }
-        Text(
-            "SQUARES = GROUPS · CIRCLES = EVENTS",
-            color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.26.sp,
-            modifier = Modifier.placedAt(14f, 8f)
-        )
     }
 }
 
@@ -360,10 +365,10 @@ private fun PreviewCard(item: ExploreItem, onOpen: () -> Unit) {
         val kicker: String
         val meta: String
         when (item) {
-            is ExploreItem.Event -> { kicker = "EVENT · ${item.e.topic}"; meta = "${item.e.whenLabel} · ${item.e.venue}" }
+            is ExploreItem.Event -> { kicker = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_kicker_event, item.e.topic); meta = androidx.compose.ui.res.stringResource(com.circle.app.R.string.dot_pair, item.e.whenLabel, item.e.venue) }
             is ExploreItem.Group -> {
-                kicker = "GROUP · ${item.g.topic}"
-                meta = "${item.g.memberCount} members, " + if (item.g.isPublic) "public" else "private"
+                kicker = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_kicker_group, item.g.topic)
+                meta = "${item.g.memberCount} members, " + if (item.g.isPublic) androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_public) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_private)
             }
         }
         Text(kicker, color = colors.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
@@ -382,7 +387,7 @@ private fun PreviewCard(item: ExploreItem, onOpen: () -> Unit) {
                     .padding(horizontal = 18.dp, vertical = 8.dp)
             ) {
                 Text(
-                    if (item is ExploreItem.Event) "View event" else "View group",
+                    if (item is ExploreItem.Event) androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_view_event) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_view_group),
                     color = colors.onAccent, fontSize = 12.5.sp, fontWeight = FontWeight.Bold
                 )
             }
@@ -402,14 +407,14 @@ private fun CapacityBar(e: EventSummary, modifier: Modifier = Modifier) {
             )
         }
         Spacer(Modifier.width(8.dp))
-        Text("${e.going} of ${e.capacity} going", color = colors.muted, fontSize = 11.5.sp)
+        Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.event_going_of, e.going, e.capacity), color = colors.muted, fontSize = 11.5.sp)
     }
 }
 
 @Composable
 private fun TopicChips(selected: String?, onSelect: (String?) -> Unit) {
     val colors = CircleTheme.colors
-    val options = listOf<Pair<String?, String>>(null to "All") + Sector.entries.map { it.name to it.label.lowercase().replaceFirstChar { c -> c.uppercase() } }
+    val options = listOf<Pair<String?, String>>(null to androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_all_topics)) + Sector.entries.map { it.name to it.text() }
     Row(
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -439,12 +444,13 @@ private fun ListSection(text: String) {
 @Composable
 private fun EventListRow(e: EventSummary, onClick: () -> Unit) {
     val colors = CircleTheme.colors
+    val eventRowLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_event_row, e.title, e.dateSpoken(), e.venue, e.going, e.capacity)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClickLabel = "View event", onClick = onClick)
+            .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_view_event), onClick = onClick)
             .semantics(mergeDescendants = true) {
-                contentDescription = "${e.title}, event, ${e.dateSpoken()}, ${e.venue}, ${e.going} of ${e.capacity} going"
+                contentDescription = eventRowLabel
             }
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -453,7 +459,7 @@ private fun EventListRow(e: EventSummary, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(e.title, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text("${e.whenLabel} · ${e.venue}", color = colors.muted, fontSize = 12.sp, maxLines = 1)
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.dot_pair, e.whenLabel, e.venue), color = colors.muted, fontSize = 12.sp, maxLines = 1)
             CapacityBar(e, Modifier.padding(top = 6.dp))
         }
     }
@@ -463,16 +469,17 @@ private fun EventListRow(e: EventSummary, onClick: () -> Unit) {
 private fun GroupListRow(g: GroupView, onClick: () -> Unit) {
     val colors = CircleTheme.colors
     val status = when {
-        g.isMember -> "Member"
-        g.joinRequested -> "Requested"
+        g.isMember -> androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_member_status)
+        g.joinRequested -> androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_requested)
         else -> null
     }
+    val groupRowLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_group_row, g.name, g.topic.lowercase(), g.memberCount) + (status?.let { ", $it" } ?: "")
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClickLabel = "View group", onClick = onClick)
+            .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_view_group), onClick = onClick)
             .semantics(mergeDescendants = true) {
-                contentDescription = "${g.name}, group, ${g.topic.lowercase()}, ${g.memberCount} members" + (status?.let { ", $it" } ?: "")
+                contentDescription = groupRowLabel
             }
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -481,7 +488,7 @@ private fun GroupListRow(g: GroupView, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(g.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text("${g.category} · ${g.memberCount} members", color = colors.muted, fontSize = 12.sp)
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.dot_pair, g.category, androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.members_count, g.memberCount, g.memberCount)), color = colors.muted, fontSize = 12.sp)
         }
         if (status != null) Text(status, color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
     }

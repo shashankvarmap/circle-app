@@ -71,4 +71,15 @@ class OrbitTest {
         assertEquals(38f, EventTableGeometry.seatSize(12), eps)
         assertEquals(30f, EventTableGeometry.seatSize(13), eps)
     }
+
+    @Test
+    fun orbitScaleIsClampedAndSmallPhonesGetTheList() {
+        assertEquals(1f, orbitFit(390f).scale, eps)
+        assertEquals(320f / 390f, orbitFit(320f).scale, eps) // 0.82: still a map
+        assertEquals(false, orbitFit(320f).useList)
+        assertEquals(0.8f, orbitFit(280f).scale, eps)
+        assertEquals(true, orbitFit(280f).useList) // under 0.8: the list view
+        assertEquals(1.25f, orbitFit(800f).scale, eps) // tablets: capped and centred
+        assertEquals(false, orbitFit(800f).useList)
+    }
 }

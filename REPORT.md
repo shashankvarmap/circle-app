@@ -358,3 +358,57 @@ invite domain and its assetlinks.json.
 - New dependency: libphonenumber (the document asks for it: real country list, validation, E.164).
 - New permission: READ_CONTACTS, requested only on "Connect contacts" or "Show my contacts here", after the explanation.
 - Log in replaces local state with the demo account; Create account starts a fresh, empty one.
+
+---
+
+## Phase 10: Scaling, strings, accessibility, device pass (ACCESS_AND_LAUNCH 5-7)
+
+**Works now**
+- **Strings:** every user-visible text in `ui/` comes from `res/values/strings.xml` or `plurals.xml` (about 230 strings moved,
+  counts as plurals: seats left, empty seats, members, "and N more", replies; format arguments instead of concatenation, e.g.
+  "Hosted by %1$s · %2$s", "%1$d of %2$d going"). Enum display names (theme, who can send requests/invite, Explore sectors,
+  event visibility) moved out of the data layer into `ui/format/EnumText.kt`. Lint `HardcodedText` is an **error**; because lint
+  only checks XML, `HardcodedTextTest` fails the build on any Compose literal with words in Text / contentDescription /
+  onClickLabel / description / placeholder / title / subtitle. Pseudolocales (`en-XA`, `ar-XB`) are on in debug.
+- **Orbit scaling:** `orbitFit()` (pure, unit-tested): scale = width / 390, clamped to 0.8..1.25; under 0.8 the screen shows its
+  list view and hides the Map | List switch; above 1.25 the orbit stops growing and is centred. Geometry **and** node visuals
+  scale; the touch target stays at least 48dp. Text inside an orbit grows with the system font only up to 1.3x (so labels never
+  overlap nodes); everything around it (cards, lists, headers) reflows at any size.
+- **Large font fixes found by the screenshots:** Explore's legend no longer sits under the Map | List switch (it overlapped even
+  at 320dp / 100%); sector labels have room for "OUTDOORS"; the "Explore" title shrinks instead of breaking mid-word
+  (`FitText`); the event's visibility tag moved above the title (the title was one letter per line at 200%); the group's
+  Member / Leave row shares the width; at large font the group's Map | List switch drops under the tabs; Profile's
+  "128 friends · 5 inner circle" wraps so "See your circle" always shows; Compose in landscape with the keyboard up scrolls as
+  one piece instead of collapsing the text field.
+- **Screenshot tests:** `OrbitScreenshotTest` (Roborazzi 1.13, Robolectric native graphics) renders Explore, Your circle,
+  Group people and Event table at 320/360/390/430dp x night/day x font 1.0/2.0 = 64 images in `app/src/test/screenshots`
+  (`./gradlew recordRoborazziDebug` to refresh; a normal `build` renders them all and fails on a crash).
+- **48dp audit:** `TouchTargetTest` walks 14 screens and checks every clickable node's touch area is at least 48x48dp
+  (passes: small visuals get their touch area extended).
+
+**Device pass** (emulator, 411dp phone, API 34; the 320/360/430dp widths are covered by the screenshot tests)
+
+| Screen | Test | Result |
+|---|---|---|
+| Home, Profile, Explore | Font 1.3 and 2.0 | Pass after fixes (Profile friends row, Explore legend/title) |
+| Explore, Your circle, Group people, Event table | 320-430dp, both themes, font 1.0/2.0 (screenshots) | Pass after fixes |
+| Compose | Rotation with text typed | Pass (text kept); landscape + keyboard fixed (field was collapsed) |
+| Compose | Process death (home, `am kill`, relaunch) | Pass (draft and screen restored) |
+| Settings | Theme Night -> Day -> Night while running | Pass (applies at once) |
+| Settings, Home | Back button | Pass |
+| Home | Right to left (`ar-XB`) | Pass (mirrored, icons and nav order flip) |
+| Home | Long text (`en-XA`) | Pass (no clipping) |
+| Orbit screens | Screen reader on | Pass (list view by default; Phase 2 tests) |
+| Orbit screens | Remove animations | Pass (reduce motion honoured; earlier phases) |
+| All | Crash log after the pass | Clean (`AndroidRuntime:E` empty) |
+
+Not done on a device: a real tablet or foldable (the orbit cap at 1.25 is covered by a unit test only), the Accessibility
+Scanner app (not installed on the emulator), TalkBack itself (not on this emulator image; labels and the list default are
+covered by the UI tests).
+
+**Decisions**
+- Text inside orbits stops growing at 1.3x the default size (the doc allows orbit text to clip; capping it keeps it legible
+  without overlap). Lists and cards reflow at 200%.
+- Demo-only text that stands for user content (seed posts, the Explore search sample captions, the "Aachen" city) stays as data,
+  not strings; the city picker is a stub until location exists.
+- New test-only dependency: Roborazzi 1.13.0 (the doc names Paparazzi or Roborazzi; Roborazzi reuses the Robolectric setup).

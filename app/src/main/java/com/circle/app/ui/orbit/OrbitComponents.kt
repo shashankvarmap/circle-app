@@ -1,5 +1,6 @@
 package com.circle.app.ui.orbit
 
+import com.circle.app.ui.a11y.label
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -55,18 +56,28 @@ class OrbitScope internal constructor(val scale: Float) {
 }
 
 /**
- * A fixed-size polar map, centered horizontally. On screens narrower than [width] the
- * geometry (rings, positions) shrinks to fit; node sizes and touch targets stay the same.
+ * A polar map designed on a [width]×[height] canvas, scaled to the real width ([orbitFit]: 0.8..1.25)
+ * and centred. Geometry and node visuals scale; touch targets never drop below 48dp. Screens check
+ * [rememberOrbitFits] first and show their list view when the phone is too narrow.
  */
 @Composable
 fun OrbitMap(width: Float, height: Float, modifier: Modifier = Modifier, content: @Composable OrbitScope.() -> Unit) {
     BoxWithConstraints(modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-        val scale = min(1f, maxWidth.value / width)
+        val scale = orbitFit(maxWidth.value, width).scale
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val capped = androidx.compose.ui.unit.Density(density.density, minOf(density.fontScale, MAX_ORBIT_FONT_SCALE))
         Box(Modifier.size((width * scale).dp, (height * scale).dp)) {
-            OrbitScope(scale).content()
+            androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides capped) {
+                OrbitScope(scale).content()
+            }
         }
     }
 }
+
+/** False on phones too narrow for the orbit (scale under 0.8): the screen shows its list view instead. */
+@Composable
+fun rememberOrbitFits(designWidth: Float = 390f): Boolean =
+    !orbitFit(androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.toFloat(), designWidth).useList
 
 /** Ring stroke as in the prototype: 1.4dp, dashed rings use a "2 6" round-capped dash. */
 fun DrawScope.orbitRing(center: Offset, radius: Float, color: Color, dashed: Boolean) {
@@ -92,6 +103,9 @@ sealed interface NodeShape {
 data class NodeBorder(val width: Dp, val color: Color, val dashed: Boolean = false)
 
 private const val MIN_TOUCH_DP = 48f
+
+/** Text inside an orbit (labels, day numbers, initials) grows with the system font only this far, so it never overlaps. */
+private const val MAX_ORBIT_FONT_SCALE = 1.3f
 
 /**
  * One person, event or group on an orbit.
@@ -123,7 +137,8 @@ fun OrbitScope.OrbitNode(
     content: @Composable BoxScope.() -> Unit
 ) {
     val colors = CircleTheme.colors
-    val hit = maxOf(size, MIN_TOUCH_DP.dp)
+    val visual = size * this.scale
+    val hit = maxOf(visual, MIN_TOUCH_DP.dp)
     val scale by animateFloatAsState(
         targetValue = if (selected) selectedScale else 1f,
         animationSpec = if (reduceMotion) snap() else tween(200),
@@ -151,7 +166,7 @@ fun OrbitScope.OrbitNode(
     ) {
         Box(
             modifier = Modifier
-                .size(size)
+                .size(visual)
                 .graphicsLayer { scaleX = scale; scaleY = scale; this.alpha = alpha }
                 .drawBehind {
                     val ringed = selected || accentRing
@@ -232,14 +247,15 @@ fun MapListToggle(showMap: Boolean, onChange: (Boolean) -> Unit, modifier: Modif
             .border(1.dp, colors.border, RoundedCornerShape(999.dp))
             .padding(2.dp)
     ) {
-        listOf("Map" to true, "List" to false).forEach { (label, isMap) ->
+        listOf(androidx.compose.ui.res.stringResource(com.circle.app.R.string.orbit_map) to true, androidx.compose.ui.res.stringResource(com.circle.app.R.string.orbit_list) to false).forEach { (label, isMap) ->
+            val viewLabel = if (isMap) androidx.compose.ui.res.stringResource(com.circle.app.R.string.orbit_map_view) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.orbit_list_view)
             val active = showMap == isMap
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(999.dp))
                     .background(if (active) colors.track else Color.Transparent)
                     .clickable(role = Role.Tab) { onChange(isMap) }
-                    .semantics { selected = active; contentDescription = "$label view" }
+                    .semantics { selected = active }.then(Modifier.label(viewLabel))
                     .defaultMinSize(minHeight = 32.dp)
                     .padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center

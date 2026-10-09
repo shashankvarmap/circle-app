@@ -1,5 +1,6 @@
 package com.circle.app.ui.components
 
+import com.circle.app.ui.a11y.label
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -134,10 +135,10 @@ fun PostActions(nav: NavHostController, note: Note, showComment: Boolean = true)
                 modifier = Modifier
                     .height(40.dp)
                     .clip(RoundedCornerShape(999.dp))
-                    .clickable(onClickLabel = "Open thread") { nav.navigate(Routes.thread(target)) }
+                    .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.common_open_thread)) { nav.navigate(Routes.thread(target)) }
                     .padding(horizontal = 11.dp)
             ) {
-                Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = "Comments", tint = colors.muted, modifier = Modifier.size(18.dp))
+                Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = androidx.compose.ui.res.stringResource(com.circle.app.R.string.common_comments), tint = colors.muted, modifier = Modifier.size(18.dp))
                 if (note.commentCount > 0) {
                     Spacer(Modifier.width(5.dp))
                     Text("${note.commentCount}", color = colors.muted, fontSize = 12.sp)
@@ -154,7 +155,8 @@ fun PostActions(nav: NavHostController, note: Note, showComment: Boolean = true)
                     reposted = reposted,
                     onRepost = { actions.repost(target) },
                     onUndo = { actions.undoRepost(target) },
-                    onQuote = { nav.navigate(Routes.compose(quote = target)) }
+                    onQuote = { nav.navigate(Routes.compose(quote = target)) },
+                    labels = com.circle.app.ui.components.RepostLabels(androidx.compose.ui.res.stringResource(com.circle.app.R.string.repost_repost), androidx.compose.ui.res.stringResource(com.circle.app.R.string.repost_undo), androidx.compose.ui.res.stringResource(com.circle.app.R.string.repost_quote))
                 )
             )
         }
@@ -162,12 +164,12 @@ fun PostActions(nav: NavHostController, note: Note, showComment: Boolean = true)
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .clickable(onClickLabel = if (liked) "Remove like" else "Like") { actions.toggleLike(target) },
+                .clickable(onClickLabel = if (liked) androidx.compose.ui.res.stringResource(com.circle.app.R.string.comment_unlike) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.comment_like)) { actions.toggleLike(target) },
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 if (liked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                contentDescription = if (liked) "Liked. Only the author sees this" else "Like",
+                contentDescription = if (liked) androidx.compose.ui.res.stringResource(com.circle.app.R.string.common_liked_only_the_author_sees) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.comment_like),
                 tint = if (liked) colors.accent else colors.muted,
                 modifier = Modifier.size(18.dp)
             )
@@ -253,7 +255,7 @@ fun ReplyComposer(placeholder: String = "Add a reply…", above: (@Composable ()
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.AutoMirrored.Outlined.Send, contentDescription = "Send",
+                    Icons.AutoMirrored.Outlined.Send, contentDescription = androidx.compose.ui.res.stringResource(com.circle.app.R.string.chat_send),
                     tint = if (canSend) CircleTheme.colors.onAccent else CircleTheme.colors.muted, modifier = Modifier.size(15.dp)
                 )
             }
@@ -267,7 +269,7 @@ fun ReplyComposer(placeholder: String = "Add a reply…", above: (@Composable ()
  * never instant. Shared by Contacts, Explore search and lists of people.
  */
 @Composable
-fun FriendRequestButton(personId: String, relationship: Relationship, addLabel: String = "Add friend") {
+fun FriendRequestButton(personId: String, relationship: Relationship, addLabel: String = androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_add_friend)) {
     val colors = CircleTheme.colors
     val actions = circleViewModel { ActionsViewModel(it) }
     val shape = RoundedCornerShape(999.dp)
@@ -279,15 +281,15 @@ fun FriendRequestButton(personId: String, relationship: Relationship, addLabel: 
         Relationship.REQUEST_SENT -> Box(
             Modifier.clip(shape).border(1.dp, colors.border, shape)
                 .clickable { actions.cancelFriendRequest(personId) }
-                .semantics { contentDescription = "Requested. Tap to cancel the request" }
+                .then(Modifier.label(androidx.compose.ui.res.stringResource(com.circle.app.R.string.request_cancel_label)))
                 .padding(horizontal = 14.dp, vertical = 7.dp)
-        ) { Text("Requested", color = colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
+        ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_requested), color = colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
         Relationship.REQUEST_RECEIVED -> Box(
             Modifier.clip(shape).background(colors.accent).clickable { actions.acceptRequest(personId) }
                 .padding(horizontal = 14.dp, vertical = 7.dp)
-        ) { Text("Accept", color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+        ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_accept), color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
         Relationship.FRIEND -> Box(Modifier.padding(horizontal = 14.dp, vertical = 7.dp)) {
-            Text("✓ Friends", color = colors.accent, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_friends_check), color = colors.accent, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
         }
         else -> Unit
     }
@@ -304,18 +306,18 @@ fun JoinRequestButton(group: GroupView, modifier: Modifier = Modifier) {
         group.isMember -> Box(
             modifier = modifier.clip(shape).border(1.dp, colors.border, shape).padding(horizontal = 14.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center
-        ) { Text("✓ Member", color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+        ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.common_member), color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
 
         group.joinRequested -> Box(
             modifier = modifier.clip(shape).border(1.dp, colors.border, shape).padding(horizontal = 14.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center
-        ) { Text("Requested", color = colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
+        ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_requested), color = colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
 
         else -> Box(
             modifier = modifier.clip(shape).background(colors.accent)
                 .clickable { actions.requestToJoin(group.ref.id) }
                 .padding(horizontal = 14.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center
-        ) { Text("Request to join", color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+        ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.common_request_to_join), color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
     }
 }

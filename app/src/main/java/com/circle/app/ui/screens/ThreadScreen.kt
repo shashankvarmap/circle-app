@@ -191,7 +191,7 @@ private fun RootPost(nav: NavHostController, post: Note) {
         Row(verticalAlignment = Alignment.Top) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable(onClickLabel = "Open ${post.author.name}'s profile") { nav.openPerson(post.author.id) }
+            modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.open_profile_of, post.author.name)) { nav.openPerson(post.author.id) }
         ) {
             if (post.isMine) MeAvatar(44) else Avatar(post.author.initials, post.author.color, size = 44)
             Spacer(Modifier.width(11.dp))

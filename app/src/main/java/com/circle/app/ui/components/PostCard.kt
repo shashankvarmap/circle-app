@@ -47,7 +47,7 @@ fun FeedCard(nav: NavHostController, note: Note) {
                 Icon(Icons.Outlined.Repeat, contentDescription = null, tint = CircleTheme.colors.muted, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(stringResource(R.string.note_you_reposted), color = CircleTheme.colors.muted, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
-                Text(" · ${relativeTime(note.createdAt)}", color = CircleTheme.colors.muted, fontSize = 12.sp)
+                Text(" " + androidx.compose.ui.res.stringResource(com.circle.app.R.string.dot_time, relativeTime(note.createdAt)), color = CircleTheme.colors.muted, fontSize = 12.sp)
             }
             when (repostOf) {
                 is NoteView.Full -> {
@@ -57,7 +57,7 @@ fun FeedCard(nav: NavHostController, note: Note) {
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(11.dp))
                             .background(CircleTheme.colors.background)
-                            .clickable(onClickLabel = "Open thread") { nav.navigate(Routes.thread(original.id)) }
+                            .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.common_open_thread)) { nav.navigate(Routes.thread(original.id)) }
                             .padding(12.dp)
                     ) { NoteBody(nav, original, embedQuote = true) }
                     Box(Modifier.padding(start = 2.dp)) { PostActions(nav, note) }
@@ -80,14 +80,14 @@ private fun NoteBody(nav: NavHostController, note: Note, embedQuote: Boolean) {
     Row {
         Box(
             Modifier.clip(CircleShape)
-                .clickable(onClickLabel = "Open ${author.name}'s profile") { nav.openPerson(author.id) }
+                .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.open_profile_of, author.name)) { nav.openPerson(author.id) }
         ) { if (author.isMe) MeAvatar(AVATAR) else Avatar(author.initials, author.color, size = AVATAR) }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.Top) {
                 Box(
                     Modifier.weight(1f).clip(RoundedCornerShape(6.dp))
-                        .clickable(onClickLabel = "Open ${author.name}'s profile") { nav.openPerson(author.id) }
+                        .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.open_profile_of, author.name)) { nav.openPerson(author.id) }
                 ) { NoteHeader(note) }
                 Box(Modifier.offset(x = 8.dp, y = (-10).dp)) { NoteMenuButton(nav, note) }
             }
@@ -114,7 +114,7 @@ private fun NoteHeader(note: Note) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(note.author.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, maxLines = 1)
         Spacer(Modifier.width(6.dp))
-        Text("· ${relativeTime(note.createdAt)}", color = CircleTheme.colors.muted, fontSize = 12.sp, maxLines = 1)
+        Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.dot_time, relativeTime(note.createdAt)), color = CircleTheme.colors.muted, fontSize = 12.sp, maxLines = 1)
         if (note.isMine && note.audience == Audience.INNER_CIRCLE) {
             Spacer(Modifier.width(8.dp))
             InnerCircleTag()
@@ -143,7 +143,7 @@ fun EmbeddedPost(view: NoteView, modifier: Modifier = Modifier, onClick: (() -> 
             .clip(RoundedCornerShape(11.dp))
             .background(colors.background)
             .border(1.dp, colors.border, RoundedCornerShape(11.dp))
-            .then(if (onClick != null && view !is NoteView.Hidden) Modifier.clickable(onClickLabel = "Open the original note", onClick = onClick) else Modifier)
+            .then(if (onClick != null && view !is NoteView.Hidden) Modifier.clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.postcard_open_the_original_note), onClick = onClick) else Modifier)
             .padding(12.dp)
     ) {
         when (view) {
@@ -163,7 +163,7 @@ fun EmbeddedPost(view: NoteView, modifier: Modifier = Modifier, onClick: (() -> 
                     if (post.author.isMe) MeAvatar(24) else Avatar(post.author.initials, post.author.color, size = 24)
                     Spacer(Modifier.width(8.dp))
                     Text(post.author.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Text(" · ${relativeTime(post.createdAt)}", color = colors.muted, fontSize = 12.sp)
+                    Text(" " + androidx.compose.ui.res.stringResource(com.circle.app.R.string.dot_time, relativeTime(post.createdAt)), color = colors.muted, fontSize = 12.sp)
                 }
                 if (post.text.isNotEmpty()) {
                     Text(
@@ -185,7 +185,7 @@ fun GroupPostCard(nav: NavHostController, note: Note, showGroup: Boolean) {
             note.group?.let { g ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable(onClickLabel = "Open group") { nav.navigate(Routes.groupDetail(g.id)) }
+                    modifier = Modifier.clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.chat_open_group)) { nav.navigate(Routes.groupDetail(g.id)) }
                 ) {
                     GroupTile(g.initial, g.color, size = 22)
                     Spacer(Modifier.width(8.dp))

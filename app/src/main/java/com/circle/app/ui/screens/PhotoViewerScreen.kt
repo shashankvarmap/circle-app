@@ -78,7 +78,7 @@ fun MediaViewer(media: List<MediaRef>?, index: Int, unavailable: Boolean = false
                 HorizontalPager(pager, Modifier.fillMaxSize()) { page -> MediaPage(media[page]) }
                 if (media.size > 1) {
                     Text(
-                        "${pager.currentPage + 1} / ${media.size}", color = Color.White, fontSize = 13.sp,
+                        androidx.compose.ui.res.stringResource(com.circle.app.R.string.viewer_position, pager.currentPage + 1, media.size), color = Color.White, fontSize = 13.sp,
                         modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp)
                     )
                 }

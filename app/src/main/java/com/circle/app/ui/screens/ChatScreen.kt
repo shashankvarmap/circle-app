@@ -326,8 +326,8 @@ private fun copyText(m: MessageView): String = when (m.kind) {
     MessageKind.TEXT -> m.text
     MessageKind.PHOTO -> stringResource(R.string.chat_photo)
     MessageKind.SHARED_NOTE -> when (val n = m.sharedNote) {
-        is NoteView.Full -> "${n.note.author.name}: ${n.note.text}"
-        is NoteView.Snippet -> "${n.authorName}: ${n.text}"
+        is NoteView.Full -> androidx.compose.ui.res.stringResource(com.circle.app.R.string.chat_copy_note, n.note.author.name, n.note.text)
+        is NoteView.Snippet -> androidx.compose.ui.res.stringResource(com.circle.app.R.string.chat_copy_note, n.authorName, n.text)
         else -> stringResource(R.string.chat_shared_a_note)
     }
     MessageKind.EVENT_INVITE -> m.event?.let { "${it.title}, ${eventWhen(it.startsAt)}" } ?: stringResource(R.string.chat_event_invite)

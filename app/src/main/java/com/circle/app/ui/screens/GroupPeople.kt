@@ -86,13 +86,13 @@ private fun GroupOrbit(group: GroupView, hosts: List<PersonRef>, members: List<P
             orbitRing(c, px(g.HOST_R), colors.border, dashed = false)
         }
         Box(Modifier.centeredAt(Pt(g.CX, g.CY), g.CENTER_TILE.dp)) { GroupTile(group.ref.initial, group.ref.color, size = g.CENTER_TILE.toInt()) }
-        OrbitLabel("HOSTS", 8.5f, Modifier.placedAt(g.CX - 40f, g.CY + 28f).width((80 * scale).dp))
+        OrbitLabel(androidx.compose.ui.res.stringResource(com.circle.app.R.string.grouppeople_hosts), 8.5f, Modifier.placedAt(g.CX - 40f, g.CY + 28f).width((80 * scale).dp))
 
         hosts.take(2).forEachIndexed { i, p ->
             OrbitNode(
                 center = compassPoint(g.CX, g.CY, g.HOST_R, if (i == 0) 0f else 180f),
                 size = 38.dp, shape = NodeShape.Circle, fill = p.color,
-                description = "${p.name}, host", accentRing = true, halo = 2.dp,
+                description = androidx.compose.ui.res.stringResource(com.circle.app.R.string.table_name_host, p.name), accentRing = true, halo = 2.dp,
                 reduceMotion = reduceMotion, onClick = { onPerson(p.id) }
             ) { Text(p.initials, color = avatarTextColor(p.color), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
         }
@@ -101,18 +101,18 @@ private fun GroupOrbit(group: GroupView, hosts: List<PersonRef>, members: List<P
             when (slot) {
                 is Slot.Member -> OrbitNode(
                     center = pt, size = 36.dp, shape = NodeShape.Circle, fill = slot.p.color,
-                    description = "${slot.p.name}, member", halo = 2.dp, reduceMotion = reduceMotion,
+                    description = androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_name_member, slot.p.name), halo = 2.dp, reduceMotion = reduceMotion,
                     onClick = { onPerson(slot.p.id) }
                 ) { Text(slot.p.initials, color = avatarTextColor(slot.p.color), fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                 is Slot.Request -> OrbitNode(
                     center = pt, size = 36.dp, shape = NodeShape.Circle, fill = colors.background,
                     border = NodeBorder(2.dp, colors.accent, dashed = true),
-                    description = "${slot.p.name}, asked to join", reduceMotion = reduceMotion,
+                    description = androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_name_asked, slot.p.name), reduceMotion = reduceMotion,
                     onClick = { onPerson(slot.p.id) }
                 ) { Text(slot.p.initials, color = colors.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                 is Slot.More -> OrbitNode(
                     center = pt, size = 36.dp, shape = NodeShape.Circle, fill = colors.track,
-                    description = "$more more members", reduceMotion = reduceMotion
+                    description = androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.group_more_members, more, more), reduceMotion = reduceMotion
                 ) { Text("+$more", color = colors.muted, fontSize = 10.5.sp, fontWeight = FontWeight.Bold) }
             }
         }
@@ -122,16 +122,16 @@ private fun GroupOrbit(group: GroupView, hosts: List<PersonRef>, members: List<P
 @Composable
 private fun GroupList(hosts: List<PersonRef>, members: List<PersonRef>, hidden: Int, onPerson: (String) -> Unit, host: HostActions?) {
     Column {
-        ListHeading("HOSTS")
-        hosts.forEach { PersonListRow(it, "Host", onPerson) }
-        ListHeading("MEMBERS")
+        ListHeading(androidx.compose.ui.res.stringResource(com.circle.app.R.string.grouppeople_hosts))
+        hosts.forEach { PersonListRow(it, androidx.compose.ui.res.stringResource(com.circle.app.R.string.grouppeople_host), onPerson) }
+        ListHeading(androidx.compose.ui.res.stringResource(com.circle.app.R.string.grouppeople_members))
         members.forEach { m ->
-            PersonListRow(m, "Member", onPerson) {
+            PersonListRow(m, androidx.compose.ui.res.stringResource(com.circle.app.R.string.grouppeople_member), onPerson) {
                 if (host != null) SmallPill(stringResource(R.string.group_remove), filled = false) { host.remove(m.id) }
             }
         }
         if (hidden > 0) {
-            Text("and $hidden more members", color = CircleTheme.colors.muted, fontSize = 12.5.sp, modifier = Modifier.padding(vertical = 8.dp))
+            Text(androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.group_and_more_members, hidden, hidden), color = CircleTheme.colors.muted, fontSize = 12.5.sp, modifier = Modifier.padding(vertical = 8.dp))
         }
     }
 }
@@ -140,13 +140,13 @@ private fun GroupList(hosts: List<PersonRef>, members: List<PersonRef>, hidden: 
 private fun AskedToJoin(requests: List<JoinRequestView>, onPerson: (String) -> Unit, host: HostActions?) {
     if (requests.isEmpty()) return
     Column(Modifier.padding(top = 8.dp)) {
-        ListHeading("ASKED TO JOIN · ${requests.size}")
+        ListHeading(androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_asked_caps, requests.size))
         Text(
-            "Dashed circles are join requests. Every member can see them, not just the hosts.",
+            androidx.compose.ui.res.stringResource(com.circle.app.R.string.grouppeople_dashed_circles_are_join_requests),
             color = CircleTheme.colors.muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp)
         )
         requests.forEach { r ->
-            PersonListRow(r.person, "asked ${relativeTime(r.askedAt)} ago", onPerson) {
+            PersonListRow(r.person, androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_asked_when, relativeTime(r.askedAt)), onPerson) {
                 if (host != null) {
                     SmallPill(stringResource(R.string.group_approve), filled = true) { host.approve(r.person.id) }
                     Spacer(Modifier.width(6.dp))
@@ -168,7 +168,7 @@ fun PersonListRow(p: PersonRef, subtitle: String, onPerson: (String) -> Unit, tr
     Row(verticalAlignment = Alignment.CenterVertically) {
         Row(
             Modifier.weight(1f).heightIn(min = 52.dp).clip(RoundedCornerShape(10.dp))
-                .clickable(onClickLabel = "Open ${p.name}'s profile") { onPerson(p.id) }.padding(vertical = 6.dp),
+                .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.open_profile_of, p.name)) { onPerson(p.id) }.padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Avatar(p.initials, p.color, size = 36)

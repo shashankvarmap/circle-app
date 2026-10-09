@@ -21,12 +21,28 @@ fun compassPoint(cx: Float, cy: Float, r: Float, phiDeg: Float): Pt {
 fun ringPoints(cx: Float, cy: Float, r: Float, n: Int, offsetDeg: Float = 0f): List<Pt> =
     List(n) { k -> compassPoint(cx, cy, r, offsetDeg + k * 360f / n) }
 
+/**
+ * How an orbit designed on a [designWidth]-dp canvas fits [availableWidth] dp (ACCESS_AND_LAUNCH 5).
+ * The scale is clamped to 0.8..1.25: below 0.8 the screen shows the list view instead; above 1.25
+ * the orbit stops growing and is centred.
+ */
+data class OrbitFit(val scale: Float, val useList: Boolean)
+
+const val MIN_ORBIT_SCALE = 0.8f
+const val MAX_ORBIT_SCALE = 1.25f
+
+fun orbitFit(availableWidth: Float, designWidth: Float = 390f): OrbitFit {
+    val raw = availableWidth / designWidth
+    return OrbitFit(raw.coerceIn(MIN_ORBIT_SCALE, MAX_ORBIT_SCALE), useList = raw < MIN_ORBIT_SCALE)
+}
+
 /** Outer-ring friends sit half a slot off, so they sit between inner-ring people. */
 fun outerOffsetDeg(n: Int): Float = 360f / (2 * maxOf(1, n))
 
 /** The four Explore sectors. Angle = topic. */
-enum class Sector(val label: String, val labelDeg: Float) {
-    OUTDOORS("OUTDOORS", 45f), SOCIAL("SOCIAL", 135f), MUSIC("MUSIC", 225f), MAKING("MAKING", 315f);
+/** Display names are in resources (ui/format/EnumText.kt). */
+enum class Sector(val labelDeg: Float) {
+    OUTDOORS(45f), SOCIAL(135f), MUSIC(225f), MAKING(315f);
 
     companion object {
         /** The sector a compass angle falls in: each spans 90° between the spokes. */

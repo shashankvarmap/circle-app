@@ -1,5 +1,6 @@
 package com.circle.app.ui.signup
 
+import com.circle.app.ui.a11y.label
 import android.content.Context
 import android.content.Intent
 import android.telephony.TelephonyManager
@@ -217,7 +218,7 @@ fun CodeStep(vm: SignupViewModel, onBack: () -> Unit, onVerified: () -> Unit) {
             )
             Row(
                 Modifier.fillMaxWidth().offset { IntOffset(shake.value.roundToInt(), 0) }.clickable { focus.requestFocus() }
-                    .semantics { contentDescription = "Code, ${vm.code.length} of 6 digits" },
+                    .then(Modifier.label(androidx.compose.ui.res.stringResource(com.circle.app.R.string.signup_code_label, vm.code.length))),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 repeat(6) { i ->
@@ -284,7 +285,7 @@ fun ProfileStep(vm: SignupViewModel, onBack: () -> Unit, onContinue: () -> Unit)
         InputBox(vm.pinned, vm::changePinned, stringResource(R.string.signup_pinned_hint), Modifier.fillMaxWidth())
         Row(Modifier.padding(top = 6.dp)) {
             Text(stringResource(R.string.signup_pinned_note), color = colors.muted, fontSize = 12.sp, modifier = Modifier.weight(1f))
-            Text("${vm.pinned.length} / 140", color = colors.muted, fontSize = 12.sp)
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.count_of, vm.pinned.length, 140), color = colors.muted, fontSize = 12.sp)
         }
     }
 }

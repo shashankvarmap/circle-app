@@ -1,5 +1,6 @@
 package com.circle.app.ui.components
 
+import com.circle.app.ui.a11y.label
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.*
 import androidx.compose.animation.core.MutableTransitionState
@@ -58,6 +59,9 @@ import com.circle.app.ui.theme.cardShadow
 import kotlinx.coroutines.delay
 
 /** One row in the repost popover. A null [onClick] is a disabled row that explains why. */
+/** The menu's three labels, resolved from resources by the caller. */
+data class RepostLabels(val repost: String, val undo: String, val quote: String)
+
 data class RepostMenuItem(val label: String, val icon: ImageVector, val onClick: (() -> Unit)?)
 
 private val RowHeight = 48.dp
@@ -100,7 +104,7 @@ fun RepostButton(reposted: Boolean, items: List<RepostMenuItem>, modifier: Modif
             .clip(CircleShape)
             .onGloballyPositioned { anchor = it.boundsInRoot() } // the popup shares the content root's origin (below the status bar)
             .combinedClickable(onClick = ::openMenu, onLongClick = ::openMenu, role = Role.Button)
-            .semantics { contentDescription = if (reposted) "Reposted. Repost menu" else "Repost or quote" },
+            .then(Modifier.label(if (reposted) androidx.compose.ui.res.stringResource(com.circle.app.R.string.repost_menu_reposted) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.repost_menu_label))),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -230,12 +234,13 @@ fun repostMenuItems(
     reposted: Boolean,
     onRepost: () -> Unit,
     onUndo: () -> Unit,
-    onQuote: () -> Unit
+    onQuote: () -> Unit,
+    labels: RepostLabels
 ): List<RepostMenuItem> = when {
     blockReason != null -> listOf(RepostMenuItem(blockReason, Icons.Outlined.Lock, null))
-    reposted -> listOf(RepostMenuItem("Undo repost", Icons.AutoMirrored.Outlined.Undo, onUndo))
+    reposted -> listOf(RepostMenuItem(labels.undo, Icons.AutoMirrored.Outlined.Undo, onUndo))
     else -> listOf(
-        RepostMenuItem("Repost", Icons.Outlined.Repeat, onRepost),
-        RepostMenuItem("Quote", Icons.Outlined.FormatQuote, onQuote)
+        RepostMenuItem(labels.repost, Icons.Outlined.Repeat, onRepost),
+        RepostMenuItem(labels.quote, Icons.Outlined.FormatQuote, onQuote)
     )
 }

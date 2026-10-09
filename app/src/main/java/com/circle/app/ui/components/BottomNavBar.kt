@@ -1,5 +1,6 @@
 package com.circle.app.ui.components
 
+import com.circle.app.ui.a11y.label
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -96,7 +97,7 @@ fun CircleBottomNav(
         ) {
             Icon(
                 Icons.Outlined.Home,
-                contentDescription = "Home",
+                contentDescription = androidx.compose.ui.res.stringResource(com.circle.app.R.string.bottomnavbar_home),
                 tint = if (active == NavTab.HOME) colors.accent else colors.navIdle,
                 modifier = Modifier.rotate(rotation.value)
             )
@@ -120,12 +121,12 @@ fun CircleBottomNav(
                     .border(width = 2.dp, color = colors.accent, shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Outlined.Explore, contentDescription = "Explore", tint = colors.accent, modifier = Modifier.size(19.dp))
+                Icon(Icons.Outlined.Explore, contentDescription = androidx.compose.ui.res.stringResource(com.circle.app.R.string.bottomnavbar_explore), tint = colors.accent, modifier = Modifier.size(19.dp))
             }
         }
 
         Box {
-            NavIcon(Icons.Outlined.FavoriteBorder, "Alerts", active == NavTab.NOTIFICATIONS) {
+            NavIcon(Icons.Outlined.FavoriteBorder, androidx.compose.ui.res.stringResource(com.circle.app.R.string.nav_alerts), active == NavTab.NOTIFICATIONS) {
                 nav.navigate(Routes.NOTIFICATIONS)
             }
             if (active != NavTab.NOTIFICATIONS && hasUnread) {
@@ -146,7 +147,7 @@ fun CircleBottomNav(
                 .size(40.dp)
                 .clip(CircleShape)
                 .clickable { nav.navigate(Routes.PROFILE) }
-                .semantics { contentDescription = "Profile" },
+                .then(Modifier.label(androidx.compose.ui.res.stringResource(com.circle.app.R.string.nav_profile))),
             contentAlignment = Alignment.Center
         ) {
             MeAvatar(

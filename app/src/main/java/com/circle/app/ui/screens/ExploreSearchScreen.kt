@@ -41,7 +41,7 @@ import com.circle.app.navigation.Routes
 import com.circle.app.ui.components.*
 import com.circle.app.ui.theme.*
 
-private enum class SearchTab(val label: String) { PEOPLE("People"), EVENTS("Events"), GROUPS("Groups"), POSTS("Posts") }
+private enum class SearchTab(val label: Int) { PEOPLE(com.circle.app.R.string.search_tab_people), EVENTS(com.circle.app.R.string.search_tab_events), GROUPS(com.circle.app.R.string.search_tab_groups), POSTS(com.circle.app.R.string.search_tab_posts) }
 
 private val explorePostCaptions = listOf(
     "Golden hour never disappoints.", "Grateful for days like this.",
@@ -79,11 +79,11 @@ fun ExploreSearchScreen(nav: NavHostController) {
             Box(
                 modifier = Modifier.size(44.dp).clip(CircleShape).clickable { nav.popBackStack() },
                 contentAlignment = Alignment.Center
-            ) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = colors.text) }
-            SearchField(query, { query = it }, placeholder = "Search Explore", modifier = Modifier.weight(1f))
+            ) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = androidx.compose.ui.res.stringResource(com.circle.app.R.string.back), tint = colors.text) }
+            SearchField(query, { query = it }, placeholder = androidx.compose.ui.res.stringResource(com.circle.app.R.string.exploresearch_search_explore), modifier = Modifier.weight(1f))
         }
         Box(Modifier.padding(start = 16.dp, top = 6.dp)) {
-            UnderlineTabs(SearchTab.entries.map { it.label }, tab.ordinal) { tab = SearchTab.entries[it] }
+            UnderlineTabs(SearchTab.entries.map { androidx.compose.ui.res.stringResource(it.label) }, tab.ordinal) { tab = SearchTab.entries[it] }
         }
 
         LazyColumn(
@@ -114,7 +114,7 @@ fun ExploreSearchScreen(nav: NavHostController) {
                     else item { PostsGrid(captions) }
                     item {
                         Text(
-                            "Only posts their owner opted into Explore. Tapping through still only shows photo + bio — nothing more unlocks.",
+                            androidx.compose.ui.res.stringResource(com.circle.app.R.string.exploresearch_only_posts_their_owner_opted),
                             color = colors.muted, fontSize = 11.sp
                         )
                     }
@@ -128,12 +128,12 @@ fun ExploreSearchScreen(nav: NavHostController) {
 private fun NoResults(query: String, onClear: () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            if (query.isEmpty()) "Nothing here yet." else "Nothing matches \"$query\".",
+            if (query.isEmpty()) androidx.compose.ui.res.stringResource(com.circle.app.R.string.search_nothing_yet) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.search_nothing_matches, query),
             color = CircleTheme.colors.muted, fontSize = 13.sp
         )
         if (query.isNotEmpty()) {
             Text(
-                "Clear search", color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                androidx.compose.ui.res.stringResource(com.circle.app.R.string.exploresearch_clear_search), color = CircleTheme.colors.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                 modifier = Modifier.clickable(onClick = onClear).padding(8.dp)
             )
         }
@@ -156,9 +156,9 @@ private fun EventResultCard(event: EventSummary, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(event.title, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, maxLines = 1)
-            Text("${event.whenLabel} · ${event.venue}", color = colors.muted, fontSize = 11.5.sp, maxLines = 1)
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.dot_pair, event.whenLabel, event.venue), color = colors.muted, fontSize = 11.5.sp, maxLines = 1)
         }
-        Text("${event.going} of ${event.capacity}", color = colors.muted, fontSize = 11.sp)
+        Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.search_going_of, event.going, event.capacity), color = colors.muted, fontSize = 11.sp)
     }
 }
 
@@ -200,7 +200,7 @@ private fun PersonRow(r: PersonResult, onOpen: () -> Unit) {
     val p = r.person
     Row(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-            .clickable(onClickLabel = "Open ${p.name}'s profile", onClick = onOpen).padding(vertical = 6.dp),
+            .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.open_profile_of, p.name), onClick = onOpen).padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Avatar(p.initials, p.color, size = 40)
@@ -227,11 +227,11 @@ private fun GroupListRow(group: GroupView, onClick: () -> Unit) {
             GroupTile(group.initial, group.color, size = 32)
             Spacer(Modifier.width(10.dp))
             Text(group.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            Text("PUBLIC", color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.exploresearch_public), color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
         }
         if (group.description.isNotEmpty()) Text(group.description, color = colors.body, fontSize = 12.5.sp)
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("${group.memberCount} members", color = colors.muted, fontSize = 11.5.sp)
+            Text(androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.members_count, group.memberCount, group.memberCount), color = colors.muted, fontSize = 11.5.sp)
             JoinRequestButton(group)
         }
     }

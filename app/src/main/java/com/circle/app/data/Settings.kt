@@ -1,12 +1,12 @@
 package com.circle.app.data
 
-enum class ThemeMode(val label: String) { SYSTEM("System"), NIGHT("Night"), DAY("Day") }
+enum class ThemeMode { SYSTEM, NIGHT, DAY }
 
-enum class RequestsFrom(val label: String) { EVERYONE("Everyone"), FRIENDS_OF_FRIENDS("Friends of friends") }
+enum class RequestsFrom { EVERYONE, FRIENDS_OF_FRIENDS }
 
-enum class InvitesFrom(val label: String) { FRIENDS("Friends"), FRIENDS_OF_FRIENDS("Friends of friends") }
+enum class InvitesFrom { FRIENDS, FRIENDS_OF_FRIENDS }
 
-enum class PauseAll(val label: String) { OFF("Off"), ONE_HOUR("1 hour"), UNTIL_TOMORROW("Until tomorrow") }
+enum class PauseAll { OFF, ONE_HOUR, UNTIL_TOMORROW }
 
 /** Your own profile. The pinned thought is the bio: it's all a stranger sees, with your photo. */
 data class MyProfile(

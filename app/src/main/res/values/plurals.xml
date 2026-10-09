@@ -32,4 +32,36 @@
         <item quantity="one">and %1$d more</item>
         <item quantity="other">and %1$d more</item>
     </plurals>
+    <plurals name="table_empty_seats">
+        <item quantity="one">%1$d empty seat</item>
+        <item quantity="other">%1$d empty seats</item>
+    </plurals>
+    <plurals name="table_taken_seats">
+        <item quantity="one">%1$d seat taken</item>
+        <item quantity="other">%1$d seats taken</item>
+    </plurals>
+    <plurals name="table_more_seats">
+        <item quantity="one">%1$d more seat</item>
+        <item quantity="other">%1$d more seats</item>
+    </plurals>
+    <plurals name="group_and_more_members">
+        <item quantity="one">and %1$d more member</item>
+        <item quantity="other">and %1$d more members</item>
+    </plurals>
+    <plurals name="group_more_members">
+        <item quantity="one">%1$d more member</item>
+        <item quantity="other">%1$d more members</item>
+    </plurals>
+    <plurals name="count_people">
+        <item quantity="one">%1$d person</item>
+        <item quantity="other">%1$d people</item>
+    </plurals>
+    <plurals name="count_friends">
+        <item quantity="one">%1$d friend</item>
+        <item quantity="other">%1$d friends</item>
+    </plurals>
+    <plurals name="event_seats_left">
+        <item quantity="one">%1$d seat left</item>
+        <item quantity="other">%1$d seats left</item>
+    </plurals>
 </resources>

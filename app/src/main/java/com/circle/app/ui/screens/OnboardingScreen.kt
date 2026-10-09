@@ -63,9 +63,9 @@ fun OnboardingScreen(onDone: () -> Unit) {
             }
             Spacer(Modifier.height(20.dp))
             if (isLast) {
-                PrimaryButton("Get started", modifier = Modifier.fillMaxWidth(), onClick = onDone)
+                PrimaryButton(androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_get_started), modifier = Modifier.fillMaxWidth(), onClick = onDone)
             } else {
-                PrimaryButton("Next", modifier = Modifier.fillMaxWidth()) { slide++ }
+                PrimaryButton(androidx.compose.ui.res.stringResource(com.circle.app.R.string.newchat_next), modifier = Modifier.fillMaxWidth()) { slide++ }
             }
         }
     }
@@ -78,17 +78,17 @@ private fun SlideIntro() {
         contentAlignment = Alignment.Center
     ) { Icon(Icons.Outlined.Circle, contentDescription = null, tint = CircleTheme.colors.onAccent) }
     Spacer(Modifier.height(22.dp))
-    Text("Circle.", fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 26.sp, color = CircleTheme.colors.text)
+    Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_circle), fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 26.sp, color = CircleTheme.colors.text)
     Spacer(Modifier.height(10.dp))
     Text(
-        "A place for the people you actually know — not everyone you've ever met.",
+        androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_a_place_for_the_people),
         color = CircleTheme.colors.body, fontSize = 14.5.sp, textAlign = TextAlign.Center, lineHeight = 22.sp
     )
 }
 
 @Composable
 private fun SlidePricing() {
-    Text("\u201C", fontFamily = Display, fontSize = 40.sp, color = CircleTheme.colors.accent)
+    Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_text), fontFamily = Display, fontSize = 40.sp, color = CircleTheme.colors.accent)
     Text(
         androidx.compose.ui.res.stringResource(com.circle.app.R.string.story_pricing_quote),
         fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 21.sp,
@@ -106,18 +106,18 @@ private fun SlidePricing() {
 
 @Composable
 private fun SlideStory() {
-    Text("Once upon a time,", color = CircleTheme.colors.muted, fontStyle = FontStyle.Italic, fontSize = 13.sp)
+    Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_once_upon_a_time), color = CircleTheme.colors.muted, fontStyle = FontStyle.Italic, fontSize = 13.sp)
     Spacer(Modifier.height(16.dp))
     Text(
-        "social media used to be simple.",
+        androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_social_media_used_to_be),
         fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 20.sp,
         textAlign = TextAlign.Center, color = CircleTheme.colors.text, lineHeight = 28.sp
     )
     Spacer(Modifier.height(16.dp))
     BulletList(
         listOf(
-            "It was just about keeping up with friends",
-            "Then it became infinite scroll, and hours disappeared"
+            androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_it_was_just_about_keeping),
+            androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_then_it_became_infinite_scroll)
         )
     )
 }
@@ -130,16 +130,16 @@ private fun SlideMission() {
     ) { Icon(Icons.Outlined.Circle, contentDescription = null, tint = CircleTheme.colors.accent) }
     Spacer(Modifier.height(18.dp))
     Text(
-        "Circle is for you and your friends.",
+        androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_circle_is_for_you_and),
         fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 21.sp,
         textAlign = TextAlign.Center, color = CircleTheme.colors.text
     )
     Spacer(Modifier.height(14.dp))
     BulletList(
         listOf(
-            "No infinite scroll — we tell you when you're caught up",
-            "Want more? Create or join an event or a group",
-            "Have fun outside, then tell everyone about it here"
+            androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_no_infinite_scroll_we_tell),
+            androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_want_more_create_or_join),
+            androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_have_fun_outside_then_tell)
         )
     )
 }

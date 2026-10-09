@@ -1,6 +1,7 @@
 ﻿plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("io.github.takahirom.roborazzi")
 }
 
 android {
@@ -16,6 +17,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // en-XA (longer text) and ar-XB (right to left) appear in the phone's language list for the device pass.
+            isPseudoLocalesEnabled = true
+        }
         release {
             isMinifyEnabled = false
         }
@@ -29,6 +34,10 @@ android {
         jvmTarget = "17"
     }
 
+    lint {
+        // All user-visible text lives in res/values (Phase 10). Compose literals are checked by HardcodedTextTest.
+        error += "HardcodedText"
+    }
     buildFeatures {
         compose = true
     }
@@ -46,6 +55,10 @@ android {
 // Compose test activity; release would only repeat them without it.
 androidComponents {
     beforeVariants(selector().withBuildType("release")) { it.enableUnitTest = false }
+}
+
+roborazzi {
+    outputDir.set(file("src/test/screenshots"))
 }
 
 dependencies {
@@ -75,4 +88,7 @@ dependencies {
     testImplementation("androidx.test:core:1.5.0")
     testImplementation(platform("androidx.compose:compose-bom:2024.09.03"))
     testImplementation("androidx.compose.ui:ui-test-junit4")
+    // Orbit screenshots at 320-430dp, both themes, font 1.0/2.0 (ACCESS_AND_LAUNCH 5): ./gradlew recordRoborazziDebug
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.13.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.13.0")
 }
