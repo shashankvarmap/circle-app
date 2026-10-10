@@ -106,7 +106,7 @@ fun ExploreSearchScreen(nav: NavHostController) {
                     // Private groups never appear in Explore.
                     val groups = explore.groups.filter { matches(it.name, it.category, it.description) }
                     if (groups.isEmpty()) item { NoResults(q) { query = "" } }
-                    groups.forEach { g -> item(key = g.id) { GroupListRow(g) { nav.navigate(Routes.groupDetail(g.id)) } } }
+                    groups.forEach { g -> item(key = g.id) { GroupListRow(g, onJoinTemporary = { nav.navigate(Routes.joinGroup(g.id)) }) { nav.navigate(Routes.groupDetail(g.id)) } } }
                 }
                 SearchTab.POSTS -> {
                     val captions = explorePostCaptions.filter { matches(it) }
@@ -217,7 +217,7 @@ private fun PersonRow(r: PersonResult, onOpen: () -> Unit) {
 }
 
 @Composable
-private fun GroupListRow(group: GroupView, onClick: () -> Unit) {
+private fun GroupListRow(group: GroupView, onJoinTemporary: () -> Unit, onClick: () -> Unit) {
     val colors = CircleTheme.colors
     Column(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp)).background(colors.surface).clickable(onClick = onClick).padding(13.dp),
@@ -232,7 +232,7 @@ private fun GroupListRow(group: GroupView, onClick: () -> Unit) {
         if (group.description.isNotEmpty()) Text(group.description, color = colors.body, fontSize = 12.5.sp)
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.members_count, group.memberCount, group.memberCount), color = colors.muted, fontSize = 11.5.sp)
-            JoinRequestButton(group)
+            JoinRequestButton(group, onTemporary = onJoinTemporary)
         }
     }
 }

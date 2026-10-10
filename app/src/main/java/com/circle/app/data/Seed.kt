@@ -205,7 +205,7 @@ internal object Seed {
         GroupInfo(
             "alps-hiking-crew", "Alps Hiking Crew", "Outdoors", "OUTDOORS",
             "One summer of hut-to-hut hikes, closing with a last weekend in the mountains.",
-            AvatarTeal, isPublic = true, compassDeg = 118f, memberCount = 24, isMember = false
+            AvatarTeal, isPublic = true, compassDeg = 100f, memberCount = 24, isMember = false
         ).apply {
             hostIds.add("HS")
             term = termEnding(4)

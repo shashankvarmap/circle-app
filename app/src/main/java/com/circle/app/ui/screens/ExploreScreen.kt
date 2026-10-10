@@ -1,5 +1,8 @@
 package com.circle.app.ui.screens
 
+import com.circle.app.ui.components.dashedOutline
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import com.circle.app.ui.format.text
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -89,6 +92,7 @@ fun ExploreScreen(nav: NavHostController) {
     val showMap = showMapChoice && fits
     var selectedKey by rememberSaveable { mutableStateOf("e:board-game-night") }
     var topic by rememberSaveable { mutableStateOf<String?>(null) } // Sector name, null = all
+    var temporaryOnly by rememberSaveable { mutableStateOf(false) } // list view: All | Temporary
 
     // Private groups and events you may not see never reach this screen (the repository filters them).
     val vm = circleViewModel { ExploreViewModel(it) }
@@ -127,6 +131,7 @@ fun ExploreScreen(nav: NavHostController) {
                             if (fits) MapListToggle(showMap, { showMapChoice = it })
                         }
                         ExploreMap(onMap, selected?.key) { selectedKey = it.key }
+                        if (groups.any { it.g.lifetime != null }) MapLegend()
                     }
                 }
                 if (selected != null) item(key = "preview") { PreviewCard(selected) { open(selected) } }
@@ -155,13 +160,14 @@ fun ExploreScreen(nav: NavHostController) {
                         if (fits) MapListToggle(showMap, { showMapChoice = it })
                     }
                 }
+                if (groups.any { it.g.lifetime != null }) item(key = "temp-filter") { LifetimeFilter(temporaryOnly) { temporaryOnly = it } }
                 item(key = "chips") { TopicChips(topic) { topic = it } }
 
                 fun inTopic(item: ExploreItem) =
                     topic == null || item.compassDeg?.let { Sector.of(it).name } == topic
-                // Events by how soon, groups by name. Never by popularity.
-                val listEvents = events.filter(::inTopic).sortedBy { it.e.startsAt }
-                val listGroups = groups.filter(::inTopic).sortedBy { it.g.name }
+                // Events by how soon, groups by name. Never by popularity. "Temporary" shows temporary groups only.
+                val listEvents = if (temporaryOnly) emptyList() else events.filter(::inTopic).sortedBy { it.e.startsAt }
+                val listGroups = groups.filter(::inTopic).filter { !temporaryOnly || it.g.lifetime != null }.sortedBy { it.g.name }
 
                 if (listEvents.isEmpty() && listGroups.isEmpty()) {
                     item(key = "empty") {
@@ -329,19 +335,36 @@ private fun ExploreMap(items: List<ExploreItem>, selectedKey: String?, onSelect:
                 }
                 is ExploreItem.Group -> {
                     val grp = item.g
+                    val life = grp.lifetime
+                    val center = compassPoint(g.CX, g.CY, g.GROUP_RING_R, grp.compassDeg!!)
+                    // Temporary: dashed accent outline, accent tint and letter, and a small ring badge (never colour alone).
+                    val temporaryLabel = life?.let {
+                        ", " + androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_legend_temporary) + ", " +
+                            androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.explore_ends_in, it.daysLeft, it.daysLeft)
+                    }.orEmpty()
                     OrbitNode(
-                        center = compassPoint(g.CX, g.CY, g.GROUP_RING_R, grp.compassDeg!!),
+                        center = center,
                         size = g.GROUP_NODE.dp,
                         shape = NodeShape.Rounded(g.GROUP_NODE_RADIUS.dp),
-                        fill = grp.color,
-                        description = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_group_node, grp.name, grp.memberCount) + if (isSelected) androidx.compose.ui.res.stringResource(com.circle.app.R.string.a11y_selected_suffix) else "",
+                        fill = if (life != null) colors.accent.copy(alpha = 0.08f).compositeOver(colors.background) else grp.color,
+                        border = if (life != null) NodeBorder(2.dp, colors.accent, dashed = true) else null,
+                        description = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_group_node, grp.name, grp.memberCount) + temporaryLabel +
+                            if (isSelected) androidx.compose.ui.res.stringResource(com.circle.app.R.string.a11y_selected_suffix) else "",
                         selected = isSelected,
                         selectedGap = 3.dp,
                         selectedScale = g.SELECTED_SCALE,
                         reduceMotion = reduceMotion,
                         onClick = { onSelect(item) }
                     ) {
-                        Text(grp.initial, color = avatarTextColor(grp.color), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(grp.initial, color = if (life != null) colors.accent else avatarTextColor(grp.color), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                    }
+                    if (life != null) {
+                        val off = g.GROUP_NODE / 2f - 2f
+                        Box(
+                            Modifier.centeredAt(Pt(center.x + off, center.y - off), (20 * scale).dp).size((20 * scale).dp)
+                                .clip(CircleShape).background(colors.background).clearAndSetSemantics { },
+                            contentAlignment = Alignment.Center
+                        ) { com.circle.app.ui.components.LifetimeRing(life.elapsed, size = (16 * scale).dp) }
                     }
                 }
             }
@@ -367,7 +390,8 @@ private fun PreviewCard(item: ExploreItem, onOpen: () -> Unit) {
         when (item) {
             is ExploreItem.Event -> { kicker = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_kicker_event, item.e.topic); meta = androidx.compose.ui.res.stringResource(com.circle.app.R.string.dot_pair, item.e.whenLabel, item.e.venue) }
             is ExploreItem.Group -> {
-                kicker = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_kicker_group, item.g.topic)
+                kicker = if (item.g.lifetime != null) androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_temp_kicker, item.g.topic)
+                    else androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_kicker_group, item.g.topic)
                 meta = "${item.g.memberCount} members, " + if (item.g.isPublic) androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_public) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_private)
             }
         }
@@ -378,6 +402,17 @@ private fun PreviewCard(item: ExploreItem, onOpen: () -> Unit) {
         )
         Text(meta, color = colors.muted, fontSize = 12.5.sp, modifier = Modifier.padding(top = 3.dp))
         if (item is ExploreItem.Event) CapacityBar(item.e, Modifier.padding(top = 10.dp))
+        val life = (item as? ExploreItem.Group)?.g?.lifetime
+        if (life != null) {
+            com.circle.app.ui.components.ChipShell(
+                loud = true, text = androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.explore_ends_in, life.daysLeft, life.daysLeft),
+                modifier = Modifier.padding(top = 10.dp)
+            ) { }
+            Text(
+                androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_temp_body), color = colors.body, fontSize = 12.5.sp, lineHeight = 18.75.sp,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
         Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.End) {
             Box(
                 modifier = Modifier
@@ -389,6 +424,46 @@ private fun PreviewCard(item: ExploreItem, onOpen: () -> Unit) {
                 Text(
                     if (item is ExploreItem.Event) androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_view_event) else androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_view_group),
                     color = colors.onAccent, fontSize = 12.5.sp, fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+/** Under the map: solid = Permanent group, dashed = Temporary group. */
+@Composable
+private fun MapLegend() {
+    val colors = CircleTheme.colors
+    Row(
+        Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp).semantics(mergeDescendants = true) {},
+        horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.size(14.dp).clip(RoundedCornerShape(4.dp)).background(AvatarOrange))
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_legend_permanent), color = colors.muted, fontSize = 11.5.sp)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.size(14.dp).dashedOutline(colors.accent, 4.dp))
+            Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_legend_temporary), color = colors.muted, fontSize = 11.5.sp)
+        }
+    }
+}
+
+/** All | Temporary, above the topic chips in the list. */
+@Composable
+private fun LifetimeFilter(temporaryOnly: Boolean, onChange: (Boolean) -> Unit) {
+    val colors = CircleTheme.colors
+    Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(false to com.circle.app.R.string.explore_filter_all, true to com.circle.app.R.string.explore_filter_temp).forEach { (value, label) ->
+            val active = value == temporaryOnly
+            Box(
+                Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(999.dp)).clickable(role = Role.Tab) { onChange(value) }.semantics { this.selected = active },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    androidx.compose.ui.res.stringResource(label), color = if (active) colors.onAccent else colors.text, fontSize = 12.5.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(if (active) colors.accent else Color.Transparent)
+                        .border(1.5.dp, if (active) colors.accent else colors.border, RoundedCornerShape(999.dp)).padding(horizontal = 14.dp, vertical = 8.dp)
                 )
             }
         }
@@ -473,7 +548,11 @@ private fun GroupListRow(g: GroupView, onClick: () -> Unit) {
         g.joinRequested -> androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_requested)
         else -> null
     }
-    val groupRowLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_group_row, g.name, g.topic.lowercase(), g.memberCount) + (status?.let { ", $it" } ?: "")
+    val life = g.lifetime
+    val endsIn = life?.let { androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.explore_ends_in, it.daysLeft, it.daysLeft) }
+    val temporaryText = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_legend_temporary)
+    val groupRowLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_group_row, g.name, g.topic.lowercase(), g.memberCount) +
+        (endsIn?.let { ", $temporaryText, $it" } ?: "") + (status?.let { ", $it" } ?: "")
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -484,12 +563,22 @@ private fun GroupListRow(g: GroupView, onClick: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        GroupTile(g.initial, g.color, size = 42)
+        if (life != null) com.circle.app.ui.components.TemporaryGroupTile(g.initial, size = 42) else GroupTile(g.initial, g.color, size = 42)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(g.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(g.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f, fill = false))
+                if (life != null) Text(
+                    androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_temp_tag), color = colors.accent, fontSize = 9.5.sp, fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 0.95.sp, maxLines = 1,
+                    modifier = Modifier.clip(RoundedCornerShape(999.dp)).border(1.dp, colors.accent, RoundedCornerShape(999.dp)).padding(horizontal = 7.dp, vertical = 2.dp)
+                )
+            }
             Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.dot_pair, g.category, androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.members_count, g.memberCount, g.memberCount)), color = colors.muted, fontSize = 12.sp)
         }
-        if (status != null) Text(status, color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        when {
+            status != null -> Text(status, color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            endsIn != null -> Text(endsIn, color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        }
     }
 }
