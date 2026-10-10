@@ -39,6 +39,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -173,48 +174,106 @@ fun ComposePostScreen(nav: NavHostController, quoteId: String? = null, groupId: 
         )
     }
 
-    // Landscape with the keyboard up leaves very little height: then the whole screen scrolls as one,
-    // so the text field never collapses to nothing.
-    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().background(colors.background).imePadding()) {
-    val compact = maxHeight < 260.dp
-    Column(modifier = if (compact) Modifier.fillMaxSize().verticalScroll(rememberScrollState()) else Modifier.fillMaxSize()) {
+    ComposeLayout(
+        text = text,
+        onText = { text = it },
+        placeholder = when {
+            quoted != null -> stringResource(R.string.compose_hint_quote)
+            group != null -> stringResource(R.string.compose_hint_group, group!!.ref.name)
+            else -> stringResource(R.string.compose_hint)
+        },
+        focus = focus,
+        media = media,
+        onRemoveMedia = { media.remove(it) },
+        quoted = quoted,
+        onRemoveQuote = { quoteRemoved = true },
+        postLabel = stringResource(if (editId != null) R.string.compose_save else R.string.compose_post),
+        canPost = canPost,
+        onCancel = ::cancel,
+        onPost = ::post,
+        canAttach = editId == null && media.size < MAX_MEDIA,
+        onAttach = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+        remaining = remaining,
+        editing = editId != null,
+        groupName = group?.ref?.name,
+        audience = audience,
+        onToggleAudience = { audience = if (audience == Audience.FRIENDS) Audience.INNER_CIRCLE else Audience.FRIENDS },
+        innerCount = circle.innerCount,
+        onEditInner = { nav.navigate(Routes.YOUR_CIRCLE) }
+    )
+}
+
+/**
+ * The composer's layout, without state (so screenshot tests can render every case).
+ * From the top: Cancel / Post; one scrolling area with the text, then attached media and any quote
+ * directly under it; then the bottom bar, pinned above the keyboard (imePadding): attach + audience pill,
+ * and under it the audience note and the inner-circle link.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun ComposeLayout(
+    text: String,
+    onText: (String) -> Unit,
+    placeholder: String,
+    focus: FocusRequester,
+    media: List<MediaRef>,
+    onRemoveMedia: (MediaRef) -> Unit,
+    quoted: NoteView.Full?,
+    onRemoveQuote: () -> Unit,
+    postLabel: String,
+    canPost: Boolean,
+    onCancel: () -> Unit,
+    onPost: () -> Unit,
+    canAttach: Boolean,
+    onAttach: () -> Unit,
+    remaining: Int,
+    editing: Boolean,
+    groupName: String?,
+    audience: Audience,
+    onToggleAudience: () -> Unit,
+    innerCount: Int,
+    onEditInner: () -> Unit,
+) {
+    val colors = CircleTheme.colors
+    val context = LocalContext.current
+    Column(Modifier.fillMaxSize().background(colors.background).imePadding()) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.cancel), color = colors.body, fontSize = 14.5.sp, modifier = Modifier.clickable(onClick = ::cancel).padding(vertical = 10.dp))
+            Text(
+                stringResource(R.string.cancel), color = colors.body, fontSize = 14.5.sp,
+                modifier = Modifier.heightIn(min = 48.dp).clickable(role = Role.Button, onClick = onCancel).wrapContentHeight().padding(horizontal = 4.dp)
+            )
             Box(
                 modifier = Modifier
                     .alpha(if (canPost) 1f else 0.4f)
                     .clip(RoundedCornerShape(999.dp))
                     .background(colors.accent)
-                    .clickable(enabled = canPost, role = Role.Button, onClick = ::post)
+                    .clickable(enabled = canPost, role = Role.Button, onClick = onPost)
                     .semantics { if (!canPost) disabled() }
                     .padding(horizontal = 20.dp, vertical = 8.dp)
             ) {
-                Text(stringResource(if (editId != null) R.string.compose_save else R.string.compose_post), color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                Text(postLabel, color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
             }
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(colors.border))
 
-        Column(modifier = (if (compact) Modifier else Modifier.weight(1f).verticalScroll(rememberScrollState())).fillMaxWidth().padding(16.dp)) {
+        // Text, then media and quote directly under it. Only this part scrolls.
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
             Row {
                 MeAvatar(38)
                 Spacer(Modifier.width(12.dp))
                 Box(Modifier.weight(1f).padding(top = 6.dp)) {
-                    val placeholder = when {
-                        quoted != null -> stringResource(R.string.compose_hint_quote)
-                        group != null -> stringResource(R.string.compose_hint_group, group!!.ref.name)
-                        else -> stringResource(R.string.compose_hint)
-                    }
-                    if (text.isEmpty()) Text(placeholder, color = colors.muted, fontSize = 17.sp, fontFamily = Body)
+                    val style = TextStyle(color = colors.text, fontSize = 17.sp, lineHeight = 24.5.sp, fontFamily = Body)
+                    if (text.isEmpty()) Text(placeholder, style = style.copy(color = colors.muted))
                     BasicTextField(
                         value = text,
-                        onValueChange = { text = it },
-                        textStyle = TextStyle(color = colors.text, fontSize = 17.sp, lineHeight = 24.5.sp, fontFamily = Body),
+                        onValueChange = onText,
+                        textStyle = style,
+                        minLines = 5,
                         cursorBrush = SolidColor(colors.accent),
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp).focusRequester(focus)
-                            .semantics { contentDescription = placeholder }
+                        modifier = Modifier.fillMaxWidth().focusRequester(focus).semantics { contentDescription = placeholder }
                     )
                 }
             }
@@ -223,62 +282,36 @@ fun ComposePostScreen(nav: NavHostController, quoteId: String? = null, groupId: 
                     Modifier.padding(start = 50.dp, top = 12.dp).horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    media.forEach { m ->
-                        Box(Modifier.size(96.dp).clip(RoundedCornerShape(11.dp)).background(colors.track)) {
-                            MediaThumb(m)
-                            Box(
-                                Modifier.align(Alignment.TopEnd).padding(4.dp).size(28.dp).clip(CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.55f)).clickable { media.remove(m) },
-                                contentAlignment = Alignment.Center
-                            ) { Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.compose_remove_media), tint = Color.White, modifier = Modifier.size(15.dp)) }
-                        }
-                    }
+                    media.forEach { m -> ComposeThumb(m, onRemove = { onRemoveMedia(m) }) }
                 }
             }
             if (quoted != null) {
                 Box(Modifier.padding(start = 50.dp, top = 12.dp)) {
                     EmbeddedPost(quoted)
                     Box(
-                        modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(32.dp).clip(CircleShape)
-                            .clickable { quoteRemoved = true }
+                        modifier = Modifier.align(Alignment.TopEnd).size(48.dp).clip(CircleShape)
+                            .clickable(role = Role.Button, onClick = onRemoveQuote)
                             .semantics { contentDescription = context.getString(R.string.compose_remove_quote) },
                         contentAlignment = Alignment.Center
                     ) { Icon(Icons.Outlined.Close, contentDescription = null, tint = colors.muted, modifier = Modifier.size(16.dp)) }
                 }
             }
-            Spacer(Modifier.height(16.dp))
-            if (editId == null) {
-                val note = when {
-                    group != null -> stringResource(R.string.compose_note_group, group!!.ref.name)
-                    audience == Audience.FRIENDS -> stringResource(R.string.compose_note_friends)
-                    else -> androidx.compose.ui.res.pluralStringResource(R.plurals.compose_note_inner, circle.innerCount, circle.innerCount)
-                }
-                Text(note, color = colors.muted, fontSize = 12.sp, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-                if (group == null) {
-                    Text(
-                        stringResource(R.string.compose_edit_inner),
-                        color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp,
-                        modifier = Modifier.align(Alignment.End).clickable { nav.navigate(Routes.YOUR_CIRCLE) }.padding(vertical = 8.dp)
-                    )
-                }
-            }
         }
 
-        // Bottom bar rides above the keyboard.
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+        // Bottom bar: pinned above the keyboard by the imePadding on the column.
+        Column(Modifier.fillMaxWidth().background(colors.background).padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) {
             Box(Modifier.fillMaxWidth().height(1.dp).background(colors.border))
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically
             ) {
-                if (editId == null) {
+                if (!editing) {
                     Box(
-                        Modifier.size(44.dp).clip(CircleShape).clickable(enabled = media.size < MAX_MEDIA, role = Role.Button) {
-                            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
-                        },
+                        Modifier.size(48.dp).clip(CircleShape).clickable(enabled = canAttach, role = Role.Button, onClick = onAttach),
                         contentAlignment = Alignment.Center
                     ) { Icon(Icons.Outlined.Image, contentDescription = stringResource(R.string.compose_add_media), tint = colors.muted) }
-                } else Spacer(Modifier.size(44.dp))
+                }
+                Spacer(Modifier.weight(1f))
                 if (remaining <= 50) {
                     val left = stringResource(R.string.compose_chars_left, remaining)
                     Text(
@@ -288,16 +321,17 @@ fun ComposePostScreen(nav: NavHostController, quoteId: String? = null, groupId: 
                     )
                 }
                 when {
-                    editId != null -> Spacer(Modifier.size(1.dp))
-                    group != null -> Text(group!!.ref.name, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                    editing -> Spacer(Modifier.height(48.dp))
+                    groupName != null -> Text(groupName, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
                     else -> Row(
                         modifier = Modifier
+                            .heightIn(min = 48.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                            .clickable(onClickLabel = stringResource(R.string.note_change_audience), onClick = onToggleAudience)
+                            .wrapContentHeight()
                             .clip(RoundedCornerShape(999.dp))
                             .background(colors.surface)
                             .border(1.5.dp, colors.accent, RoundedCornerShape(999.dp))
-                            .clickable(onClickLabel = stringResource(R.string.note_change_audience)) {
-                                audience = if (audience == Audience.FRIENDS) Audience.INNER_CIRCLE else Audience.FRIENDS
-                            }
                             .padding(horizontal = 14.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -310,9 +344,59 @@ fun ComposePostScreen(nav: NavHostController, quoteId: String? = null, groupId: 
                     }
                 }
             }
+            if (!editing) {
+                val note = when {
+                    groupName != null -> stringResource(R.string.compose_note_group, groupName)
+                    audience == Audience.FRIENDS -> stringResource(R.string.compose_note_friends)
+                    else -> pluralStringResource(R.plurals.compose_note_inner, innerCount, innerCount)
+                }
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(note, color = colors.muted, fontSize = 12.sp, modifier = Modifier.align(Alignment.CenterVertically).padding(vertical = 4.dp))
+                    if (groupName == null) {
+                        Text(
+                            stringResource(R.string.compose_edit_inner),
+                            color = colors.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                            modifier = Modifier.heightIn(min = 48.dp).clickable(role = Role.Button, onClick = onEditInner).wrapContentHeight()
+                        )
+                    }
+                }
+            }
         }
     }
+}
+
+/** A 96dp thumbnail with a 48dp remove target at its top-right corner and, for a video, its length. */
+@Composable
+private fun ComposeThumb(m: MediaRef, onRemove: () -> Unit) {
+    val colors = CircleTheme.colors
+    Box(Modifier.size(96.dp).clip(RoundedCornerShape(12.dp)).background(colors.track)) {
+        MediaThumb(m)
+        if (m.kind == MediaKind.VIDEO && m.durationMs != null) {
+            Text(
+                formatDuration(m.durationMs), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.BottomStart).padding(6.dp)
+                    .clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 5.dp, vertical = 1.dp)
+            )
+        }
+        Box(
+            Modifier.align(Alignment.TopEnd).size(48.dp).clickable(role = Role.Button, onClick = onRemove),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(Modifier.size(26.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.6f)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.compose_remove_media), tint = Color.White, modifier = Modifier.size(15.dp))
+            }
+        }
     }
+}
+
+/** 0:07, 1:42, 1:02:05. */
+internal fun formatDuration(ms: Long): String {
+    val s = ms / 1000
+    return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
 }
 
 /** A picked item's kind and, for a video, its length. Keeps read access across restarts where allowed. */
