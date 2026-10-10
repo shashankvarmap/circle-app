@@ -135,8 +135,11 @@ fun MessagesScreen(nav: NavHostController) {
             }
         ) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
-                if (tab == MTab.GROUP) item(key = "group-note") {
-                    Text(stringResource(R.string.messages_groups_note), color = colors.muted, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                item(key = "tab-note-${tab.name}") {
+                    Text(
+                        stringResource(if (tab == MTab.GROUP) R.string.messages_tab_groups_note else R.string.messages_tab_friends_note),
+                        color = colors.muted, fontSize = 11.5.sp, lineHeight = 16.sp, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 2.dp)
+                    )
                 }
                 if (chatsLoad is com.circle.app.ui.vm.Load.Loading) {
                     item(key = "loading") { SkeletonList() }
@@ -249,15 +252,20 @@ private fun SwipeChatRow(chat: ChatRowView, vm: MessagesViewModel, nav: NavHostC
 private fun ChatRow(chat: ChatRowView, onOpen: () -> Unit, onLongPress: () -> Unit) {
     val colors = CircleTheme.colors
     val unreadLabel = stringResource(R.string.messages_unread)
+    val life = chat.lifetime
+    val endingSoon = life?.state == com.circle.app.data.lifetime.LifeState.ENDING_SOON
+    val ended = life?.state == com.circle.app.data.lifetime.LifeState.WRAP_UP
+    val loud = chat.unread || endingSoon
     Row(
         modifier = Modifier.fillMaxWidth()
             .background(colors.background)
-            .background(if (chat.unread) colors.accent.copy(alpha = 0.08f) else colors.background)
+            .background(if (loud) colors.accent.copy(alpha = 0.08f) else colors.background)
             .combinedClickable(onClickLabel = stringResource(R.string.messages_open_chat), onClick = onOpen, onLongClick = onLongPress)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         when {
+            chat.group != null && life != null -> com.circle.app.ui.components.TemporaryGroupTile(chat.group.initial, size = 52)
             chat.group != null -> GroupTile(chat.group.initial, chat.group.color, size = 52)
             chat.person != null -> Avatar(chat.person.initials, chat.person.color, size = 52)
             else -> Box(modifier = Modifier.size(52.dp)) {
@@ -270,7 +278,7 @@ private fun ChatRow(chat: ChatRowView, onOpen: () -> Unit, onLongPress: () -> Un
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     chat.title, color = colors.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    fontWeight = if (chat.unread) FontWeight.ExtraBold else FontWeight.Bold, modifier = Modifier.weight(1f, fill = false)
+                    fontWeight = if (loud) FontWeight.ExtraBold else FontWeight.Bold, modifier = Modifier.weight(1f, fill = false)
                 )
                 if (chat.pinned) {
                     Spacer(Modifier.width(5.dp))
@@ -283,21 +291,27 @@ private fun ChatRow(chat: ChatRowView, onOpen: () -> Unit, onLongPress: () -> Un
             }
             val p = chat.preview
             val preview = when {
+                endingSoon -> androidx.compose.ui.res.pluralStringResource(R.plurals.msg_timed_ending, life!!.daysLeft, life.daysLeft)
+                ended -> androidx.compose.ui.res.pluralStringResource(R.plurals.msg_timed_ended, life!!.daysToDelete, life.daysToDelete)
                 p == null -> stringResource(R.string.messages_no_messages)
                 p.mine -> stringResource(R.string.messages_preview_you, summary(p.kind, p.text))
                 p.senderFirstName != null -> stringResource(R.string.messages_preview_named, p.senderFirstName, summary(p.kind, p.text))
                 else -> summary(p.kind, p.text)
             }
             Text(
-                preview, color = if (chat.unread) colors.text else colors.muted,
-                fontWeight = if (chat.unread) FontWeight.SemiBold else FontWeight.Normal,
+                preview, color = if (loud) colors.text else colors.muted,
+                fontWeight = if (loud) FontWeight.SemiBold else FontWeight.Normal,
                 fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
         }
         Spacer(Modifier.width(8.dp))
         Column(horizontalAlignment = Alignment.End) {
             val time = chat.lastAt?.let { at -> if (relative(at) is com.circle.app.ui.format.Relative.Hours || relative(at) is com.circle.app.ui.format.Relative.Minutes) clockTime(at) else relativeTime(at) }
-            Text(time.orEmpty(), color = if (chat.unread) colors.accent else colors.muted, fontSize = 11.5.sp)
+            Text(time.orEmpty(), color = if (loud) colors.accent else colors.muted, fontSize = 11.5.sp, fontWeight = if (loud) FontWeight.Bold else FontWeight.SemiBold)
+            if (life != null) {
+                Spacer(Modifier.height(6.dp))
+                com.circle.app.ui.components.TimerChip(life)
+            }
             if (chat.unread) {
                 Spacer(Modifier.height(5.dp))
                 Box(Modifier.size(10.dp).background(colors.accent, CircleShape).semantics { contentDescription = unreadLabel })

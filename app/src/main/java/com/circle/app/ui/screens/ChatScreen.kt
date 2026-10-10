@@ -104,6 +104,14 @@ private val BubbleMaxWidth = 276.dp
 class ChatViewModel(repo: CircleRepository, private val chatId: String) : RepoViewModel(repo) {
     /** Null while loading, or when the chat isn't available to you. */
     val chat = repo.chat(chatId).state(null)
+    /** A temporary chat (or its group) the server deleted while you were away, or while this screen was open. */
+    val gone = repo.wasDeleted(chatId).state(false)
+    fun extend(days: Int, then: (com.circle.app.data.repo.Outcome<Unit>) -> Unit) = run({ extendLifetime(chatId, days) }, then)
+    fun makePermanent(then: (com.circle.app.data.repo.Outcome<Unit>) -> Unit) = run({ makePermanent(chatId) }, then)
+    fun endNow(then: (com.circle.app.data.repo.Outcome<Unit>) -> Unit) = run({ endNow(chatId) }, then)
+    /** Leaving a group's chat leaves the group; a chat with friends leaves your list. */
+    fun leave(groupId: String?, then: (com.circle.app.data.repo.Outcome<Unit>) -> Unit) =
+        run({ if (groupId != null) leaveGroup(groupId) else deleteChat(chatId) }, then)
     fun markRead() = run({ markRead(chatId); com.circle.app.data.repo.Outcome.Success(Unit) })
     /** Messages on their way: shown as "Sending…", then "Not sent · tap to retry" if the send fails. */
     val pending = kotlinx.coroutines.flow.MutableStateFlow<List<PendingMessage>>(emptyList())
@@ -196,12 +204,35 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
         if (!markerTaken) { unreadMarker = first.firstUnreadId; markerTaken = true }
     }
 
+    val gone by vm.gone.collectAsStateWithLifecycle()
     val c = chat
     if (c == null) {
+        if (gone) {
+            com.circle.app.ui.components.DeletedTimedState(onBack = {
+                nav.navigate(Routes.MESSAGES) { popUpTo(Routes.MESSAGES) { inclusive = true }; launchSingleTop = true }
+            })
+            return
+        }
         Column(Modifier.fillMaxSize().background(colors.background)) {
             DetailHeader(stringResource(R.string.chat_title)) { nav.popBackStack() }
         }
         return
+    }
+    var extending by rememberSaveable { mutableStateOf(false) }
+    fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+    val saveSoon = stringResource(R.string.timed_save_copy_soon)
+    val life = c.lifetime
+    if (extending && life != null) {
+        val permanentDone = stringResource(if (c.kind == ChatKind.GROUP) R.string.extend_permanent_done_group else R.string.extend_permanent_done_chat)
+        val endDone = stringResource(R.string.extend_end_done)
+        val res = context.resources
+        com.circle.app.ui.components.ExtendSheet(
+            canEndNow = life.state != com.circle.app.data.lifetime.LifeState.WRAP_UP,
+            onDismiss = { extending = false },
+            onExtend = { d -> extending = false; vm.extend(d) { if (it is com.circle.app.data.repo.Outcome.Success) toast(res.getQuantityString(R.plurals.extend_done, d, d)) } },
+            onPermanent = { extending = false; vm.makePermanent { if (it is com.circle.app.data.repo.Outcome.Success) toast(permanentDone) } },
+            onEndNow = { extending = false; vm.endNow { if (it is com.circle.app.data.repo.Outcome.Success) toast(endDone) } },
+        )
     }
 
     val messages = c.messages
@@ -244,7 +275,13 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
 
     Column(Modifier.fillMaxSize().background(colors.background).imePadding()) {
         if (searching) ChatSearchBar(search, { search = it }, onClose = { searching = false; search = "" })
-        else ChatTopBar(nav, c, vm, onSearch = { searching = true }, onReport = { reporting = true })
+        else ChatTopBar(
+            nav, c, vm, onSearch = { searching = true }, onReport = { reporting = true },
+            onSave = { toast(saveSoon) }, onExtend = { extending = true },
+        )
+        if (life != null && !searching) {
+            com.circle.app.ui.components.LifetimeBanner(life, isGroupChat = c.kind == ChatKind.GROUP, onSave = { toast(saveSoon) }, onExtend = { extending = true })
+        }
 
         Box(Modifier.weight(1f).fillMaxWidth()) {
         CompositionLocalProvider(LocalViewConfiguration provides chatConfig) {
@@ -319,8 +356,13 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
             }
         }
 
-        if (replyTo != null) ReplyStrip(senderName(replyTo), summary(replyTo.kind, replyTo.text)) { replyToId = null }
-        Composer(draft, onChange = { draft = it }, onSend = ::send, onPlus = { plusSheet = true })
+        if (!c.canSend) {
+            // Wrap-up: read-only for everyone until it is deleted.
+            com.circle.app.ui.components.ReadOnlyBar()
+        } else {
+            if (replyTo != null) ReplyStrip(senderName(replyTo), summary(replyTo.kind, replyTo.text)) { replyToId = null }
+            Composer(draft, onChange = { draft = it }, onSend = ::send, onPlus = { plusSheet = true })
+        }
     }
 }
 
@@ -362,7 +404,10 @@ private fun copyText(m: MessageView): String = when (m.kind) {
 }
 
 @Composable
-private fun ChatTopBar(nav: NavHostController, chat: ChatView, vm: ChatViewModel, onSearch: () -> Unit, onReport: () -> Unit) {
+private fun ChatTopBar(
+    nav: NavHostController, chat: ChatView, vm: ChatViewModel, onSearch: () -> Unit, onReport: () -> Unit,
+    onSave: () -> Unit, onExtend: () -> Unit,
+) {
     var menu by remember { mutableStateOf(false) }
     var confirm by rememberSaveable { mutableStateOf<String?>(null) }
     when (confirm) {
@@ -370,6 +415,10 @@ private fun ChatTopBar(nav: NavHostController, chat: ChatView, vm: ChatViewModel
             stringResource(R.string.chat_clear_title), stringResource(R.string.chat_clear_body), stringResource(R.string.chat_clear),
             destructive = true, onDismiss = { confirm = null }
         ) { vm.clearMessages() }
+        "leave" -> com.circle.app.ui.components.ConfirmDialog(
+            stringResource(R.string.timed_leave_title, chat.title), stringResource(R.string.timed_leave_body), stringResource(R.string.timed_menu_leave),
+            destructive = true, onDismiss = { confirm = null }
+        ) { vm.leave(chat.group?.id) { if (it is com.circle.app.data.repo.Outcome.Success) nav.popBackStack() } }
         "block" -> chat.person?.let { p ->
             com.circle.app.ui.components.ConfirmDialog(
                 stringResource(R.string.profile_block_title, p.firstName), stringResource(R.string.profile_block_body), stringResource(R.string.profile_block),
@@ -378,10 +427,20 @@ private fun ChatTopBar(nav: NavHostController, chat: ChatView, vm: ChatViewModel
         }
     }
     val colors = CircleTheme.colors
-    val subline = when (chat.kind) {
+    val life = chat.lifetime
+    val friends = (chat.memberCount - 1).coerceAtLeast(1)
+    val subline = when {
+        life != null && life.state == com.circle.app.data.lifetime.LifeState.WRAP_UP ->
+            stringResource(R.string.chat_sub_ended, com.circle.app.ui.components.lastDay(life.endsAt))
+        life != null && chat.kind == ChatKind.GROUP ->
+            androidx.compose.ui.res.pluralStringResource(R.plurals.chat_sub_members_ends, chat.memberCount, chat.memberCount, com.circle.app.ui.components.lastDay(life.endsAt))
+        life != null ->
+            androidx.compose.ui.res.pluralStringResource(R.plurals.chat_sub_friends_ends, friends, friends, com.circle.app.ui.components.lastDay(life.endsAt))
+        else -> when (chat.kind) {
         ChatKind.GROUP -> androidx.compose.ui.res.pluralStringResource(R.plurals.members_count, chat.memberCount, chat.memberCount)
         ChatKind.DIRECT -> chat.friendsSinceYear?.let { stringResource(R.string.chat_friends_since, it) }.orEmpty()
         ChatKind.MULTI -> stringResource(R.string.chat_you_and_friends, chat.memberCount - 1)
+        }
     }
     Column {
         Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -400,6 +459,7 @@ private fun ChatTopBar(nav: NavHostController, chat: ChatView, vm: ChatViewModel
                         }
                     )
                     .padding(4.dp)
+                    .weight(1f)
             ) {
                 when {
                     chat.group != null -> GroupTile(chat.group.initial, chat.group.color, size = 40)
@@ -408,16 +468,20 @@ private fun ChatTopBar(nav: NavHostController, chat: ChatView, vm: ChatViewModel
                 }
                 Spacer(Modifier.width(10.dp))
                 Column {
-                    Text(chat.title, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 15.5.sp, maxLines = 1, modifier = Modifier.semantics { heading() })
-                    Text(subline, color = colors.muted, fontSize = 11.5.sp, maxLines = 1)
+                    Text(chat.title, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 15.5.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
+                    Text(subline, color = colors.muted, fontSize = 11.5.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
             }
-            Spacer(Modifier.weight(1f))
+
+            if (life != null) com.circle.app.ui.components.TimerChip(life, Modifier.padding(start = 6.dp))
             Box {
                 Box(Modifier.size(44.dp).clip(CircleShape).clickable { menu = true }, contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.chat_more_options), tint = colors.text)
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    if (life?.canSaveCopy == true) DropdownMenuItem(text = { Text(stringResource(R.string.timed_save_copy)) }, onClick = { menu = false; onSave() })
+                    if (life?.canChange == true) DropdownMenuItem(text = { Text(stringResource(R.string.timed_menu_extend)) }, onClick = { menu = false; onExtend() })
+                    if (life != null) DropdownMenuItem(text = { Text(stringResource(R.string.timed_menu_leave), color = colors.alertDot) }, onClick = { menu = false; confirm = "leave" })
                     DropdownMenuItem(text = { Text(stringResource(if (chat.muted) R.string.messages_unmute else R.string.messages_mute)) }, onClick = { menu = false; vm.setMuted(!chat.muted) })
                     DropdownMenuItem(text = { Text(stringResource(R.string.chat_search)) }, onClick = { menu = false; onSearch() })
                     DropdownMenuItem(text = { Text(stringResource(R.string.chat_clear)) }, onClick = { menu = false; confirm = "clear" })

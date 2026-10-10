@@ -899,7 +899,8 @@
     <string name="timed_back_to_messages">Back to Messages</string>
     <string name="timed_menu_extend">Extend or make permanent</string>
     <string name="timed_menu_leave">Leave</string>
-    <string name="timed_left_chat">You left the chat</string>
+    <string name="timed_leave_title">Leave %1$s?</string>
+    <string name="timed_leave_body">It leaves your list. Anything you saved stays on your phone.</string>
     <string name="extend_title">Keep it going</string>
     <string name="extend_body">Only the host can do this. Everyone is told.</string>
     <plurals name="extend_plus">
