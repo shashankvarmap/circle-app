@@ -1,6 +1,6 @@
 # Circle: build progress (MASTER_PROMPT.md)
 
-**Next step:** Phase 12 click-through items 3-11 on the emulator (items 1-2 passed 2026-10-10).
+**Next step:** MASTER_PROMPT run complete. Next: owner decisions in LAUNCH_CHECKLIST.md, then turn on R8 for release and start the backend against BACKEND_READINESS.md.
 
 **After a context reset: read this file first, then REPORT.md, and continue from the first unchecked item.**
 Status per item: `[x]` done · `[~]` partial (what is missing is noted) · `[ ]` not started.
@@ -115,7 +115,7 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] Verified on the emulator (new account and a like survive force-stop; Reset; fail switch on Home/Messages/Alerts); `ChatSendingUiTest`
 
 ## Phase 12: Final pass
-- [ ] Click-through (section 5) in night and day, pass/fail table
-- [ ] Remove dead buttons; re-read Rejected list
-- [ ] BACKEND_READINESS.md (complete), LAUNCH_CHECKLIST.md
-- [ ] Fresh-install commands + summary to the owner
+- [x] Click-through (section 5) in night and day, pass/fail table (REPORT.md Phase 12)
+- [x] Remove dead buttons; re-read Rejected list
+- [x] BACKEND_READINESS.md (complete), LAUNCH_CHECKLIST.md
+- [x] Fresh-install commands + summary to the owner

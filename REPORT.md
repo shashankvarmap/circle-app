@@ -439,3 +439,45 @@ redacted views the user may see, purged on unfriend/block (BACKEND_READINESS).
   when the backend arrives. New dependency: kotlinx-serialization-json 1.6.3 (+ the Kotlin serialization plugin 1.9.24).
 - Robolectric tests never load or save the file (each test starts from the seed).
 - The Demo section is hidden if the repository is not the fake (`DemoControls`), so it cannot ship with a backend.
+
+
+---
+
+## Phase 12: Final pass (2026-10-10)
+
+**Click-through (MASTER_PROMPT section 5)**, run on the Pixel 7 emulator (API 34) with a fresh install, night first, then day.
+
+| # | Step | Result |
+|---|---|---|
+| 1 | Fresh install > Welcome > +91 number > any code > profile > age 18+ > find friends (skip) > story > empty Home > invite sheet | Pass |
+| 2 | Log out > Welcome (Log in only); reopen logged in: straight to Home, no story | Pass (also after force-stop) |
+| 3 | Profile friends row > Your circle: move Elin to inner circle; count 5 > 6 on Profile and in Compose ("Only your 6 inner-circle friends") | Pass |
+| 4 | Home: private heart ("Liked. Only the author sees this"); Thread with first-layer replies and "View N replies" collapsed; reply to a comment ("Replying to Jonah"); Repost popover; Quote posts with the quoted card | Pass; fixed: tapping Reply now focuses the field and opens the keyboard |
+| 5 | Compose: Inner circle, Post: tagged "INNER CIRCLE ONLY" on Home and Profile | Pass |
+| 6 | Explore map dot > View event > Take a seat (4 > 5 of 10); non-member group > Request to join > Requested, "every member can see it" | Pass |
+| 7 | Alerts: Accept Riya; friends 128 > 129 | Pass |
+| 8 | Chat: swipe right to reply; hold: Copy / Delete for me (no Unsend on theirs); friend's shared note opens the thread; Elena's opens the gate (no thread, no comment field); Elena in the group chat: Limited profile, Add friend, no Message | Pass |
+| 9 | Gear on Profile; Notifications one row ("6 of 6 on"); theme Day applies at once; About Circle and Why I built it tinted | Pass |
+| 10 | Membership (start > "You're a member."), Your data (request download, audit line; delete by typing "delete" > Welcome), Terms / Privacy / Company | Pass |
+| 11 | Night and day | Pass on Home, Chat, Explore, Settings, About, Why (day screenshots); other screens checked in night. Screen reader: list views carry full labels (Explore list, Your circle); TalkBack itself isn't on this emulator image |
+| — | Phase 11 on device: a new account and a like survive force-stop; Reset demo data; fail switch shows the error state on Home, Messages, Alerts | Pass |
+| — | Crash log (`AndroidRuntime:E`) after the pass | Clean |
+
+**Dead buttons:** none found. The only no-op handlers are a long-press target (the tap does nothing on purpose) and the
+disabled "Other cities aren't available yet" item, which says why. "Use email instead" shows the "coming soon" message the
+document asks for.
+
+**Rejected list (BUILD_BRIEF 3) re-read:** no reaction pickers, circle-reveal transitions, gestures, wheels, avatar rows,
+drum/deck feeds or inline comments on Home; group joins are always requests; requests live in Alerts; Home is a plain
+vertical scroll.
+
+**Fixed in this phase:** Reply focuses the composer (thread and event thread); four Settings subtitles and the reply
+placeholder moved to resources (the text test missed literals passed as plain arguments); the Home date header follows the
+device locale instead of English; Android backup turned off (the demo file holds chats).
+
+**Documents:** BACKEND_READINESS.md completed (entities, operations as candidate API calls, push, media, moderation, export
+and deletion, sign-in, assumptions); LAUNCH_CHECKLIST.md written; PRIVACY_RULES.md and CLAIMS.md were already complete and
+still match the behaviour.
+
+**Open (not done):** R8/minify for release; real device / tablet pass; TalkBack on a real phone; everything marked Owner,
+Lawyer or Backend in LAUNCH_CHECKLIST.md.
