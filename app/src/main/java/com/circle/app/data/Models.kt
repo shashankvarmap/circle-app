@@ -188,6 +188,10 @@ data class Alert(
     val postId: String? = null,
     /** For activity rows: whose note it was about. */
     val aboutId: String? = null,
+    /** Timed reminders and changes: the temporary group or chat with friends it is about. */
+    val timedId: String? = null,
+    /** The date the alert names: the new end (extended), or when it is deleted (ended, deleted tomorrow). */
+    val timedAt: Instant? = null,
 )
 
 enum class AlertKind {
@@ -195,4 +199,6 @@ enum class AlertKind {
     LIKED_YOUR_NOTE, COMMENTED_ON_YOUR_NOTE, REPOSTED_YOUR_NOTE, QUOTED_YOUR_NOTE,
     // What friends did (Activity tab)
     FRIEND_COMMENTED, FRIEND_REPOSTED,
+    // Temporary groups and chats with friends (TIMED_GROUPS 7): the server sends these to members
+    TIMED_ENDS_SOON, TIMED_ENDS_TOMORROW, TIMED_ENDED, TIMED_DELETED_TOMORROW, TIMED_EXTENDED, TIMED_MADE_PERMANENT,
 }

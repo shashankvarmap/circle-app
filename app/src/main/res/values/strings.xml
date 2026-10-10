@@ -868,4 +868,154 @@
     <string name="time_travel_kind_chat">Chat with friends</string>
     <string name="time_travel_none">No temporary groups or chats left.</string>
     <string name="time_travel_note">Something deleted stays deleted, even if you go back. Reset demo data brings it back.</string>
+    <!-- Timed groups: display (T3) -->
+    <plurals name="timer_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <string name="timer_ended">Ended</string>
+    <string name="timer_temporary">Temporary</string>
+    <plurals name="timer_cd_left">
+        <item quantity="one">Ends in %d day</item>
+        <item quantity="other">Ends in %d days</item>
+    </plurals>
+    <string name="timer_cd_ended">Ended, read-only</string>
+    <string name="timed_ending_soon_kicker">ENDING SOON</string>
+    <plurals name="timed_ends_in">
+        <item quantity="one">Ends in %d day.</item>
+        <item quantity="other">Ends in %d days.</item>
+    </plurals>
+    <string name="timed_ending_soon_body">Save a copy to keep what\'s here. After that it\'s read-only for 7 days, then deleted.</string>
+    <string name="timed_together">The group and its chat end together.</string>
+    <string name="timed_ended_kicker">THIS CHAT HAS ENDED</string>
+    <string name="timed_deleted_on">Deleted on %1$s.</string>
+    <string name="timed_ended_body">It\'s read-only now. Save a copy before it goes. Anything you saved stays on your phone.</string>
+    <string name="timed_save_copy">Save a copy</string>
+    <string name="timed_save_copy_soon">Saving a copy comes in the next update.</string>
+    <string name="timed_extend_or_keep">Extend or keep it</string>
+    <string name="timed_read_only">Read-only. This chat has ended.</string>
+    <string name="timed_deleted_title">This chat has ended and was deleted.</string>
+    <string name="timed_deleted_body">Everything in it was removed from Circle. If you saved a copy, it\'s on your phone.</string>
+    <string name="timed_back_to_messages">Back to Messages</string>
+    <string name="timed_menu_extend">Extend or make permanent</string>
+    <string name="timed_menu_leave">Leave</string>
+    <string name="timed_left_chat">You left the chat</string>
+    <string name="extend_title">Keep it going</string>
+    <string name="extend_body">Only the host can do this. Everyone is told.</string>
+    <plurals name="extend_plus">
+        <item quantity="one">+%d day</item>
+        <item quantity="other">+%d days</item>
+    </plurals>
+    <string name="extend_permanent">Make it permanent</string>
+    <string name="extend_end_now">End it now</string>
+    <plurals name="extend_done">
+        <item quantity="one">Extended by %d day</item>
+        <item quantity="other">Extended by %d days</item>
+    </plurals>
+    <string name="extend_permanent_done_group">This is now a permanent group</string>
+    <string name="extend_permanent_done_chat">This is now a permanent chat</string>
+    <string name="extend_end_done">Ended. Read-only for 7 days</string>
+    <plurals name="msg_timed_ending">
+        <item quantity="one">Ends in %d day. Save a copy.</item>
+        <item quantity="other">Ends in %d days. Save a copy.</item>
+    </plurals>
+    <plurals name="msg_timed_ended">
+        <item quantity="one">Ended. Read-only. Deleted in %d day.</item>
+        <item quantity="other">Ended. Read-only. Deleted in %d days.</item>
+    </plurals>
+    <string name="messages_tab_friends_note">Chats with friends. A chat you start with friends can be temporary too, and stays here with your messages.</string>
+    <string name="messages_tab_groups_note">Chats for the Circle groups you\'ve joined. A temporary group\'s chat ends with the group.</string>
+    <plurals name="chat_sub_friends_ends">
+        <item quantity="one">%1$d friend · ends %2$s</item>
+        <item quantity="other">%1$d friends · ends %2$s</item>
+    </plurals>
+    <plurals name="chat_sub_members_ends">
+        <item quantity="one">%1$d member · ends %2$s</item>
+        <item quantity="other">%1$d members · ends %2$s</item>
+    </plurals>
+    <string name="chat_sub_ended">Ended %1$s · read-only</string>
+    <string name="group_ends_chip">Ends %1$s</string>
+    <string name="group_ended_chip">Ended %1$s · read-only</string>
+    <string name="group_chat_row">Group chat</string>
+    <string name="group_chat_ends">Ends with the group</string>
+    <string name="group_left">You left the group</string>
+    <string name="group_ended_no_posts">This group has ended. It\'s read-only now.</string>
+    <string name="explore_temp_kicker">TEMPORARY GROUP · %1$s</string>
+    <plurals name="explore_ends_in">
+        <item quantity="one">Ends in %d day</item>
+        <item quantity="other">Ends in %d days</item>
+    </plurals>
+    <string name="explore_temp_body">A temporary group. Members can save a copy before it closes. It\'s deleted 7 days after it ends.</string>
+    <string name="explore_temp_tag">TEMPORARY</string>
+    <string name="explore_filter_all">All</string>
+    <string name="explore_filter_temp">Temporary</string>
+    <string name="explore_legend_permanent">Permanent group</string>
+    <string name="explore_legend_temporary">Temporary group</string>
+    <plurals name="alert_timed_ends_in">
+        <item quantity="one">%1$s ends in %2$d day</item>
+        <item quantity="other">%1$s ends in %2$d days</item>
+    </plurals>
+    <string name="alert_timed_ends_soon_body">Reminder. You can save a copy any time before then.</string>
+    <string name="alert_timed_tomorrow_body">Save a copy to keep what\'s in it.</string>
+    <string name="alert_timed_ended_title">%1$s has ended</string>
+    <string name="alert_timed_ended_body">It\'s read-only until %1$s. Save a copy before it\'s deleted.</string>
+    <string name="alert_timed_delete_title">%1$s is deleted tomorrow</string>
+    <string name="alert_timed_delete_body">Save a copy now to keep it. After that it\'s gone from Circle for everyone.</string>
+    <string name="alert_timed_extended_title">%1$s extended %2$s</string>
+    <string name="alert_timed_extended_body">It now ends %1$s.</string>
+    <string name="alert_timed_permanent_title">%1$s made %2$s permanent</string>
+    <string name="alert_timed_permanent_body">It no longer has an end date.</string>
+    <string name="lifetime_heading">HOW LONG DOES IT LAST?</string>
+    <string name="lifetime_permanent">Permanent</string>
+    <string name="lifetime_permanent_sub">Stays until you delete it.</string>
+    <string name="lifetime_temporary">Temporary</string>
+    <string name="lifetime_temporary_sub">Ends on a date you choose, then closes by itself.</string>
+    <string name="lifetime_ends_in">ENDS IN</string>
+    <string name="lifetime_custom">Custom</string>
+    <string name="lifetime_fewer">Fewer days</string>
+    <string name="lifetime_more">More days</string>
+    <plurals name="lifetime_days_word">
+        <item quantity="one"> day</item>
+        <item quantity="other"> days</item>
+    </plurals>
+    <string name="lifetime_range">From 1 to 90 days.</string>
+    <string name="lifetime_what_happens">WHAT HAPPENS</string>
+    <string name="lifetime_today">Today</string>
+    <string name="lifetime_today_group">Works like any group.</string>
+    <string name="lifetime_today_chat">Works like any chat.</string>
+    <string name="lifetime_end_line">It ends. For 7 days it\'s read-only and everyone can save a copy.</string>
+    <string name="lifetime_delete_line">Deleted for everyone.</string>
+    <string name="lifetime_told">Everyone is told this before they join, and every member can save a copy.</string>
+    <string name="lifetime_group_chat">A temporary group has its own chat.</string>
+    <string name="lifetime_permanent_note">It stays as long as it has members. You can delete it any time.</string>
+    <string name="lifetime_how_link">How timed groups work</string>
+    <string name="lifetime_created_until">Group created. It ends %1$s</string>
+    <string name="chat_created">Chat created</string>
+    <string name="how_title">How timed groups work</string>
+    <string name="how_headline">For things that have an end.</string>
+    <string name="how_intro">A project, a trip, an exam, a wedding. Set an end date, and the group closes by itself. Nobody has to remember to tidy up.</string>
+    <string name="how_stage1">Active</string>
+    <string name="how_stage1_body">Works like any group. Everyone sees when it ends.</string>
+    <string name="how_stage2">Ending soon</string>
+    <string name="how_stage2_body">Reminders 3 days and 1 day before, with a Save a copy button.</string>
+    <string name="how_stage3">Wrap-up: 7 days, read-only</string>
+    <string name="how_stage3_body">Nobody can post. Everyone can save a copy. The host can extend it or make it permanent.</string>
+    <string name="how_stage4">Deleted</string>
+    <string name="how_stage4_body">Everything is removed from Circle for everyone, whether or not anyone saved a copy. Copies people saved stay on their own phones.</string>
+    <string name="how_good_to_know">GOOD TO KNOW</string>
+    <string name="how_q1">Who can save a copy?</string>
+    <string name="how_a1">Every member, on their own phone, as a ZIP file. Nobody has to send anything to anyone.</string>
+    <string name="how_q2">What if I forget?</string>
+    <string name="how_a2">After the 7 days it\'s deleted. People who saved a copy keep it. Nobody else does.</string>
+    <string name="how_q3">Can it be changed?</string>
+    <string name="how_a3">The host can extend the end date or make the group permanent any time before it\'s deleted.</string>
+    <string name="how_q4">Can I leave early?</string>
+    <string name="how_a4">Yes. And you can delete your own messages any time.</string>
+    <string name="how_placeholder">Placeholder wording for design. The rule about reported content being kept briefly for review, and the exact deletion timings, must be checked with a lawyer.</string>
+    <string name="join_ends_on">This group ends on %1$s.</string>
+    <string name="join_body">Until then it works like any group. Everything in it can be saved by its members. After it ends it\'s read-only for 7 days, then it\'s deleted for everyone.</string>
+    <string name="join_agree">By joining you agree to this.</string>
+    <string name="join_not_now">Not now</string>
+    <string name="join_private_group">Private group</string>
+    <string name="join_public_group">Public group</string>
 </resources>

@@ -101,6 +101,12 @@ class FakeCircleRepository(
     override suspend fun resetDemoData() {
         store.reset()
         store.people.keys.forEach { cache.purgeAuthor(it) }
+        sweepLifetimes()
+    }
+
+    init {
+        // Catch up with time at start: seed reminders, and anything that ended while the app was closed.
+        sweepLifetimes()
     }
 
     /**
@@ -154,6 +160,7 @@ class FakeCircleRepository(
      * Reads never wait for this: they treat DELETED as NotFound already.
      */
     internal fun sweepLifetimes() {
+        remind()
         store.groups.filter { groupState(it) == LifeState.WRAP_UP }.forEach { g ->
             if (g.joinRequests.isNotEmpty()) g.joinRequests.clear()
             if (g.joinRequested) g.joinRequested = false
@@ -169,12 +176,113 @@ class FakeCircleRepository(
         store.likedPostIds.removeAll { it in gonePostIds }
         store.likedCommentIds.removeAll { it in goneCommentIds }
         store.alerts.removeAll { it.postId != null && it.postId in gonePostIds }
+        val goneIds = goneGroups + goneChats.map { it.id }
+        store.alerts.removeAll { it.timedId != null && it.timedId in goneIds }
+        store.goneTimedIds.addAll(goneIds.filter { it !in store.goneTimedIds })
         store.invites.removeAll { it.groupId != null && it.groupId in goneGroups }
         store.hiddenMessageIds.removeAll { it in goneMessageIds }
         store.chats.removeAll { c -> goneChats.any { it === c } }
         store.groups.removeAll { it.id in goneGroups }
         cache.forgetKeys(gonePostIds.flatMap { listOf("note:$it", "thread:$it", "snippet:$it") }.toSet())
     }
+
+    /**
+     * The reminders the server sends members (TIMED_GROUPS 7): 3 days and 1 day before the end, at the
+     * end, and 1 day before deletion. Each is sent once, dated when it was due; after a jump in time only
+     * the latest one due is sent. The server doesn't know who saved a copy (the app hides that last one).
+     */
+    private fun remind() {
+        val now = lifetime.now()
+        val day = java.time.Duration.ofDays(1)
+        val targets = store.groups.filter { it.isMember }.map { it.id to it.term } +
+            store.chats.filter { it.groupId == null && !it.hiddenForMe }.map { it.id to it.term }
+        targets.forEach { (id, term) ->
+            val t = term as? com.circle.app.data.lifetime.Term.Temporary ?: return@forEach
+            val deleteAt = com.circle.app.data.lifetime.Lifetime.deleteAt(t.endsAt)
+            if (now >= deleteAt) return@forEach
+            val due = listOf(
+                AlertKind.TIMED_DELETED_TOMORROW to deleteAt.minus(day),
+                AlertKind.TIMED_ENDED to t.endsAt,
+                AlertKind.TIMED_ENDS_TOMORROW to t.endsAt.minus(day),
+                AlertKind.TIMED_ENDS_SOON to t.endsAt.minus(com.circle.app.data.lifetime.Lifetime.ENDING_SOON),
+            ).firstOrNull { now >= it.second } ?: return@forEach
+            val alertId = "timed-${due.first.name}-$id-${t.endsAt.epochSecond}"
+            if (store.alerts.none { it.id == alertId }) {
+                store.alerts.add(0, Alert(alertId, ME, due.first, due.second, timedId = id, timedAt = deleteAt))
+            }
+        }
+    }
+
+    /** What the viewer sees of a term; null when permanent. */
+    private fun lifetimeView(term: com.circle.app.data.lifetime.Term, isMember: Boolean, isHost: Boolean): LifetimeView? {
+        val t = term as? com.circle.app.data.lifetime.Term.Temporary ?: return null
+        val state = lifetime.state(t)
+        val now = lifetime.now()
+        val deleteAt = com.circle.app.data.lifetime.Lifetime.deleteAt(t.endsAt)
+        fun daysUntil(i: java.time.Instant): Int {
+            val ms = java.time.Duration.between(now, i).toMillis()
+            return if (ms <= 0) 0 else ((ms + DAY_MS - 1) / DAY_MS).toInt()
+        }
+        val left = java.time.Duration.between(now, t.endsAt).toMillis().coerceAtLeast(0)
+        return LifetimeView(
+            state = state, endsAt = t.endsAt, deleteAt = deleteAt,
+            daysLeft = daysUntil(t.endsAt), daysToDelete = daysUntil(deleteAt),
+            elapsed = (1f - left.toFloat() / (30 * DAY_MS)).coerceIn(0f, 1f),
+            canChange = AccessPolicy.timed(state, TimedAction.EXTEND, isMember, isHost).allowed,
+            canSaveCopy = AccessPolicy.timed(state, TimedAction.EXPORT, isMember, isHost).allowed,
+        )
+    }
+
+    private fun groupLifetime(g: GroupInfo) = lifetimeView(g.term, g.isMember, g.isMember && ME in g.hostIds)
+
+    private fun chatLifetime(c: Chat): LifetimeView? =
+        c.groupId?.let { id -> store.group(id)?.let { groupLifetime(it) } } ?: lifetimeView(c.term, true, c.startedBy == ME)
+
+    override fun lifetimePreview(days: Int): LifetimePreview {
+        val zone = java.time.ZoneId.systemDefault()
+        val end = lifetime.endOfDay(lifetime.today(zone).plusDays(days.coerceIn(1, 90).toLong()), zone)
+        return LifetimePreview(end, com.circle.app.data.lifetime.Lifetime.deleteAt(end))
+    }
+
+    /** The term an id points at: a group, a chat with friends, or a group's chat (its group). */
+    private class Owner(val get: () -> com.circle.app.data.lifetime.Term, val set: (com.circle.app.data.lifetime.Term) -> Unit, val name: String, val isMember: Boolean, val isHost: Boolean, val others: List<String>)
+
+    private fun owner(id: String): Owner? {
+        val g = store.group(id) ?: store.chat(id)?.groupId?.let { store.group(it) }
+        if (g != null) return Owner({ g.term }, { g.term = it }, g.name, g.isMember, g.isMember && ME in g.hostIds, (g.hostIds + g.memberIds).distinct() - ME)
+        val c = store.chat(id)?.takeIf { it.groupId == null && chatVisible(it) } ?: return null
+        return Owner({ c.term }, { c.term = it }, chatTitle(c), true, c.startedBy == ME, c.memberIds - ME)
+    }
+
+    private suspend fun changeLifetime(id: String, action: TimedAction, change: (com.circle.app.data.lifetime.Term) -> com.circle.app.data.lifetime.Lifetime.Change): Outcome<Unit> {
+        offline()?.let { return it }
+        val o = owner(id) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        denied(AccessPolicy.timed(lifetime.state(o.get()), action, o.isMember, o.isHost))?.let { return it }
+        return when (val r = change(o.get())) {
+            is com.circle.app.data.lifetime.Lifetime.Change.Done -> {
+                o.set(r.term)
+                // Members are told by the server ("Priya extended Project Alps. It now ends Fri 6 Nov.").
+                o.others.forEach { store.sentNotices.add(Notice(it, "${o.name}: ${action.name.lowercase()}", Clock.now())) }
+                sweepLifetimes()
+                Outcome.Success(Unit)
+            }
+            is com.circle.app.data.lifetime.Lifetime.Change.Refused -> Outcome.Error(r.why.name.lowercase())
+        }
+    }
+
+    override suspend fun extendLifetime(id: String, days: Int): Outcome<Unit> = changeLifetime(id, TimedAction.EXTEND) { term ->
+        val zone = java.time.ZoneId.systemDefault()
+        val end = (term as? com.circle.app.data.lifetime.Term.Temporary)?.endsAt
+        val lastDay = end?.minusNanos(1)?.atZone(zone)?.toLocalDate() ?: lifetime.today(zone)
+        val from = maxOf(lastDay, lifetime.today(zone))
+        lifetime.extend(term, from.plusDays(days.toLong()), zone)
+    }
+
+    override suspend fun makePermanent(id: String): Outcome<Unit> = changeLifetime(id, TimedAction.MAKE_PERMANENT) { lifetime.makePermanent(it) }
+
+    override suspend fun endNow(id: String): Outcome<Unit> = changeLifetime(id, TimedAction.END_NOW) { lifetime.endNow(it) }
+
+    override fun wasDeleted(id: String): Flow<Boolean> = observe { id in store.goneTimedIds }
 
     /** Who someone is. Null across a block, or for nobody. */
     private fun ref(personId: String): PersonRef? {
@@ -753,6 +861,7 @@ class FakeCircleRepository(
                 unread = c.unread,
                 pinned = c.pinned,
                 muted = c.muted,
+                lifetime = chatLifetime(c),
             )
         }.sortedByDescending { it.lastAt } // newest first, never ranked
     }
@@ -770,6 +879,8 @@ class FakeCircleRepository(
             messages = messages.mapNotNull { m -> messageView(m, byId) },
             firstUnreadId = c.lastReadAt?.let { read -> messages.firstOrNull { it.senderId != ME && it.createdAt.isAfter(read) }?.id },
             muted = c.muted,
+            lifetime = chatLifetime(c),
+            canSend = chatState(c).isOpen,
         )
     }
 
@@ -799,15 +910,22 @@ class FakeCircleRepository(
         return c to null
     }
 
-    override suspend fun createChat(friendIds: List<String>, name: String?): Outcome<String> {
+    override suspend fun createChat(friendIds: List<String>, name: String?, lifetimeDays: Int?): Outcome<String> {
         offline()?.let { return it }
         val ids = friendIds.distinct().filter { it != ME }
         if (ids.isEmpty()) return Outcome.Error("empty")
         ids.forEach { id -> denied(AccessPolicy.directMessage(rel(id)))?.let { return it } }
-        if (ids.size == 1) return openDirectChat(ids.single())
+        // A temporary chat is always its own chat, even with one friend: the 1:1 chat stays permanent.
+        if (ids.size == 1 && lifetimeDays == null) return openDirectChat(ids.single())
+        val term = lifetimeDays?.let { days ->
+            when (val r = lifetime.create(days, java.time.ZoneId.systemDefault())) {
+                is com.circle.app.data.lifetime.Lifetime.Change.Done -> r.term
+                is com.circle.app.data.lifetime.Lifetime.Change.Refused -> return Outcome.Error(r.why.name.lowercase())
+            }
+        } ?: com.circle.app.data.lifetime.Term.Permanent
         val title = name?.trim()?.takeIf { it.isNotEmpty() }
             ?: ids.mapNotNull { store.person(it)?.firstName }.joinToString(", ")
-        val c = Chat(newId("chat"), ids, name = title, messages = emptyList(), startedBy = ME)
+        val c = Chat(newId("chat"), ids, name = title, messages = emptyList(), startedBy = ME).apply { this.term = term }
         store.chats.add(0, c)
         return Outcome.Success(c.id)
     }
@@ -932,6 +1050,9 @@ class FakeCircleRepository(
         return GroupView(
             GroupRef(g.id, g.name, g.initial, g.color), g.category, g.topic, g.description, g.isPublic,
             g.memberCount, g.isMember, g.joinRequested, g.compassDeg, people, iAmHost = g.isMember && ME in g.hostIds,
+            lifetime = groupLifetime(g),
+            chatId = if (g.isMember) store.chats.firstOrNull { it.groupId == g.id }?.id else null,
+            isOpen = groupState(g).isOpen,
         )
     }
 
@@ -1053,15 +1174,21 @@ class FakeCircleRepository(
 
     private val tileColors = listOf(AvatarOrange, AvatarSage, AvatarBlue, AvatarRose, AvatarTeal, AvatarAmber)
 
-    override suspend fun createGroup(name: String, category: String, description: String, isPublic: Boolean): Outcome<String> {
+    override suspend fun createGroup(name: String, category: String, description: String, isPublic: Boolean, lifetimeDays: Int?): Outcome<String> {
         offline()?.let { return it }
         if (name.isBlank()) return Outcome.Error("Add a name")
+        val term = lifetimeDays?.let { days ->
+            when (val r = lifetime.create(days, java.time.ZoneId.systemDefault())) {
+                is com.circle.app.data.lifetime.Lifetime.Change.Done -> r.term
+                is com.circle.app.data.lifetime.Lifetime.Change.Refused -> return Outcome.Error(r.why.name.lowercase())
+            }
+        } ?: com.circle.app.data.lifetime.Term.Permanent
         val cat = category.trim().ifEmpty { "General" }
         val g = GroupInfo(
             id = newId("group"), name = name.trim(), category = cat, topic = cat.uppercase(),
             description = description.trim(), color = tileColors[store.groups.size % tileColors.size],
             isPublic = isPublic, compassDeg = null, memberCount = 1, isMember = true, // the creator is a member
-        ).apply { hostIds.add(ME) }
+        ).apply { hostIds.add(ME); this.term = term }
         store.groups.add(0, g)
         // Every group gets its linked chat, in Messages > Groups.
         store.chats.add(0, Chat("g-${g.id}", emptyList(), groupId = g.id, messages = emptyList()))
@@ -1191,12 +1318,14 @@ class FakeCircleRepository(
 
     private fun alertView(a: Alert): AlertView? {
         val actor = ref(a.actorId) ?: return null
+        val timed = if (a.kind in timedKinds) timedAlert(a) ?: return null else null
         // A quoted comment only travels to someone who may read that thread.
         val readable = a.postId?.let { store.post(it) }?.let { decide(it, NoteAction.READ_COMMENTS).allowed } ?: false
         val read = store.alertsReadAt
         return AlertView(
             a.id, actor, a.kind, a.createdAt, a.quote?.takeIf { readable }, a.postId, a.aboutId?.let { ref(it) },
             unread = read == null || a.createdAt.isAfter(read),
+            timed = timed,
         )
     }
 
@@ -1207,7 +1336,25 @@ class FakeCircleRepository(
             AlertKind.LIKED_YOUR_NOTE -> prefs.likes
             AlertKind.COMMENTED_ON_YOUR_NOTE, AlertKind.QUOTED_YOUR_NOTE, AlertKind.REPOSTED_YOUR_NOTE -> prefs.comments
             AlertKind.FRIEND_COMMENTED, AlertKind.FRIEND_REPOSTED -> true
+            AlertKind.TIMED_ENDS_SOON, AlertKind.TIMED_ENDS_TOMORROW, AlertKind.TIMED_ENDED, AlertKind.TIMED_DELETED_TOMORROW,
+            AlertKind.TIMED_EXTENDED, AlertKind.TIMED_MADE_PERMANENT -> a.timedId?.let { store.group(it) } != null && prefs.groups || a.timedId?.let { store.group(it) } == null && prefs.messages
         }
+    }
+
+    private val timedKinds = setOf(
+        AlertKind.TIMED_ENDS_SOON, AlertKind.TIMED_ENDS_TOMORROW, AlertKind.TIMED_ENDED, AlertKind.TIMED_DELETED_TOMORROW,
+        AlertKind.TIMED_EXTENDED, AlertKind.TIMED_MADE_PERMANENT,
+    )
+
+    /** What a timed alert is about, if you can still see it (a group you're in, or a chat with friends). */
+    private fun timedAlert(a: Alert): TimedAlertView? {
+        val id = a.timedId ?: return null
+        store.group(id)?.let { g ->
+            if (!g.isMember || !AccessPolicy.timedRead(groupState(g)).allowed) return null
+            return TimedAlertView(g.id, g.name, true, null, a.timedAt)
+        }
+        val c = store.chat(id)?.takeIf { chatVisible(it) } ?: return null
+        return TimedAlertView(c.id, chatTitle(c), false, c.id, a.timedAt)
     }
 
     override fun hasUnreadAlerts(): Flow<Boolean> = observe {
@@ -1225,10 +1372,10 @@ class FakeCircleRepository(
         return Outcome.Success(Unit)
     }
 
-    private val aimedAtYou = setOf(AlertKind.LIKED_YOUR_NOTE, AlertKind.COMMENTED_ON_YOUR_NOTE, AlertKind.REPOSTED_YOUR_NOTE, AlertKind.QUOTED_YOUR_NOTE)
+    private val aimedAtYou = setOf(AlertKind.LIKED_YOUR_NOTE, AlertKind.COMMENTED_ON_YOUR_NOTE, AlertKind.REPOSTED_YOUR_NOTE, AlertKind.QUOTED_YOUR_NOTE) + timedKinds
 
     override fun alerts(): Flow<List<AlertView>> = observeLoaded {
-        store.alerts.filter { it.kind in aimedAtYou && wanted(it) }.mapNotNull { alertView(it) }
+        store.alerts.filter { it.kind in aimedAtYou && wanted(it) }.mapNotNull { alertView(it) }.sortedByDescending { it.createdAt }
     }
 
     override fun activity(): Flow<List<AlertView>> = observe {
@@ -1238,3 +1385,4 @@ class FakeCircleRepository(
             .mapNotNull { alertView(it) }
     }
 }
+private const val DAY_MS = 24L * 60 * 60 * 1000

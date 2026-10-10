@@ -162,6 +162,29 @@ enum class ChatKind { DIRECT, MULTI, GROUP }
 
 data class ChatPreview(val mine: Boolean, val senderFirstName: String?, val kind: MessageKind, val text: String)
 
+/**
+ * A temporary group's or chat's lifetime as the viewer sees it (TIMED_GROUPS 6). Null on permanent ones.
+ * The server decides the state; the app only shows it.
+ */
+data class LifetimeView(
+    val state: com.circle.app.data.lifetime.LifeState,
+    val endsAt: Instant,
+    val deleteAt: Instant,
+    /** Whole days left until the end, counted up ("12 days"); 0 once ended. */
+    val daysLeft: Int,
+    /** Whole days left until deletion, counted up ("Deleted in 5 days"). */
+    val daysToDelete: Int,
+    /** How full the chip's ring is: on a 30-day scale, full once ended. */
+    val elapsed: Float,
+    /** Host only (the group's host, or whoever started the chat): extend, make permanent, end now. */
+    val canChange: Boolean,
+    /** Members, from Active to Wrap-up. */
+    val canSaveCopy: Boolean,
+)
+
+/** When a new temporary group or chat would end and be deleted (the WHAT HAPPENS card). */
+data class LifetimePreview(val endsAt: Instant, val deleteAt: Instant)
+
 data class ChatRowView(
     val id: String,
     val kind: ChatKind,
@@ -174,6 +197,7 @@ data class ChatRowView(
     val unread: Boolean,
     val pinned: Boolean = false,
     val muted: Boolean = false,
+    val lifetime: LifetimeView? = null,
 )
 
 /** An event as it appears in a chat card. */
@@ -209,6 +233,9 @@ data class ChatView(
     /** The first message that arrived after you last read the chat (for the "New messages" divider). */
     val firstUnreadId: String? = null,
     val muted: Boolean = false,
+    val lifetime: LifetimeView? = null,
+    /** False once a temporary chat has ended: the composer is replaced by a locked bar. */
+    val canSend: Boolean = true,
 )
 
 // ---- Groups, events, explore --------------------------------------------------------------------
@@ -238,6 +265,11 @@ data class GroupView(
     val people: GroupPeopleView?,
     /** Hosts approve requests, edit the group and remove members. */
     val iAmHost: Boolean = false,
+    val lifetime: LifetimeView? = null,
+    /** The group's chat, for members ("Group chat · Ends with the group"). */
+    val chatId: String? = null,
+    /** False once a temporary group has ended: no posts, comments, invites or joins. */
+    val isOpen: Boolean = true,
 )
 
 data class EventSummary(
@@ -287,4 +319,8 @@ data class AlertView(
     val postId: String?,
     val about: PersonRef?,
     val unread: Boolean = false,
+    val timed: TimedAlertView? = null,
 )
+
+/** What a timed alert is about. [chatId] opens a chat with friends; otherwise [id] is a group. */
+data class TimedAlertView(val id: String, val name: String, val isGroup: Boolean, val chatId: String?, val at: Instant?)

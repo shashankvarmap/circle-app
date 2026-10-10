@@ -74,9 +74,10 @@ data class StoreSnapshot(
     val notifications: NotifS,
     /** Demo time travel: how far the fake server's clock is moved from real time. */
     val clockShiftMs: Long = 0,
+    val goneTimedIds: List<String> = emptyList(),
 ) {
     companion object {
-        const val VERSION = 3
+        const val VERSION = 4
     }
 }
 
@@ -114,6 +115,7 @@ data class StoreSnapshot(
 )
 @Serializable data class AlertS(
     val id: String, val actorId: String, val kind: String, val at: Long, val quote: String?, val postId: String?, val aboutId: String?,
+    val timedId: String? = null, val timedAt: Long? = null,
 )
 @Serializable data class ExportS(val kind: String, val at: Long)
 @Serializable data class InviteS(val toPersonId: String, val groupId: String?, val eventId: String?, val at: Long)
@@ -182,7 +184,8 @@ fun CircleStore.capture(): StoreSnapshot = StoreSnapshot(
         )
     },
     hiddenMessageIds = hiddenMessageIds.toList(),
-    alerts = alerts.map { AlertS(it.id, it.actorId, it.kind.name, it.createdAt.ms(), it.quote, it.postId, it.aboutId) },
+    alerts = alerts.map { AlertS(it.id, it.actorId, it.kind.name, it.createdAt.ms(), it.quote, it.postId, it.aboutId, it.timedId, it.timedAt?.ms()) },
+    goneTimedIds = goneTimedIds.toList(),
     exportLog = exportLog.map { ExportS(it.kind.name, it.at.ms()) },
     invitesShared = invitesShared,
     alertsReadAt = alertsReadAt?.ms(),
@@ -236,7 +239,8 @@ fun CircleStore.restore(s: StoreSnapshot) {
         ).apply { muted = c.muted; hiddenForMe = c.hiddenForMe; clearedAt = c.clearedAt?.instant(); term = termOf(c.endsAt) }
     })
     hiddenMessageIds.replaceWith(s.hiddenMessageIds)
-    alerts.replaceWith(s.alerts.map { Alert(it.id, it.actorId, AlertKind.valueOf(it.kind), it.at.instant(), it.quote, it.postId, it.aboutId) })
+    alerts.replaceWith(s.alerts.map { Alert(it.id, it.actorId, AlertKind.valueOf(it.kind), it.at.instant(), it.quote, it.postId, it.aboutId, it.timedId, it.timedAt?.instant()) })
+    goneTimedIds.replaceWith(s.goneTimedIds)
     exportLog.replaceWith(s.exportLog.map { ExportEvent(ExportStep.valueOf(it.kind), it.at.instant()) })
     invitesShared = s.invitesShared
     alertsReadAt = s.alertsReadAt?.instant()

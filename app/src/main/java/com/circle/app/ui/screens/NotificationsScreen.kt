@@ -61,7 +61,12 @@ fun NotificationsScreen(nav: NavHostController) {
     val header = rememberCollapsingHeaderState { listState.canScrollForward || listState.canScrollBackward }
 
     fun open(a: AlertView) {
-        if (a.postId != null) nav.navigate(Routes.thread(a.postId)) else nav.openPerson(a.actor.id)
+        val timed = a.timed
+        when {
+            timed != null -> nav.navigate(timed.chatId?.let { Routes.chat(it) } ?: Routes.groupDetail(timed.id))
+            a.postId != null -> nav.navigate(Routes.thread(a.postId))
+            else -> nav.openPerson(a.actor.id)
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
@@ -108,7 +113,7 @@ fun NotificationsScreen(nav: NavHostController) {
                         )
                     }
                     item { Spacer(Modifier.height(4.dp)); SectionLabel(stringResource(R.string.alerts_recent_caps)) }
-                    items(alerts, key = { it.id }) { a -> ActivityRow(a) { open(a) } }
+                    items(alerts, key = { it.id }) { a -> if (a.timed != null) TimedAlertRow(a) { open(a) } else ActivityRow(a) { open(a) } }
                 } else {
                     if (activity.isEmpty()) item(key = "empty-activity") { EmptyState(EmptyKind.ALERTS) }
                     items(activity, key = { it.id }) { a -> ActivityRow(a) { open(a) } }
@@ -169,6 +174,44 @@ private fun alertText(a: AlertView): String {
         AlertKind.QUOTED_YOUR_NOTE -> a.quote?.let { stringResource(R.string.alert_quoted_quote, it) } ?: stringResource(R.string.alert_quoted)
         AlertKind.FRIEND_COMMENTED -> a.quote?.let { stringResource(R.string.alert_friend_commented_quote, about, it) } ?: stringResource(R.string.alert_friend_commented, about)
         AlertKind.FRIEND_REPOSTED -> stringResource(R.string.alert_friend_reposted, about)
+        else -> ""
+    }
+}
+
+/** Reminders and changes for temporary groups and chats (TIMED_GROUPS 7): a title, one line, and when. */
+@Composable
+private fun TimedAlertRow(a: AlertView, onOpen: () -> Unit) {
+    val t = a.timed ?: return
+    val colors = CircleTheme.colors
+    val title = when (a.kind) {
+        AlertKind.TIMED_ENDS_SOON -> androidx.compose.ui.res.pluralStringResource(R.plurals.alert_timed_ends_in, 3, t.name, 3)
+        AlertKind.TIMED_ENDS_TOMORROW -> androidx.compose.ui.res.pluralStringResource(R.plurals.alert_timed_ends_in, 1, t.name, 1)
+        AlertKind.TIMED_ENDED -> stringResource(R.string.alert_timed_ended_title, t.name)
+        AlertKind.TIMED_DELETED_TOMORROW -> stringResource(R.string.alert_timed_delete_title, t.name)
+        AlertKind.TIMED_EXTENDED -> stringResource(R.string.alert_timed_extended_title, a.actor.firstName, t.name)
+        else -> stringResource(R.string.alert_timed_permanent_title, a.actor.firstName, t.name)
+    }
+    val date = t.at?.let { com.circle.app.ui.components.lastDay(it) }.orEmpty()
+    val body = when (a.kind) {
+        AlertKind.TIMED_ENDS_SOON -> stringResource(R.string.alert_timed_ends_soon_body)
+        AlertKind.TIMED_ENDS_TOMORROW -> stringResource(R.string.alert_timed_tomorrow_body)
+        AlertKind.TIMED_ENDED -> stringResource(R.string.alert_timed_ended_body, date)
+        AlertKind.TIMED_DELETED_TOMORROW -> stringResource(R.string.alert_timed_delete_body)
+        AlertKind.TIMED_EXTENDED -> stringResource(R.string.alert_timed_extended_body, date)
+        else -> stringResource(R.string.alert_timed_permanent_body)
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+            .background(if (a.unread) colors.accent.copy(alpha = 0.08f) else androidx.compose.ui.graphics.Color.Transparent)
+            .clickable(onClick = onOpen).padding(vertical = 13.dp, horizontal = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        com.circle.app.ui.components.TimedAlertIcon(a.kind)
+        Column(Modifier.weight(1f)) {
+            Text(title, color = colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(body, color = colors.body, fontSize = 13.sp, lineHeight = 18.9.sp, modifier = Modifier.padding(top = 2.dp))
+            Text(relativeTime(a.createdAt), color = colors.muted, fontSize = 11.5.sp, modifier = Modifier.padding(top = 3.dp))
+        }
     }
 }
 

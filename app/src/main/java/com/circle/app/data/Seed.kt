@@ -267,5 +267,7 @@ internal object Seed {
         Alert("a4", "TN", AlertKind.QUOTED_YOUR_NOTE, ago(h = 3), quote = "so real", postId = "you-workshop"),
         Alert("b1", "AO", AlertKind.FRIEND_COMMENTED, ago(m = 45), quote = "ha, same", postId = "tomas-tomatoes", aboutId = "TN"),
         Alert("b2", "JL", AlertKind.FRIEND_REPOSTED, ago(h = 2), postId = "tomas-tomatoes", aboutId = "TN"),
+        // Priya extended Project Alps last week; reminders for the others come from the server as time passes.
+        Alert("t1", "PK", AlertKind.TIMED_EXTENDED, ago(d = 6), timedId = "project-alps", timedAt = termEnding(11).endsAt),
     )
 }

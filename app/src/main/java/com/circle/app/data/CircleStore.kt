@@ -65,6 +65,12 @@ object CircleStore {
 
     val alerts = mutableStateListOf<Alert>()
 
+    /**
+     * Temporary groups and chats the server has deleted for everyone. Ids only, so a stale link or
+     * an open screen can say "ended and deleted" instead of a plain "not found".
+     */
+    val goneTimedIds = mutableStateListOf<String>()
+
     /** Your data-export audit log, and how many invite links you've shared (shown to you only). */
     val exportLog = mutableStateListOf<ExportEvent>()
     var invitesShared by mutableStateOf(0)
@@ -109,7 +115,7 @@ object CircleStore {
         groups.clear(); groups.addAll(Seed.groups())
         events.clear(); events.addAll(Seed.events())
         chats.clear(); chats.addAll(ChatSeed.chats()); hiddenMessageIds.clear()
-        alerts.clear(); alerts.addAll(Seed.alerts())
+        alerts.clear(); alerts.addAll(Seed.alerts()); goneTimedIds.clear()
         invites.clear(); sentNotices.clear(); alertsReadAt = null
         exportLog.clear(); invitesShared = 0
 

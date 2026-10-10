@@ -133,7 +133,7 @@ interface CircleRepository {
     /** Opens (or creates) the 1:1 chat with a friend; returns the chat id. Friends only. */
     suspend fun openDirectChat(personId: String): Outcome<String>
     /** New chat: one friend opens the 1:1 chat; several make a chat (with an optional name). Friends only. */
-    suspend fun createChat(friendIds: List<String>, name: String?): Outcome<String>
+    suspend fun createChat(friendIds: List<String>, name: String?, lifetimeDays: Int? = null): Outcome<String>
     suspend fun sendMedia(chatId: String, media: List<com.circle.app.data.media.MediaRef>): Outcome<Unit>
     suspend fun sendEventInvite(chatId: String, eventId: String): Outcome<Unit>
     suspend fun setChatPinned(chatId: String, pinned: Boolean): Outcome<Unit>
@@ -153,7 +153,19 @@ interface CircleRepository {
     fun event(eventId: String): Flow<EventView?>
     suspend fun requestToJoin(groupId: String): Outcome<Unit>
     suspend fun leaveGroup(groupId: String): Outcome<Unit>
-    suspend fun createGroup(name: String, category: String, description: String, isPublic: Boolean): Outcome<String>
+    suspend fun createGroup(name: String, category: String, description: String, isPublic: Boolean, lifetimeDays: Int? = null): Outcome<String>
+
+    // ---- Temporary groups and chats (TIMED_GROUPS). [id] is a group, a chat with friends, or a group's chat (= its group). ----
+    /** When a temporary group or chat made today for [days] days would end and be deleted. */
+    fun lifetimePreview(days: Int): LifetimePreview
+    /** Host only. Moves the end [days] days later (from today when it has already ended); members are told. */
+    suspend fun extendLifetime(id: String, days: Int): Outcome<Unit>
+    /** Host only. Removes the end; members are told. */
+    suspend fun makePermanent(id: String): Outcome<Unit>
+    /** Host only. Ends it now: read-only for 7 days, then deleted. */
+    suspend fun endNow(id: String): Outcome<Unit>
+    /** True once [id] was a temporary group or chat the server has deleted for everyone. */
+    fun wasDeleted(id: String): Flow<Boolean>
     /** Hosts only. Approving makes the person a member. */
     suspend fun approveJoinRequest(groupId: String, personId: String): Outcome<Unit>
     suspend fun declineJoinRequest(groupId: String, personId: String): Outcome<Unit>
