@@ -71,6 +71,16 @@ internal object Seed {
     private fun ago(d: Long = 0, h: Long = 0, m: Long = 0): Instant =
         Clock.ago(Duration.ofDays(d).plusHours(h).plusMinutes(m))
 
+    /**
+     * A temporary term (TIMED_GROUPS) ending at the end of the day [lastDayFromToday] days from today
+     * in this phone's zone. Time left counts up to whole days, so 11 shows as "12 days" and 2 as "3 days".
+     */
+    fun termEnding(lastDayFromToday: Long): com.circle.app.data.lifetime.Term.Temporary {
+        val zone = ZoneId.systemDefault()
+        val today = Clock.now().atZone(zone).toLocalDate()
+        return com.circle.app.data.lifetime.Term.Temporary(today.plusDays(lastDayFromToday + 1).atStartOfDay(zone).toInstant())
+    }
+
     /** [daysAhead] days from today at a local clock time. */
     private fun ahead(daysAhead: Long, hhmm: String): Instant {
         val zone = ZoneId.systemDefault()
@@ -150,6 +160,8 @@ internal object Seed {
             Post("group-catan", "JL", ago(h = 2), "Anyone up for Catan tonight? Need a fourth.", groupId = "board-game-club"),
             Post("group-long-exposure", "TN", ago(h = 3), "Finally got the long-exposure shot of the fountain right.", groupId = "photo-walk"),
             Post("group-trail-route", "AO", ago(h = 5), "Route for this week is up. Easy pace, brunch after.", groupId = "sunday-trail"),
+            Post("alps-route", "PK", ago(m = 40), "Draft of the route plan is up. Comments by Friday please.", groupId = "project-alps"),
+            Post("alps-hut", "JL", ago(h = 3), "Booked the hut for the 21st. Sixteen beds, we need eight.", groupId = "project-alps"),
         )
     }
 
@@ -179,7 +191,33 @@ internal object Seed {
         GroupInfo(
             "aachen-choir", "Aachen Choir", "Music", "MUSIC", "",
             AvatarRose, isPublic = true, compassDeg = 248f, memberCount = 42, isMember = false
-        )
+        ),
+        // Timed groups (TIMED_GROUPS 10, T2): a private temporary group you're in, and two public ones for Explore.
+        GroupInfo(
+            "project-alps", "Project Alps", "Outdoors", "OUTDOORS",
+            "Planning the Alps trip: route, hut, gear. It ends when we're back.",
+            AvatarSage, isPublic = false, compassDeg = null, memberCount = 8, isMember = true
+        ).apply {
+            hostIds.add("PK")
+            memberIds.addAll(listOf("JL", "AO", "TN", "ML", "IM", "NB"))
+            term = termEnding(11)
+        },
+        GroupInfo(
+            "alps-hiking-crew", "Alps Hiking Crew", "Outdoors", "OUTDOORS",
+            "One summer of hut-to-hut hikes, closing with a last weekend in the mountains.",
+            AvatarTeal, isPublic = true, compassDeg = 118f, memberCount = 24, isMember = false
+        ).apply {
+            hostIds.add("HS")
+            term = termEnding(4)
+        },
+        GroupInfo(
+            "exam-prep-circle", "Exam Prep Circle", "Study", "STUDY",
+            "Quiet study sessions in the library until the winter exams are done.",
+            AvatarRose, isPublic = true, compassDeg = 200f, memberCount = 9, isMember = false
+        ).apply {
+            hostIds.add("NK")
+            term = termEnding(11)
+        },
     )
 
     fun events() = listOf(

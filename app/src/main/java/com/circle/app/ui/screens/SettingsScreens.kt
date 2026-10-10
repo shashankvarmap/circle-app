@@ -219,6 +219,7 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
                     item {
                         ToggleRow(stringResource(R.string.settings_demo_auto_accept), stringResource(R.string.settings_demo_auto_accept_sub), autoAccept) { vm.setAutoAccept(it) }
                     }
+                    item { NavRow(stringResource(R.string.time_travel), stringResource(R.string.time_travel_sub)) { nav.navigate(Routes.TIME_TRAVEL) } }
                 }
                 if (debuggable) {
                     item {

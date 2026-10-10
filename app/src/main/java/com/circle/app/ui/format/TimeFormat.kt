@@ -77,3 +77,7 @@ fun eventMonth(at: Instant, zone: ZoneId = ZoneId.systemDefault()): String =
     at.atZone(zone).format(DateTimeFormatter.ofPattern("MMM")).uppercase()
 fun eventDateSpoken(at: Instant, zone: ZoneId = ZoneId.systemDefault()): String =
     at.atZone(zone).format(DateTimeFormatter.ofPattern("d MMMM"))
+
+/** "Thu 22 Oct": the day a temporary group ends or is deleted, in the viewer's zone. */
+fun shortDate(at: Instant, zone: ZoneId = ZoneId.systemDefault()): String =
+    at.atZone(zone).format(DateTimeFormatter.ofPattern("EEE d MMM"))

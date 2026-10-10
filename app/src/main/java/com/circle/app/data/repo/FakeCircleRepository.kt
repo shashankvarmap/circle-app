@@ -62,6 +62,42 @@ class FakeCircleRepository(
         }
     }
 
+    override fun timeShift(): Flow<java.time.Duration> = observe { com.circle.app.data.Clock.shift }
+
+    override suspend fun travel(by: java.time.Duration) {
+        com.circle.app.data.Clock.shift = com.circle.app.data.Clock.shift.plus(by)
+        sweepLifetimes()
+    }
+
+    override suspend fun backToToday() { com.circle.app.data.Clock.shift = java.time.Duration.ZERO }
+
+    override fun timedItems(): Flow<List<TimedItem>> = observe {
+        val groups = store.groups.mapNotNull { g ->
+            val t = g.term as? com.circle.app.data.lifetime.Term.Temporary ?: return@mapNotNull null
+            TimedItem(g.id, g.name, true, groupState(g), t.endsAt)
+        }
+        val chats = store.chats.filter { it.groupId == null }.mapNotNull { c ->
+            val t = c.term as? com.circle.app.data.lifetime.Term.Temporary ?: return@mapNotNull null
+            TimedItem(c.id, c.name ?: c.id, false, chatState(c), t.endsAt)
+        }
+        (groups + chats).filter { it.state != LifeState.DELETED }
+    }
+
+    override suspend fun jumpTo(id: String, stage: LifeState) {
+        val term = (store.group(id)?.term ?: store.chat(id)?.term) as? com.circle.app.data.lifetime.Term.Temporary ?: return
+        val minute = java.time.Duration.ofMinutes(1)
+        val target = when (stage) {
+            LifeState.PERMANENT -> return
+            // An hour before the last 3 days, so it reads "4 days"; then just inside each later stage.
+            LifeState.ACTIVE -> term.endsAt.minus(com.circle.app.data.lifetime.Lifetime.ENDING_SOON).minus(java.time.Duration.ofHours(1))
+            LifeState.ENDING_SOON -> term.endsAt.minus(com.circle.app.data.lifetime.Lifetime.ENDING_SOON).plus(minute)
+            LifeState.WRAP_UP -> term.endsAt.plus(minute)
+            LifeState.DELETED -> com.circle.app.data.lifetime.Lifetime.deleteAt(term.endsAt).plus(minute)
+        }
+        com.circle.app.data.Clock.shift = java.time.Duration.between(java.time.Instant.now(), target)
+        sweepLifetimes()
+    }
+
     override suspend fun resetDemoData() {
         store.reset()
         store.people.keys.forEach { cache.purgeAuthor(it) }

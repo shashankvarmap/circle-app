@@ -23,6 +23,7 @@ object Routes {
     const val SIGNUP_PROFILE = "signup_profile"
     const val SIGNUP_AGE = "signup_age"
     const val LEGAL = "legal"
+    const val TIME_TRAVEL = "time_travel"
     const val MEMBERSHIP = "membership"
     const val YOUR_DATA = "your_data"
     const val DELETE_ACCOUNT = "delete_account"
@@ -136,6 +137,7 @@ fun CircleNavGraph(
             }
         }
         composable(Routes.LEGAL) { LegalScreen(navController) }
+        composable(Routes.TIME_TRAVEL) { com.circle.app.ui.screens.TimeTravelScreen(navController) }
         composable(Routes.MEMBERSHIP) { MembershipScreen(navController) }
         composable(Routes.YOUR_DATA) { YourDataScreen(navController) }
         composable(Routes.DELETE_ACCOUNT) {

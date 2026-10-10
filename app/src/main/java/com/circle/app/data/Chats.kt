@@ -115,6 +115,33 @@ internal object ChatSeed {
                 ChatMessage("pw3", "TN", t(71), text = "I'll bring a tripod to share"),
             )
         ),
+        // Temporary chats with friends (TIMED_GROUPS T2): 12 days left (you started it), ending soon
+        // (Elin started it: you're a member), and ended with 5 days to deletion (you started it).
+        Chat(
+            "alps-trip", listOf("PK", "JL", "AO"), name = "Alps trip", startedBy = ME, messages = listOf(
+                ChatMessage("at1", "PK", t(150), text = "Route plan is in the group. Thoughts?"),
+                ChatMessage("at2", ME, t(138), text = "Looks good. I'll check the hut booking."),
+                ChatMessage("at3", "JL", t(120), text = "Booked. Sixteen beds."),
+            )
+        ).apply { term = Seed.termEnding(11) },
+        Chat(
+            "study-group", listOf("EK", "TN", "SY"), name = "Study group", startedBy = "EK", messages = listOf(
+                ChatMessage("sg1", "EK", Clock.ago(Duration.ofHours(26)), text = "Library at ten tomorrow?"),
+                ChatMessage("sg2", "TN", Clock.ago(Duration.ofHours(25)), text = "I'll bring the past papers."),
+            )
+        ).apply { term = Seed.termEnding(2) },
+        Chat(
+            "exam-prep", listOf("ML", "LF", "CZ"), name = "Exam prep", startedBy = ME, messages = listOf(
+                ChatMessage("ex1", "ML", Clock.ago(Duration.ofHours(70)), text = "Last exam done. We survived."),
+                ChatMessage("ex2", ME, Clock.ago(Duration.ofHours(69)), text = "Thanks for all the notes, everyone."),
+            )
+        ).apply { term = Seed.termEnding(-3) },
+        Chat(
+            "g-project-alps", listOf("PK", "JL", "AO", "TN", "ML", "IM", "NB"), groupId = "project-alps", messages = listOf(
+                ChatMessage("pa1", "JL", t(200), text = "Hut is booked for the 21st."),
+                ChatMessage("pa2", "PK", t(40), text = "Draft of the route plan is up."),
+            )
+        ),
         Chat(
             "g-board-game-club", listOf("JL"), groupId = "board-game-club", messages = listOf(
                 ChatMessage("bg1", "JL", t(240), text = "Anyone up for Catan tonight?"),

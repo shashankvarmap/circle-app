@@ -32,3 +32,15 @@ fun Sector.text(): String = stringResource(
         Sector.MUSIC -> R.string.sector_music; Sector.MAKING -> R.string.sector_making
     }
 )
+
+/** Stage names for temporary groups and chats (TIMED_GROUPS 3). */
+@Composable
+fun com.circle.app.data.lifetime.LifeState.text(): String = stringResource(
+    when (this) {
+        com.circle.app.data.lifetime.LifeState.PERMANENT -> R.string.life_permanent
+        com.circle.app.data.lifetime.LifeState.ACTIVE -> R.string.life_active
+        com.circle.app.data.lifetime.LifeState.ENDING_SOON -> R.string.life_ending_soon
+        com.circle.app.data.lifetime.LifeState.WRAP_UP -> R.string.life_wrap_up
+        com.circle.app.data.lifetime.LifeState.DELETED -> R.string.life_deleted
+    }
+)

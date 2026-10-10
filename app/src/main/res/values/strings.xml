@@ -838,4 +838,34 @@
     <!-- Timed groups and chats (TIMED_GROUPS 4) -->
     <string name="deny_ended">This has ended. It is read-only until it is deleted.</string>
     <string name="deny_not_host">Only the host can change this.</string>
+    <!-- Timed groups: demo time travel (T2) -->
+    <string name="life_permanent">Permanent</string>
+    <string name="life_active">Active</string>
+    <string name="life_ending_soon">Ending soon</string>
+    <string name="life_wrap_up">Wrap-up</string>
+    <string name="life_deleted">Deleted</string>
+    <string name="time_travel">Time travel</string>
+    <string name="time_travel_sub">Preview only. Move the demo clock to try every stage of a temporary group or chat.</string>
+    <string name="time_travel_intro">Moves the demo server\'s clock. Lists, chips, banners and alerts follow at once.</string>
+    <string name="time_travel_now">Demo time: %1$s, %2$s</string>
+    <string name="time_travel_real_time">Real time</string>
+    <string name="time_travel_close">Within a day of real time</string>
+    <plurals name="time_travel_ahead">
+        <item quantity="one">%d day ahead of real time</item>
+        <item quantity="other">%d days ahead of real time</item>
+    </plurals>
+    <plurals name="time_travel_behind">
+        <item quantity="one">%d day behind real time</item>
+        <item quantity="other">%d days behind real time</item>
+    </plurals>
+    <plurals name="time_travel_plus">
+        <item quantity="one">+%d day</item>
+        <item quantity="other">+%d days</item>
+    </plurals>
+    <string name="time_travel_back">Back to real time</string>
+    <string name="time_travel_jump">Jump to a stage</string>
+    <string name="time_travel_kind_group">Group</string>
+    <string name="time_travel_kind_chat">Chat with friends</string>
+    <string name="time_travel_none">No temporary groups or chats left.</string>
+    <string name="time_travel_note">Something deleted stays deleted, even if you go back. Reset demo data brings it back.</string>
 </resources>
