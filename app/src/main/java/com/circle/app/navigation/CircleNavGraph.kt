@@ -120,7 +120,7 @@ fun CircleNavGraph(
                 val vm = signupVm(entry)
                 com.circle.app.ui.signup.CodeStep(vm, onBack = { navController.popBackStack() }, onVerified = {
                     if (vm.creating) navController.navigate(Routes.SIGNUP_PROFILE)
-                    else vm.logIn { session.logIn { navController.resetTo(it) } }
+                    else vm.logIn { session.logIn(vm.countryCode) { navController.resetTo(it) } }
                 })
             }
             composable(Routes.SIGNUP_PROFILE) { entry ->
@@ -131,7 +131,7 @@ fun CircleNavGraph(
                 val vm = signupVm(entry)
                 com.circle.app.ui.signup.AgeStep(
                     vm, onBack = { navController.popBackStack() }, onLegal = { navController.navigate(Routes.LEGAL) },
-                    onCreated = { session.createAccount { navController.resetTo(it) } }
+                    onCreated = { session.createAccount(vm.countryCode) { navController.resetTo(it) } }
                 )
             }
         }

@@ -147,6 +147,7 @@ fun LegalScreen(nav: NavHostController) {
 class MembershipViewModel : androidx.lifecycle.ViewModel() {
     private val billing = AppGraph.billing
     val prices = billing.prices
+    val isPreviewPrice = billing.isPreviewPrice
     val isMember = billing.isMember
     fun start(plan: Plan) { viewModelScope.launch { billing.start(plan) } }
 }
@@ -188,6 +189,9 @@ fun MembershipScreen(nav: NavHostController) {
                             Text(stringResource(if (p == Plan.MONTHLY) R.string.membership_per_month else R.string.membership_per_year), color = colors.muted, fontSize = 12.5.sp)
                         }
                     }
+                }
+                if (vm.isPreviewPrice) {
+                    Text(stringResource(R.string.membership_preview_price), color = colors.muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 CapsLabel(stringResource(R.string.membership_pays_caps))
                 LeadLine(stringResource(R.string.membership_pays_1_lead), stringResource(R.string.membership_pays_1))

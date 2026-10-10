@@ -831,4 +831,7 @@
 
     <!-- Code screen, preview builds only (no SMS provider yet) -->
     <string name="signup_code_preview_hint">Preview build: no text message is sent. Enter any 6 digits.</string>
+
+    <!-- Membership, preview builds (no Play Billing yet) -->
+    <string name="membership_preview_price">Preview price. The real price comes from Google Play in your currency.</string>
 </resources>

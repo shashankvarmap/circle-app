@@ -29,12 +29,14 @@ class SessionViewModel(private val session: SessionStore) : ViewModel() {
         viewModelScope.launch { _start.value = LaunchFlow.start(session.state.first()) }
     }
 
-    fun createAccount(then: (Destination) -> Unit) = viewModelScope.launch {
+    fun createAccount(countryCode: String, then: (Destination) -> Unit) = viewModelScope.launch {
+        session.setCountryCode(countryCode)
         session.accountCreated()
         then(LaunchFlow.afterAccountCreated())
     }
 
-    fun logIn(then: (Destination) -> Unit) = viewModelScope.launch {
+    fun logIn(countryCode: String, then: (Destination) -> Unit) = viewModelScope.launch {
+        session.setCountryCode(countryCode)
         session.loggedIn()
         then(LaunchFlow.afterLogIn())
     }

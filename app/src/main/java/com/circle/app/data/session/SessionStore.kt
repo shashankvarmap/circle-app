@@ -30,6 +30,10 @@ interface SessionStore {
 
     /** Same as log out on this device; the account itself is removed by the repository. */
     suspend fun accountDeleted()
+
+    /** The country calling code chosen at sign-up or log-in (digits, e.g. "91"). Preview prices use it. */
+    val countryCode: Flow<String?>
+    suspend fun setCountryCode(code: String)
 }
 
 class InMemorySessionStore(initial: LaunchState = LaunchState(hasSession = false, onboardingSeen = false)) : SessionStore {
@@ -42,6 +46,10 @@ class InMemorySessionStore(initial: LaunchState = LaunchState(hasSession = false
     override suspend fun onboardingFinished() { flow.value = flow.value.copy(onboardingSeen = true) }
     override suspend fun loggedOut() { flow.value = flow.value.copy(hasSession = false) }
     override suspend fun accountDeleted() { flow.value = flow.value.copy(hasSession = false) }
+
+    private val code = MutableStateFlow<String?>(null)
+    override val countryCode: Flow<String?> = code
+    override suspend fun setCountryCode(code: String) { this.code.value = code }
 }
 
 private val Context.sessionDataStore: DataStore<Preferences> by preferencesDataStore(name = "session")
@@ -61,4 +69,8 @@ class DataStoreSessionStore(context: Context) : SessionStore {
     override suspend fun onboardingFinished() { store.edit { it[onboardingSeen] = true } }
     override suspend fun loggedOut() { store.edit { it[hasSession] = false } }
     override suspend fun accountDeleted() { store.edit { it[hasSession] = false } }
+
+    private val callingCode = androidx.datastore.preferences.core.stringPreferencesKey("country_code")
+    override val countryCode: Flow<String?> = store.data.map { it[callingCode] }
+    override suspend fun setCountryCode(code: String) { store.edit { it[callingCode] = code } }
 }

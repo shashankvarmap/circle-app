@@ -18,6 +18,7 @@ legal item.** Status: **Done** (in the app now) · **Owner** (a decision, an acc
 | Reporting and blocking | Done (app) | Report flow on people, notes, comments, groups, events, chats; Block everywhere |
 | Acting on reports | Owner + Backend | Who reviews, how fast, removal and appeal rules (BACKEND_READINESS > Moderation) |
 | Subscriptions (Play Billing) | Owner + Backend | `MembershipBilling` interface with a fake; create products and per-country prices in Play Console |
+| Prices per country | Owner | Set the monthly and yearly price for every country in Play Console. The app shows only Play's `ProductDetails` formattedPrice, in the user's Play currency, and never formats or converts prices. The `PreviewPricing` table (+91 INR, +49 EUR, +1 USD, +44 GBP, +61 AUD, +81 JPY, labelled "Preview price") is for preview builds only and goes away with Play Billing |
 | Store listing, screenshots, feature graphic | Owner | Screenshot tests can produce clean frames |
 | Testing tracks: internal, then closed with real friends, then production | Owner | Closed test needs the backend for real accounts |
 
