@@ -244,7 +244,7 @@ fun EventScreen(nav: NavHostController, eventId: String?) {
                         }
                         val all = thread.comments + thread.comments.flatMap { it.replies }
                         val target = replyTo?.let { id -> all.firstOrNull { it.id == id } }
-                        ReplyComposer(above = target?.let { t -> { ReplyingToChip(t.author.firstName) { replyTo = null } } }) { text ->
+                        ReplyComposer(above = target?.let { t -> { ReplyingToChip(t.author.firstName) { replyTo = null } } }, focusKey = replyTo) { text ->
                             val top = target?.let { t -> thread.comments.firstOrNull { it.id == t.id || it.replies.any { r -> r.id == t.id } } }
                             vm.comment(text, target?.id)
                             top?.let { expanded = expanded + it.id }

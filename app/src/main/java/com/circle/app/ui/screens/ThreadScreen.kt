@@ -157,7 +157,7 @@ fun ThreadScreen(nav: NavHostController, postId: String) {
                 val targetTop = target?.let { t -> thread.comments.firstOrNull { top -> top.id == t.id || top.replies.any { it.id == t.id } } }
                 Box(Modifier.fillMaxWidth().background(colors.background).padding(horizontal = 14.dp, vertical = 10.dp)) {
                     ReplyComposer(
-                        above = target?.let { t -> { ReplyingToChip(t.author.firstName) { replyTo = null } } }
+                        above = target?.let { t -> { ReplyingToChip(t.author.firstName) { replyTo = null } } }, focusKey = replyTo
                     ) { text ->
                         vm.reply(text, target?.id) { outcome ->
                             if (outcome !is Outcome.Success) return@reply

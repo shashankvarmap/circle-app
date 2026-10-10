@@ -819,6 +819,10 @@
     <string name="settings_reset_demo_done">Demo data reset.</string>
     <string name="settings_debug_fail">Make the network fail (debug)</string>
     <string name="settings_debug_fail_sub">Actions fail and lists show their error state, so the error screens can be checked</string>
+    <string name="reply_placeholder">Add a reply…</string>
+    <string name="settings_edit_profile_sub">Name, username, photo and pinned thought</string>
+    <string name="settings_read_receipts_sub">Friends see when you\'ve read their message, and you see theirs.</string>
+    <string name="settings_licenses_sub">Fraunces and Public Sans (SIL Open Font License)</string>
     <string name="chat_sending">Sending…</string>
     <string name="chat_not_sent">Not sent · tap to retry</string>
 </resources>

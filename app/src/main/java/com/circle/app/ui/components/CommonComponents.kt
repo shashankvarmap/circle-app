@@ -23,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -210,8 +211,16 @@ fun PrimaryButton(text: String, modifier: Modifier = Modifier, onClick: () -> Un
  * [above] sits over the input (the "Replying to" chip).
  */
 @Composable
-fun ReplyComposer(placeholder: String = "Add a reply…", above: (@Composable () -> Unit)? = null, onSend: (String) -> Unit) {
+fun ReplyComposer(
+    placeholder: String = androidx.compose.ui.res.stringResource(com.circle.app.R.string.reply_placeholder),
+    above: (@Composable () -> Unit)? = null,
+    /** When this becomes non-null (e.g. the comment being replied to), the field takes focus and the keyboard opens. */
+    focusKey: Any? = null,
+    onSend: (String) -> Unit,
+) {
     var text by rememberSaveable { mutableStateOf("") }
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(focusKey) { if (focusKey != null) runCatching { focus.requestFocus() } }
     val canSend = text.isNotBlank()
     fun send() {
         if (canSend) {
@@ -243,7 +252,7 @@ fun ReplyComposer(placeholder: String = "Add a reply…", above: (@Composable ()
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = { send() }),
                     maxLines = 4,
-                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = placeholder }
+                    modifier = Modifier.fillMaxWidth().focusRequester(focus).semantics { contentDescription = placeholder }
                 )
             }
             Box(

@@ -173,8 +173,8 @@ private fun HomeHeader(feed: Feed, onWordmark: () -> Unit, onFeed: (Feed) -> Uni
     val colors = CircleTheme.colors
     val today = remember {
         java.time.LocalDate.now().let { d ->
-            val fmt = java.time.format.DateTimeFormatter.ofPattern("EEEE '\u00b7' d MMMM", java.util.Locale.ENGLISH)
-            d.format(fmt).uppercase(java.util.Locale.ENGLISH)
+            val fmt = java.time.format.DateTimeFormatter.ofPattern("EEEE '\u00b7' d MMMM", java.util.Locale.getDefault())
+            d.format(fmt).uppercase(java.util.Locale.getDefault())
         }
     }
     Column(

@@ -148,8 +148,8 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
         DetailHeader(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_settings)) { nav.popBackStack() }
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(bottom = 32.dp)) {
             item { SectionHeading(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_account)) }
-            item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_edit_profile), "Name, username, photo and pinned thought") { nav.navigate(Routes.EDIT_PROFILE) } }
-            item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_your_circle), "${circle.friendCount} friends · ${circle.innerCount} inner circle") { nav.navigate(Routes.YOUR_CIRCLE) } }
+            item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_edit_profile), stringResource(R.string.settings_edit_profile_sub)) { nav.navigate(Routes.EDIT_PROFILE) } }
+            item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_your_circle), stringResource(R.string.circle_summary, circle.friendCount, circle.innerCount)) { nav.navigate(Routes.YOUR_CIRCLE) } }
             item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_blocked_users), countLabel(blockedList.size, com.circle.app.R.plurals.count_people)) { nav.navigate(Routes.peopleList("blocked")) } }
             item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_muted_friends), countLabel(mutedList.size, com.circle.app.R.plurals.count_friends)) { nav.navigate(Routes.peopleList("muted")) } }
             item { NavRow(stringResource(R.string.settings_your_data), stringResource(R.string.settings_your_data_sub)) { nav.navigate(Routes.YOUR_DATA) } }
@@ -180,7 +180,7 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
                 }
             }
             item {
-                ToggleRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_read_receipts_in_messages), "Friends see when you've read their message, and you see theirs.", privacy.readReceipts) {
+                ToggleRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_read_receipts_in_messages), stringResource(R.string.settings_read_receipts_sub), privacy.readReceipts) {
                     vm.setPrivacy(privacy.copy(readReceipts = it))
                 }
             }
@@ -206,7 +206,7 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
             item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_about_circle), null) { nav.navigate(Routes.info("about")) } }
             item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_why_i_built_it), null) { nav.navigate(Routes.info("why")) } }
             item { NavRow(stringResource(R.string.settings_legal), null) { nav.navigate(Routes.LEGAL) } }
-            item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_open_source_licenses), "Fraunces and Public Sans (SIL Open Font License)") { nav.navigate(Routes.info("licenses")) } }
+            item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_open_source_licenses), stringResource(R.string.settings_licenses_sub)) { nav.navigate(Routes.info("licenses")) } }
             item { InfoRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_version), version) }
 
             if (vm.hasDemo) {
