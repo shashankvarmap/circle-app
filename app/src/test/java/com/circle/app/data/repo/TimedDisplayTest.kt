@@ -84,6 +84,12 @@ class TimedDisplayTest {
         assertTrue(repo.wasDeleted("exam-prep").first())
     }
 
+    @Test fun `extending or making permanent withdraws reminders about the old end`() = runTest {
+        assertTrue(CircleStore.alerts.any { it.timedId == "exam-prep" && it.kind == AlertKind.TIMED_ENDED })
+        repo.extendLifetime("exam-prep", 7)
+        assertTrue(CircleStore.alerts.none { it.timedId == "exam-prep" && it.kind == AlertKind.TIMED_ENDED })
+    }
+
     @Test fun `temporary group and chat from the forms`() = runTest {
         val g = (repo.createGroup("Wedding", "Family", "", isPublic = false, lifetimeDays = 14) as Outcome.Success).value
         val view = repo.group(g).first()!!

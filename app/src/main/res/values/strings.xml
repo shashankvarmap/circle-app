@@ -142,6 +142,7 @@
     <string name="alerts_no_requests">No friend requests right now.</string>
     <string name="alerts_now_friends">Now friends</string>
     <string name="alerts_asked">Asked %1$s ago</string>
+    <string name="alerts_asked_on">Asked %1$s</string>
     <string name="alert_liked_your_note">liked your note</string>
     <string name="alert_commented">commented on your note</string>
     <string name="alert_commented_quote">commented: \"%1$s\"</string>
@@ -891,6 +892,10 @@
     <string name="timed_ending_soon_body">Save a copy to keep what\'s here. After that it\'s read-only for 7 days, then deleted.</string>
     <string name="timed_together">The group and its chat end together.</string>
     <string name="timed_ended_kicker">THIS CHAT HAS ENDED</string>
+    <string name="timed_group_ended_kicker">THIS GROUP HAS ENDED</string>
+    <string name="timed_group_read_only">Read-only. This group has ended.</string>
+    <string name="timed_group_deleted_title">This group has ended and was deleted.</string>
+    <string name="timed_group_deleted_body">Everything in it and its chat was removed from Circle. If you saved a copy, it\'s on your phone.</string>
     <string name="timed_deleted_on">Deleted on %1$s.</string>
     <string name="timed_ended_body">It\'s read-only now. Save a copy before it goes. Anything you saved stays on your phone.</string>
     <string name="timed_save_copy">Save a copy</string>

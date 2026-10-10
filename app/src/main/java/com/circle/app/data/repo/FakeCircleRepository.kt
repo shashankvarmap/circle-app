@@ -261,6 +261,9 @@ class FakeCircleRepository(
         return when (val r = change(o.get())) {
             is com.circle.app.data.lifetime.Lifetime.Change.Done -> {
                 o.set(r.term)
+                // Reminders about the old end no longer hold; the server sends new ones for the new end.
+                val owned = store.chats.filter { it.groupId == id || it.id == id }.mapNotNull { it.groupId } + id
+                store.alerts.removeAll { it.timedId != null && it.timedId in owned && it.kind in reminderKinds }
                 // Members are told by the server ("Priya extended Project Alps. It now ends Fri 6 Nov.").
                 o.others.forEach { store.sentNotices.add(Notice(it, "${o.name}: ${action.name.lowercase()}", Clock.now())) }
                 sweepLifetimes()
@@ -1340,6 +1343,8 @@ class FakeCircleRepository(
             AlertKind.TIMED_EXTENDED, AlertKind.TIMED_MADE_PERMANENT -> a.timedId?.let { store.group(it) } != null && prefs.groups || a.timedId?.let { store.group(it) } == null && prefs.messages
         }
     }
+
+    private val reminderKinds = setOf(AlertKind.TIMED_ENDS_SOON, AlertKind.TIMED_ENDS_TOMORROW, AlertKind.TIMED_ENDED, AlertKind.TIMED_DELETED_TOMORROW)
 
     private val timedKinds = setOf(
         AlertKind.TIMED_ENDS_SOON, AlertKind.TIMED_ENDS_TOMORROW, AlertKind.TIMED_ENDED, AlertKind.TIMED_DELETED_TOMORROW,

@@ -72,7 +72,7 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
     val groupPosts by vm.posts.collectAsStateWithLifecycle()
     val gone by vm.gone.collectAsStateWithLifecycle()
     if (loaded == null && gone) {
-        com.circle.app.ui.components.DeletedTimedState(onBack = {
+        com.circle.app.ui.components.DeletedTimedState(group = true, onBack = {
             nav.navigate(com.circle.app.navigation.Routes.MESSAGES) { popUpTo(com.circle.app.navigation.Routes.MESSAGES) { inclusive = true }; launchSingleTop = true }
         })
         return
@@ -195,7 +195,7 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
             if (life != null && isMember) item {
                 com.circle.app.ui.components.LifetimeBanner(
                     life, isGroupChat = true, onSave = { toast(saveSoon) }, onExtend = { extending = true },
-                    modifier = Modifier.padding(horizontal = 0.dp)
+                    modifier = Modifier.padding(horizontal = 0.dp), onGroupScreen = true
                 )
             }
             item {
@@ -253,7 +253,7 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                 }
             } else if (isMember) {
                 if (group.isOpen) item { ComposeToGroupRow(nav, group.id) }
-                else item { com.circle.app.ui.components.ReadOnlyBar() }
+                else item { com.circle.app.ui.components.ReadOnlyBar(group = true) }
 
                 if (groupPosts.isEmpty()) {
                     item { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_nothing_posted_here_yet_be), color = CircleTheme.colors.muted, fontSize = 13.sp) }

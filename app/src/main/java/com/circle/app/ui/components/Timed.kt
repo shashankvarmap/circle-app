@@ -160,7 +160,7 @@ fun SaveCopyButton(onClick: () -> Unit) {
  * (lock, accent border) in wrap-up. Nothing in other states.
  */
 @Composable
-fun LifetimeBanner(lifetime: LifetimeView, isGroupChat: Boolean, onSave: () -> Unit, onExtend: () -> Unit, modifier: Modifier = Modifier) {
+fun LifetimeBanner(lifetime: LifetimeView, isGroupChat: Boolean, onSave: () -> Unit, onExtend: () -> Unit, modifier: Modifier = Modifier, onGroupScreen: Boolean = false) {
     val colors = CircleTheme.colors
     val shape = RoundedCornerShape(16.dp)
     val ending = lifetime.state == LifeState.ENDING_SOON
@@ -174,7 +174,13 @@ fun LifetimeBanner(lifetime: LifetimeView, isGroupChat: Boolean, onSave: () -> U
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.semantics(mergeDescendants = true) { heading() }) {
             Icon(if (ending) Icons.Outlined.AccessTime else Icons.Outlined.Lock, null, tint = colors.accent, modifier = Modifier.size(15.dp))
             Text(
-                stringResource(if (ending) R.string.timed_ending_soon_kicker else R.string.timed_ended_kicker),
+                stringResource(
+                    when {
+                        ending -> R.string.timed_ending_soon_kicker
+                        onGroupScreen -> R.string.timed_group_ended_kicker
+                        else -> R.string.timed_ended_kicker
+                    }
+                ),
                 color = colors.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp
             )
         }
@@ -211,7 +217,7 @@ fun LifetimeBanner(lifetime: LifetimeView, isGroupChat: Boolean, onSave: () -> U
 
 /** Replaces the composer once a temporary chat has ended. */
 @Composable
-fun ReadOnlyBar(modifier: Modifier = Modifier) {
+fun ReadOnlyBar(modifier: Modifier = Modifier, group: Boolean = false) {
     val colors = CircleTheme.colors
     Column(modifier.fillMaxWidth().background(colors.background)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(colors.border))
@@ -221,7 +227,7 @@ fun ReadOnlyBar(modifier: Modifier = Modifier) {
         ) {
             Icon(Icons.Outlined.Lock, null, tint = colors.muted, modifier = Modifier.size(15.dp))
             Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.timed_read_only), color = colors.muted, fontSize = 13.sp)
+            Text(stringResource(if (group) R.string.timed_group_read_only else R.string.timed_read_only), color = colors.muted, fontSize = 13.sp)
         }
     }
 }
@@ -295,7 +301,7 @@ fun LifetimeMenuSheet(lifetime: LifetimeView, onDismiss: () -> Unit, onSave: () 
 
 /** What a stale link or an open screen shows once a temporary chat or group was deleted. */
 @Composable
-fun DeletedTimedState(onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun DeletedTimedState(onBack: () -> Unit, modifier: Modifier = Modifier, group: Boolean = false) {
     val colors = CircleTheme.colors
     Column(modifier.fillMaxSize().background(colors.background)) {
         Column(
@@ -308,11 +314,11 @@ fun DeletedTimedState(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 drawCircle(colors.accent.copy(alpha = 0.5f), radius = 31.dp.toPx(), style = Stroke(1.5.dp.toPx()))
             }
             Text(
-                stringResource(R.string.timed_deleted_title), fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 25.sp, lineHeight = 31.sp,
+                stringResource(if (group) R.string.timed_group_deleted_title else R.string.timed_deleted_title), fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 25.sp, lineHeight = 31.sp,
                 color = colors.text, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 18.dp).semantics { heading() }
             )
             Text(
-                stringResource(R.string.timed_deleted_body), color = colors.muted, fontSize = 14.sp, lineHeight = 21.7.sp,
+                stringResource(if (group) R.string.timed_group_deleted_body else R.string.timed_deleted_body), color = colors.muted, fontSize = 14.sp, lineHeight = 21.7.sp,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 8.dp)
             )
         }

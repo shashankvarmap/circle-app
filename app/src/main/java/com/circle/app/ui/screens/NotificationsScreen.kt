@@ -138,7 +138,14 @@ private fun RequestRow(request: RequestView, onOpen: () -> Unit, onAccept: () ->
             Column(modifier = Modifier.weight(1f)) {
                 Text(person.name, color = CircleTheme.colors.text, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
                 Text(
-                    if (request.accepted) stringResource(R.string.alerts_now_friends) else stringResource(R.string.alerts_asked, relativeTime(request.receivedAt)),
+                    when {
+                        request.accepted -> stringResource(R.string.alerts_now_friends)
+                        // "Asked 3d ago", but "Asked yesterday" and "Asked 10 Oct 2026" (no "ago" after a day or a date).
+                        com.circle.app.ui.format.relative(request.receivedAt).let {
+                            it is com.circle.app.ui.format.Relative.Now || it is com.circle.app.ui.format.Relative.Yesterday || it is com.circle.app.ui.format.Relative.Date
+                        } -> stringResource(R.string.alerts_asked_on, relativeTime(request.receivedAt))
+                        else -> stringResource(R.string.alerts_asked, relativeTime(request.receivedAt))
+                    },
                     color = CircleTheme.colors.muted, fontSize = 11.5.sp
                 )
             }
