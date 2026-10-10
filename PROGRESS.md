@@ -1,5 +1,7 @@
 # Circle: build progress (MASTER_PROMPT.md)
 
+**Next step:** Phase 12 click-through items 3-11 on the emulator (items 1-2 passed 2026-10-10).
+
 **After a context reset: read this file first, then REPORT.md, and continue from the first unchecked item.**
 Status per item: `[x]` done · `[~]` partial (what is missing is noted) · `[ ]` not started.
 Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so Kotlin errors are visible.
@@ -110,7 +112,7 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] State survives restarts (`StorePersistence`: the fake server as one JSON file, saved 300ms after changes; PersistenceTest)
 - [x] "Reset demo data" in Settings (Demo section, confirmed)
 - [x] Debug switch (debug builds): actions fail, Home/Messages/Alerts show the error state, chat shows Not sent · tap to retry
-- [ ] Verify Phase 11 on the emulator (restart keeps a like; reset; fail switch)
+- [x] Verified on the emulator (new account and a like survive force-stop; Reset; fail switch on Home/Messages/Alerts); `ChatSendingUiTest`
 
 ## Phase 12: Final pass
 - [ ] Click-through (section 5) in night and day, pass/fail table

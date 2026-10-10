@@ -412,3 +412,30 @@ covered by the UI tests).
 - Demo-only text that stands for user content (seed posts, the Explore search sample captions, the "Aachen" city) stays as data,
   not strings; the city picker is a stub until location exists.
 - New test-only dependency: Roborazzi 1.13.0 (the doc names Paparazzi or Roborazzi; Roborazzi reuses the Robolectric setup).
+
+
+---
+
+## Phase 11: Persistence (FRONTEND_COMPLETE F6)
+
+**Works now**
+- **State survives restarts.** `data/persist/StorePersistence` writes the whole fake server (`CircleStore`) as one JSON file
+  (`files/circle-demo-store.json`, app-private) 300ms after changes settle (atomic temp-file rename), and loads it in
+  `CircleApplication.onCreate` before any screen reads. `StoreSnapshot` is a versioned, plain serializable copy (times as epoch
+  ms, enums by name); an unreadable or older file is ignored and the seed loads. Verified on the emulator: a new account and a
+  like survive force-stop and relaunch.
+- **Reset demo data** (Settings > Demo, confirmed): puts the seed back, purges the content cache, you stay logged in.
+- **Debug fail switch** (Settings > Demo, debug builds only): every repository action returns `Outcome.Error("offline")`, and the
+  Home feed, Messages list and Alerts throw, so their error state with Try again shows. Chat now shows a sent message as
+  "Sending…", then "Not sent · tap to retry" if it fails; tapping retries (the Phase 6 leftover).
+- Tests: `PersistenceTest` (round trip of the whole store, broken/old file keeps the seed, reset, fail switch),
+  `ChatSendingUiTest` (Robolectric: Not sent, then retry delivers).
+
+**Stubs:** with a backend this file goes away; the server is the source of truth and any local cache must hold only the
+redacted views the user may see, purged on unfriend/block (BACKEND_READINESS).
+
+**Decisions**
+- One JSON file via kotlinx.serialization instead of Room: the fake server is small and in-memory, and Room would be thrown away
+  when the backend arrives. New dependency: kotlinx-serialization-json 1.6.3 (+ the Kotlin serialization plugin 1.9.24).
+- Robolectric tests never load or save the file (each test starts from the seed).
+- The Demo section is hidden if the repository is not the fake (`DemoControls`), so it cannot ship with a backend.
