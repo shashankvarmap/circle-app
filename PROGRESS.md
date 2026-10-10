@@ -126,4 +126,8 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] 3. Wordmark composable, accent full stop in night and day
 - [x] 4. Code screen preview line; CircleRepository.sendsTextMessages
 - [x] 5. PreviewPricing by sign-up country code behind MembershipBilling; LAUNCH_CHECKLIST note
-Next: owner re-tests on a clean install; then wire Play Billing (ProductDetails.formattedPrice) when products exist.
+Later: wire Play Billing (ProductDetails.formattedPrice) when products exist.
+
+## Timed groups (design-handoff/TIMED_GROUPS.md)
+- [x] T1: `Lifetime` + injectable java.time.Clock (data/lifetime), state machine + boundary/DST tests; `term` on GroupInfo and Chat (+ `startedBy`), saved in the store file; AccessPolicy `timed`/`timedRead` + ENDED/NOT_HOST/NOT_TEMPORARY with table tests; fake repo: read-only in wrap-up, no joins, auto-decline, hard delete at deleteAt (`sweepLifetimes`)
+Next: T2: Settings > Demo time travel (advance fake clock 1/3/7 days, jump to a state) + timed seed (friends chat 12 days left, one ending soon, one ended, "Project Alps" group + chat, "Alps Hiking Crew", "Exam Prep Circle").

@@ -1,5 +1,7 @@
 package com.circle.app.data.access
 
+import com.circle.app.data.lifetime.LifeState
+
 /**
  * How the viewer relates to a person. Decided by the repository from the friend graph; every
  * access decision starts from this one value.
@@ -22,7 +24,16 @@ enum class DenyReason {
     GROUP_POST,
     /** The thing doesn't exist (or no longer exists) for this viewer. */
     NOT_FOUND,
+    /** A temporary group or chat has ended: it is read-only until it is deleted. */
+    ENDED,
+    /** Only the host may change a group's or chat's lifetime. */
+    NOT_HOST,
+    /** Lifetime actions (save a copy, extend, end now, make permanent) need a temporary group or chat. */
+    NOT_TEMPORARY,
 }
+
+/** What can be done in a group or chat that has a lifetime (TIMED_GROUPS 4). Permanent ones are asked too. */
+enum class TimedAction { POST, COMMENT, SEND, JOIN, INVITE, REQUEST_TO_JOIN, EXPORT, EXTEND, MAKE_PERMANENT, END_NOW }
 
 /** What can be done with a note. */
 enum class NoteAction { VIEW, OPEN_THREAD, READ_COMMENTS, COMMENT, LIKE, REPOST, QUOTE, SHARE }
@@ -37,6 +48,8 @@ data class NoteFacts(
     /** Set for group posts: then membership decides, never friendship. */
     val groupId: String? = null,
     val viewerIsGroupMember: Boolean = false,
+    /** For group posts: the group's lifetime state. Ended groups are read-only; deleted ones are gone. */
+    val groupState: LifeState = LifeState.PERMANENT,
 )
 
 sealed interface Decision {
@@ -95,11 +108,51 @@ object AccessPolicy {
 
     /** Group posts: by membership, never by friendship alone. Comment and like only; shared only inside the group. */
     private fun groupNote(facts: NoteFacts, action: NoteAction): Decision {
+        if (facts.groupState == LifeState.DELETED) return Decision.Deny(DenyReason.NOT_FOUND)
         if (!facts.viewerIsGroupMember) return Decision.Deny(DenyReason.GROUP_NOT_MEMBER)
         return when (action) {
-            NoteAction.VIEW, NoteAction.OPEN_THREAD, NoteAction.READ_COMMENTS, NoteAction.COMMENT, NoteAction.LIKE,
-            NoteAction.SHARE -> Decision.Allow
+            NoteAction.VIEW, NoteAction.OPEN_THREAD, NoteAction.READ_COMMENTS -> Decision.Allow
+            // Read-only once ended: no comments, likes or shares.
+            NoteAction.COMMENT, NoteAction.LIKE, NoteAction.SHARE ->
+                if (facts.groupState.isOpen) Decision.Allow else Decision.Deny(DenyReason.ENDED)
             NoteAction.REPOST, NoteAction.QUOTE -> Decision.Deny(DenyReason.GROUP_POST)
+        }
+    }
+
+    /**
+     * Reading a group or chat with a lifetime: normal membership rules apply in every state except
+     * DELETED, when every read is NotFound (the server has hard-deleted it).
+     */
+    fun timedRead(state: LifeState): Decision =
+        if (state == LifeState.DELETED) Decision.Deny(DenyReason.NOT_FOUND) else Decision.Allow
+
+    /**
+     * Writing to, joining or changing a group or chat with a lifetime (TIMED_GROUPS 4).
+     * [isMember] is membership now (for EXPORT, "members at the time": nobody joins after the end);
+     * [isHost] is the group's host or whoever started the chat.
+     */
+    fun timed(state: LifeState, action: TimedAction, isMember: Boolean, isHost: Boolean): Decision {
+        if (state == LifeState.DELETED) return Decision.Deny(DenyReason.NOT_FOUND)
+        val temporary = state != LifeState.PERMANENT
+        return when (action) {
+            TimedAction.POST, TimedAction.COMMENT, TimedAction.SEND, TimedAction.INVITE -> when {
+                !isMember -> Decision.Deny(DenyReason.GROUP_NOT_MEMBER)
+                !state.isOpen -> Decision.Deny(DenyReason.ENDED)
+                else -> Decision.Allow
+            }
+            TimedAction.JOIN, TimedAction.REQUEST_TO_JOIN ->
+                if (state.isOpen) Decision.Allow else Decision.Deny(DenyReason.ENDED)
+            TimedAction.EXPORT -> when {
+                !isMember -> Decision.Deny(DenyReason.GROUP_NOT_MEMBER)
+                !temporary -> Decision.Deny(DenyReason.NOT_TEMPORARY)
+                else -> Decision.Allow
+            }
+            TimedAction.EXTEND, TimedAction.MAKE_PERMANENT, TimedAction.END_NOW -> when {
+                !isMember -> Decision.Deny(DenyReason.GROUP_NOT_MEMBER)
+                !isHost -> Decision.Deny(DenyReason.NOT_HOST)
+                !temporary -> Decision.Deny(DenyReason.NOT_TEMPORARY)
+                else -> Decision.Allow
+            }
         }
     }
 

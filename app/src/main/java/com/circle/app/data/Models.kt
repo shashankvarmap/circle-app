@@ -27,6 +27,13 @@ object Clock {
     fun ago(d: Duration): Instant = now().minus(d)
 }
 
+/** [Clock] as a java.time.Clock, for [com.circle.app.data.lifetime.Lifetime]. */
+object AppClock : java.time.Clock() {
+    override fun getZone(): java.time.ZoneId = java.time.ZoneId.systemDefault()
+    override fun withZone(zone: java.time.ZoneId): java.time.Clock = this
+    override fun instant(): Instant = Clock.now()
+}
+
 /** New ids: UUID-style, never list indexes. */
 fun newId(prefix: String): String = "$prefix-${UUID.randomUUID()}"
 
@@ -121,6 +128,8 @@ class GroupInfo(
     val joinRequests: SnapshotStateList<Pair<String, Instant>> = mutableStateListOf()
     /** Your pending join request: visible to every member, never auto-approved. */
     var joinRequested by mutableStateOf(false)
+    /** Permanent, or temporary until an end (TIMED_GROUPS). The group's chat shares this one clock. */
+    var term by mutableStateOf<com.circle.app.data.lifetime.Term>(com.circle.app.data.lifetime.Term.Permanent)
 }
 
 class EventInfo(

@@ -16,5 +16,8 @@ fun denyText(reason: DenyReason): String = stringResource(
         DenyReason.EVENT_LOCKED -> R.string.deny_event_locked
         DenyReason.INNER_CIRCLE -> R.string.deny_inner_circle
         DenyReason.GROUP_POST -> R.string.deny_group_post
+        DenyReason.ENDED -> R.string.deny_ended
+        DenyReason.NOT_HOST -> R.string.deny_not_host
+        DenyReason.NOT_TEMPORARY -> R.string.deny_not_available
     }
 )

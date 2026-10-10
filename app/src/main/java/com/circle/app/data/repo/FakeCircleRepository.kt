@@ -14,6 +14,8 @@ import com.circle.app.data.access.NoteFacts
 import com.circle.app.data.access.ProfileAccess
 import com.circle.app.data.access.Relationship
 import com.circle.app.data.access.SharedCardAccess
+import com.circle.app.data.access.TimedAction
+import com.circle.app.data.lifetime.LifeState
 import com.circle.app.ui.theme.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -30,7 +32,11 @@ class FakeCircleRepository(
     autoAccept: Boolean = false,
     private val autoAcceptDelayMs: Long = 5_000,
     demoDispatcher: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.Main,
+    /** Time for lifetimes (TIMED_GROUPS). Stands in for server time; tests pass a fixed or movable clock. */
+    clock: java.time.Clock = com.circle.app.data.AppClock,
 ) : CircleRepository, DemoControls {
+
+    private val lifetime = com.circle.app.data.lifetime.Lifetime(clock)
 
     private fun <T> observe(block: () -> T): Flow<T> = snapshotFlow(block)
 
@@ -61,8 +67,14 @@ class FakeCircleRepository(
         store.people.keys.forEach { cache.purgeAuthor(it) }
     }
 
-    /** While the debug switch is on, every action fails as if the network were down. */
-    private fun offline(): Outcome.Error? = if (failingState) Outcome.Error("offline") else null
+    /**
+     * While the debug switch is on, every action fails as if the network were down. Every action calls
+     * this first, so it is also where the fake catches up with time (see [sweepLifetimes]).
+     */
+    private fun offline(): Outcome.Error? {
+        sweepLifetimes()
+        return if (failingState) Outcome.Error("offline") else null
+    }
 
     /** A list loaded from the "network": throws while failing, so the screen shows its error state. */
     private fun <T> observeLoaded(block: () -> T): Flow<T> = snapshotFlow {
@@ -84,6 +96,50 @@ class FakeCircleRepository(
 
     private fun hiddenFromMe(personId: String) = rel(personId).isBlocked
 
+    // =========================================================================== lifetimes (TIMED_GROUPS)
+
+    private fun groupState(g: GroupInfo): LifeState = lifetime.state(g.term)
+
+    /** A group that no longer exists counts as DELETED. */
+    private fun groupState(groupId: String): LifeState = store.group(groupId)?.let { groupState(it) } ?: LifeState.DELETED
+
+    /** A group's chat follows its group's one clock; a chat with friends has its own. */
+    private fun chatState(c: Chat): LifeState = c.groupId?.let { groupState(it) } ?: lifetime.state(c.term)
+
+    /** The group's host, or whoever started the chat with friends. */
+    private fun chatHost(c: Chat): Boolean =
+        c.groupId?.let { id -> store.group(id)?.hostIds?.contains(ME) == true } ?: (c.startedBy == ME)
+
+    /**
+     * What the server does on its own as time passes. At the end, open join requests are declined.
+     * At deleteAt the group and its chat (or a chat with friends) are hard-deleted for everyone in one
+     * step: posts, comments, messages, media, alerts and invites about them, likes, and every cached
+     * copy. The saved database follows (it mirrors the store). Copies members saved stay on their phones.
+     * Reads never wait for this: they treat DELETED as NotFound already.
+     */
+    internal fun sweepLifetimes() {
+        store.groups.filter { groupState(it) == LifeState.WRAP_UP }.forEach { g ->
+            if (g.joinRequests.isNotEmpty()) g.joinRequests.clear()
+            if (g.joinRequested) g.joinRequested = false
+        }
+        val goneGroups = store.groups.filter { groupState(it) == LifeState.DELETED }.map { it.id }.toSet()
+        val goneChats = store.chats.filter { chatState(it) == LifeState.DELETED }
+        if (goneGroups.isEmpty() && goneChats.isEmpty()) return
+        val gonePosts = store.posts.filter { it.groupId != null && it.groupId in goneGroups }
+        val gonePostIds = gonePosts.map { it.id }.toSet()
+        val goneCommentIds = gonePosts.flatMap { p -> p.comments.flatMap { c -> listOf(c.id) + c.replies.map { it.id } } }.toSet()
+        val goneMessageIds = goneChats.flatMap { c -> c.messages.map { it.id } }.toSet()
+        store.posts.removeAll { it.id in gonePostIds }
+        store.likedPostIds.removeAll { it in gonePostIds }
+        store.likedCommentIds.removeAll { it in goneCommentIds }
+        store.alerts.removeAll { it.postId != null && it.postId in gonePostIds }
+        store.invites.removeAll { it.groupId != null && it.groupId in goneGroups }
+        store.hiddenMessageIds.removeAll { it in goneMessageIds }
+        store.chats.removeAll { c -> goneChats.any { it === c } }
+        store.groups.removeAll { it.id in goneGroups }
+        cache.forgetKeys(gonePostIds.flatMap { listOf("note:$it", "thread:$it", "snippet:$it") }.toSet())
+    }
+
     /** Who someone is. Null across a block, or for nobody. */
     private fun ref(personId: String): PersonRef? {
         if (hiddenFromMe(personId)) return null
@@ -100,6 +156,7 @@ class FakeCircleRepository(
         viewerInAuthorsInnerCircle = p.authorId in store.innerCirclesIAmIn,
         groupId = p.groupId,
         viewerIsGroupMember = p.groupId?.let { store.group(it)?.isMember } == true,
+        groupState = p.groupId?.let { groupState(it) } ?: LifeState.PERMANENT,
     )
 
     private fun decide(p: Post, action: NoteAction): Decision = AccessPolicy.note(rel(p.authorId), facts(p), action)
@@ -284,7 +341,11 @@ class FakeCircleRepository(
             if (groupId != null) return Outcome.Denied(DenyReason.GROUP_POST)
             denied(decide(quoted, NoteAction.QUOTE))?.let { return it }
         }
-        if (groupId != null) denied(AccessPolicy.groupContent(store.group(groupId)?.isMember == true))?.let { return it }
+        if (groupId != null) {
+            val g = store.group(groupId)
+            denied(AccessPolicy.groupContent(g?.isMember == true))?.let { return it }
+            denied(AccessPolicy.timed(groupState(groupId), TimedAction.POST, isMember = true, isHost = ME in g!!.hostIds))?.let { return it }
+        }
         val p = Post(
             newId("note"), ME, Clock.now(), t,
             audience = if (groupId != null) Audience.FRIENDS else audience,
@@ -611,7 +672,7 @@ class FakeCircleRepository(
 
     // =========================================================================== chats
 
-    private fun chatVisible(c: Chat): Boolean = !c.hiddenForMe && when {
+    private fun chatVisible(c: Chat): Boolean = !c.hiddenForMe && AccessPolicy.timedRead(chatState(c)).allowed && when {
         c.groupId != null -> AccessPolicy.groupContent(store.group(c.groupId)?.isMember == true).allowed
         c.directPersonId != null -> !hiddenFromMe(c.directPersonId!!)
         else -> true
@@ -698,6 +759,7 @@ class FakeCircleRepository(
     private fun writableChat(chatId: String): Pair<Chat?, Outcome.Denied?> {
         val c = store.chat(chatId)?.takeIf { chatVisible(it) } ?: return null to Outcome.Denied(DenyReason.NOT_FOUND)
         c.directPersonId?.let { denied(AccessPolicy.directMessage(rel(it)))?.let { d -> return null to d } }
+        denied(AccessPolicy.timed(chatState(c), TimedAction.SEND, isMember = true, isHost = chatHost(c)))?.let { return null to it }
         return c to null
     }
 
@@ -709,7 +771,7 @@ class FakeCircleRepository(
         if (ids.size == 1) return openDirectChat(ids.single())
         val title = name?.trim()?.takeIf { it.isNotEmpty() }
             ?: ids.mapNotNull { store.person(it)?.firstName }.joinToString(", ")
-        val c = Chat(newId("chat"), ids, name = title, messages = emptyList())
+        val c = Chat(newId("chat"), ids, name = title, messages = emptyList(), startedBy = ME)
         store.chats.add(0, c)
         return Outcome.Success(c.id)
     }
@@ -780,6 +842,7 @@ class FakeCircleRepository(
         val c = store.chat(chatId)?.takeIf { chatVisible(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         c.directPersonId?.let { denied(AccessPolicy.directMessage(rel(it)))?.let { d -> return d } }
+        denied(AccessPolicy.timed(chatState(c), TimedAction.SEND, isMember = true, isHost = chatHost(c)))?.let { return it }
         val allInner = p.authorId == ME && c.memberIds.all { it in store.innerCircle }
         denied(AccessPolicy.shareInto(rel(p.authorId), facts(p), c.groupId, allInner))?.let { return it }
         c.messages.add(ChatMessage(newId("m"), ME, Clock.now(), MessageKind.SHARED_NOTE, postId = p.id))
@@ -839,16 +902,18 @@ class FakeCircleRepository(
     override fun explore(): Flow<ExploreView> = observe {
         ExploreView(
             events = store.events.filter { eventVisible(it) }.map { summary(it) },
-            groups = store.groups.filter { it.isPublic }.map { groupView(it) },
+            groups = store.groups.filter { it.isPublic && AccessPolicy.timedRead(groupState(it)).allowed }.map { groupView(it) },
         )
     }
 
     override fun memberGroups(): Flow<List<GroupRef>> = observe {
-        store.groups.filter { it.isMember }.map { GroupRef(it.id, it.name, it.initial, it.color) }
+        store.groups.filter { it.isMember && AccessPolicy.timedRead(groupState(it)).allowed }.map { GroupRef(it.id, it.name, it.initial, it.color) }
     }
 
     override fun group(groupId: String): Flow<GroupView?> = observe {
-        store.group(groupId)?.takeIf { AccessPolicy.group(it.isPublic, it.isMember).allowed }?.let { groupView(it) }
+        store.group(groupId)
+            ?.takeIf { AccessPolicy.timedRead(groupState(it)).allowed && AccessPolicy.group(it.isPublic, it.isMember).allowed }
+            ?.let { groupView(it) }
     }
 
     override fun groupPosts(groupId: String): Flow<List<Note>> = observe {
@@ -880,6 +945,7 @@ class FakeCircleRepository(
         offline()?.let { return it }
         val g = store.group(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         if (!g.isPublic) return Outcome.Denied(DenyReason.NOT_FOUND)
+        denied(AccessPolicy.timed(groupState(g), TimedAction.REQUEST_TO_JOIN, g.isMember, ME in g.hostIds))?.let { return it }
         if (!g.isMember) g.joinRequested = true // never instant: a host approves it
         return Outcome.Success(Unit)
     }
@@ -900,6 +966,7 @@ class FakeCircleRepository(
     override suspend fun approveJoinRequest(groupId: String, personId: String): Outcome<Unit> {
         offline()?.let { return it }
         val g = hostedGroup(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
+        denied(AccessPolicy.timed(groupState(g), TimedAction.JOIN, isMember = true, isHost = true))?.let { return it }
         if (!g.joinRequests.removeAll { it.first == personId }) return Outcome.Error("no request")
         if (personId !in g.memberIds) g.memberIds.add(personId)
         g.memberCount += 1
@@ -938,6 +1005,7 @@ class FakeCircleRepository(
     override suspend fun inviteToGroup(groupId: String, friendIds: List<String>): Outcome<Int> {
         offline()?.let { return it }
         val g = store.group(groupId)?.takeIf { it.isMember } ?: return Outcome.Denied(DenyReason.GROUP_NOT_MEMBER)
+        denied(AccessPolicy.timed(groupState(g), TimedAction.INVITE, isMember = true, isHost = ME in g.hostIds))?.let { return it }
         return invite(friendIds, g.id, null)
     }
 

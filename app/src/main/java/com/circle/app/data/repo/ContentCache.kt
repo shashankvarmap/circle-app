@@ -17,6 +17,12 @@ class ContentCache {
         byAuthor[authorId]?.remove(key)
     }
 
+    /** Forgets these keys whoever wrote them (a deleted group's posts, for example). */
+    @Synchronized fun forgetKeys(keys: Set<String>) {
+        byAuthor.values.forEach { it.removeAll(keys) }
+        byAuthor.values.removeAll { it.isEmpty() }
+    }
+
     @Synchronized fun purgeAuthor(authorId: String) {
         byAuthor.remove(authorId)
     }

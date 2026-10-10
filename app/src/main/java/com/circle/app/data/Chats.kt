@@ -45,7 +45,11 @@ class Chat(
     pinned: Boolean = false,
     /** Until when you had read this chat; later messages from others are new. */
     lastReadAt: Instant? = null,
+    /** Who started a chat with friends: its host for lifetime changes. Null for 1:1 and group chats. */
+    val startedBy: String? = null,
 ) {
+    /** A chat with friends can be temporary. A group's chat ignores this and follows its group's term. */
+    var term by mutableStateOf<com.circle.app.data.lifetime.Term>(com.circle.app.data.lifetime.Term.Permanent)
     val messages: SnapshotStateList<ChatMessage> = mutableStateListOf<ChatMessage>().apply { addAll(messages) }
     var unread by mutableStateOf(unread)
     var pinned by mutableStateOf(pinned)

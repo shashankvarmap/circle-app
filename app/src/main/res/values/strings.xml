@@ -834,4 +834,8 @@
 
     <!-- Membership, preview builds (no Play Billing yet) -->
     <string name="membership_preview_price">Preview price. The real price comes from Google Play in your currency.</string>
+
+    <!-- Timed groups and chats (TIMED_GROUPS 4) -->
+    <string name="deny_ended">This has ended. It is read-only until it is deleted.</string>
+    <string name="deny_not_host">Only the host can change this.</string>
 </resources>

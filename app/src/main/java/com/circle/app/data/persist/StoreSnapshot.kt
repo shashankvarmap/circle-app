@@ -92,6 +92,8 @@ data class StoreSnapshot(
     val id: String, val name: String, val category: String, val topic: String, val description: String, val color: Int,
     val isPublic: Boolean, val compassDeg: Float?, val memberCount: Int, val isMember: Boolean,
     val hostIds: List<String>, val memberIds: List<String>, val joinRequests: List<JoinS>, val joinRequested: Boolean,
+    /** Null: permanent. Otherwise the end, in epoch ms (UTC). */
+    val endsAt: Long? = null,
 )
 @Serializable data class EventS(
     val id: String, val title: String, val topic: String, val compassDeg: Float?, val startsAt: Long, val venue: String,
@@ -105,6 +107,8 @@ data class StoreSnapshot(
 @Serializable data class ChatS(
     val id: String, val memberIds: List<String>, val name: String?, val groupId: String?, val messages: List<MessageS>,
     val unread: Boolean, val pinned: Boolean, val muted: Boolean, val lastReadAt: Long?, val hiddenForMe: Boolean, val clearedAt: Long?,
+    val startedBy: String? = null,
+    val endsAt: Long? = null,
 )
 @Serializable data class AlertS(
     val id: String, val actorId: String, val kind: String, val at: Long, val quote: String?, val postId: String?, val aboutId: String?,
@@ -123,6 +127,9 @@ data class StoreSnapshot(
 
 private fun Instant.ms() = toEpochMilli()
 private fun Long.instant(): Instant = Instant.ofEpochMilli(this)
+private fun com.circle.app.data.lifetime.Term.endsAtMs(): Long? = (this as? com.circle.app.data.lifetime.Term.Temporary)?.endsAt?.ms()
+private fun termOf(endsAt: Long?): com.circle.app.data.lifetime.Term =
+    endsAt?.let { com.circle.app.data.lifetime.Term.Temporary(it.instant()) } ?: com.circle.app.data.lifetime.Term.Permanent
 
 private fun Comment.s(): CommentS = CommentS(id, authorId, createdAt.ms(), text, replies.map { it.s() })
 private fun CommentS.m(): Comment = Comment(id, authorId, at.instant(), text, replies.map { it.m() })
@@ -153,7 +160,8 @@ fun CircleStore.capture(): StoreSnapshot = StoreSnapshot(
     groups = groups.map { g ->
         GroupS(
             g.id, g.name, g.category, g.topic, g.description, g.color.toArgb(), g.isPublic, g.compassDeg, g.memberCount, g.isMember,
-            g.hostIds.toList(), g.memberIds.toList(), g.joinRequests.map { JoinS(it.first, it.second.ms()) }, g.joinRequested
+            g.hostIds.toList(), g.memberIds.toList(), g.joinRequests.map { JoinS(it.first, it.second.ms()) }, g.joinRequested,
+            g.term.endsAtMs(),
         )
     },
     events = events.map { e ->
@@ -168,7 +176,7 @@ fun CircleStore.capture(): StoreSnapshot = StoreSnapshot(
             c.messages.map { m ->
                 MessageS(m.id, m.senderId, m.createdAt.ms(), m.kind.name, m.text, m.postId, m.eventId, m.replyToId, m.seenAt?.ms(), m.media.map { it.s() })
             },
-            c.unread, c.pinned, c.muted, c.lastReadAt?.ms(), c.hiddenForMe, c.clearedAt?.ms()
+            c.unread, c.pinned, c.muted, c.lastReadAt?.ms(), c.hiddenForMe, c.clearedAt?.ms(), c.startedBy, c.term.endsAtMs()
         )
     },
     hiddenMessageIds = hiddenMessageIds.toList(),
@@ -206,6 +214,7 @@ fun CircleStore.restore(s: StoreSnapshot) {
         GroupInfo(g.id, g.name, g.category, g.topic, g.description, Color(g.color), g.isPublic, g.compassDeg, g.memberCount, g.isMember).apply {
             hostIds.addAll(g.hostIds); memberIds.addAll(g.memberIds)
             joinRequests.addAll(g.joinRequests.map { it.personId to it.at.instant() }); joinRequested = g.joinRequested
+            term = termOf(g.endsAt)
         }
     })
     events.replaceWith(s.events.map { e ->
@@ -220,8 +229,8 @@ fun CircleStore.restore(s: StoreSnapshot) {
             c.messages.map { m ->
                 ChatMessage(m.id, m.senderId, m.at.instant(), MessageKind.valueOf(m.kind), m.text, m.postId, m.eventId, m.replyToId, m.seenAt?.instant(), m.media.map { it.m() })
             },
-            c.unread, c.pinned, c.lastReadAt?.instant()
-        ).apply { muted = c.muted; hiddenForMe = c.hiddenForMe; clearedAt = c.clearedAt?.instant() }
+            c.unread, c.pinned, c.lastReadAt?.instant(), c.startedBy
+        ).apply { muted = c.muted; hiddenForMe = c.hiddenForMe; clearedAt = c.clearedAt?.instant(); term = termOf(c.endsAt) }
     })
     hiddenMessageIds.replaceWith(s.hiddenMessageIds)
     alerts.replaceWith(s.alerts.map { Alert(it.id, it.actorId, AlertKind.valueOf(it.kind), it.at.instant(), it.quote, it.postId, it.aboutId) })
