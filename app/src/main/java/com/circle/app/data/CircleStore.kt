@@ -89,6 +89,7 @@ object CircleStore {
 
     /** Restores the seed data. Also used by unit tests. */
     fun reset() {
+        Clock.shift = java.time.Duration.ZERO // the seed is built around real today
         people.clear()
         (listOf(Seed.me) + Seed.namedFriends + Seed.generatedFriends + Seed.requesters + Seed.others).forEach { people[it.id] = it }
 

@@ -23,7 +23,12 @@ const val ME = "S"
 
 /** The time source for the fake. Tests pin it. */
 object Clock {
-    var now: () -> Instant = { Instant.now() }
+    /**
+     * Demo time travel (Settings > Demo, preview builds): how far the fake server's clock is moved
+     * from real time. Snapshot state, so every list, chip and banner that reads the time updates live.
+     */
+    var shift by mutableStateOf(Duration.ZERO)
+    var now: () -> Instant = { Instant.now().plus(shift) }
     fun ago(d: Duration): Instant = now().minus(d)
 }
 

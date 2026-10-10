@@ -72,9 +72,11 @@ data class StoreSnapshot(
     val theme: String,
     val privacy: PrivacyS,
     val notifications: NotifS,
+    /** Demo time travel: how far the fake server's clock is moved from real time. */
+    val clockShiftMs: Long = 0,
 ) {
     companion object {
-        const val VERSION = 2
+        const val VERSION = 3
     }
 }
 
@@ -192,6 +194,7 @@ fun CircleStore.capture(): StoreSnapshot = StoreSnapshot(
     notifications = notifications.let {
         NotifS(it.likes, it.comments, it.friendRequests, it.events, it.groups, it.messages, it.pause.name, it.quietHours, it.quietStart, it.quietEnd)
     },
+    clockShiftMs = com.circle.app.data.Clock.shift.toMillis(),
 )
 
 /** Replaces the store's contents with [s]. */
@@ -245,6 +248,7 @@ fun CircleStore.restore(s: StoreSnapshot) {
     notifications = s.notifications.let {
         NotificationPrefs(it.likes, it.comments, it.friendRequests, it.events, it.groups, it.messages, PauseAll.valueOf(it.pause), it.quietHours, it.quietStart, it.quietEnd)
     }
+    com.circle.app.data.Clock.shift = java.time.Duration.ofMillis(s.clockShiftMs)
 }
 
 private fun <T> MutableList<T>.replaceWith(items: List<T>) { clear(); addAll(items) }
