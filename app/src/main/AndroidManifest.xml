@@ -8,7 +8,7 @@
 
     <application
         android:name=".CircleApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:label="Circle"
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.Circle"
