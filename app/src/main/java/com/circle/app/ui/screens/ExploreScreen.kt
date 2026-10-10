@@ -340,7 +340,7 @@ private fun ExploreMap(items: List<ExploreItem>, selectedKey: String?, onSelect:
                     // Temporary: dashed accent outline, accent tint and letter, and a small ring badge (never colour alone).
                     val temporaryLabel = life?.let {
                         ", " + androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_legend_temporary) + ", " +
-                            androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.explore_ends_in, it.daysLeft, it.daysLeft)
+                            endsLabel(it)
                     }.orEmpty()
                     OrbitNode(
                         center = center,
@@ -405,7 +405,7 @@ private fun PreviewCard(item: ExploreItem, onOpen: () -> Unit) {
         val life = (item as? ExploreItem.Group)?.g?.lifetime
         if (life != null) {
             com.circle.app.ui.components.ChipShell(
-                loud = true, text = androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.explore_ends_in, life.daysLeft, life.daysLeft),
+                loud = true, text = endsLabel(life),
                 modifier = Modifier.padding(top = 10.dp)
             ) { }
             Text(
@@ -549,7 +549,7 @@ private fun GroupListRow(g: GroupView, onClick: () -> Unit) {
         else -> null
     }
     val life = g.lifetime
-    val endsIn = life?.let { androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.explore_ends_in, it.daysLeft, it.daysLeft) }
+    val endsIn = life?.let { endsLabel(it) }
     val temporaryText = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_legend_temporary)
     val groupRowLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.explore_group_row, g.name, g.topic.lowercase(), g.memberCount) +
         (endsIn?.let { ", $temporaryText, $it" } ?: "") + (status?.let { ", $it" } ?: "")
@@ -582,3 +582,9 @@ private fun GroupListRow(g: GroupView, onClick: () -> Unit) {
         }
     }
 }
+
+/** "Ends in 5 days", or "Ended" once a temporary group is in wrap-up. */
+@Composable
+private fun endsLabel(life: com.circle.app.data.repo.LifetimeView): String =
+    if (life.state == com.circle.app.data.lifetime.LifeState.WRAP_UP) androidx.compose.ui.res.stringResource(com.circle.app.R.string.timer_ended)
+    else androidx.compose.ui.res.pluralStringResource(com.circle.app.R.plurals.explore_ends_in, life.daysLeft, life.daysLeft)

@@ -945,7 +945,7 @@ class FakeCircleRepository(
                 muted = c.muted,
                 lifetime = chatLifetime(c),
             )
-        }.sortedByDescending { it.lastAt } // newest first, never ranked
+        }.sortedByDescending { it.lastAt ?: java.time.Instant.MAX } // newest first (a new, empty chat on top), never ranked
     }
 
     override fun chat(chatId: String): Flow<ChatView?> = observe {
