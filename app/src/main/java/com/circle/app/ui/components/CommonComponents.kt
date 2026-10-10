@@ -332,7 +332,7 @@ fun FriendRequestButton(personId: String, relationship: Relationship?, addLabel:
 /** Join button for a public group. Tapping sends a pending request (visible to every
  *  member): it never makes you a member instantly. */
 @Composable
-fun JoinRequestButton(group: GroupView, modifier: Modifier = Modifier) {
+fun JoinRequestButton(group: GroupView, modifier: Modifier = Modifier, onTemporary: (() -> Unit)? = null) {
     val actions = circleViewModel { ActionsViewModel(it) }
     val colors = CircleTheme.colors
     val shape = RoundedCornerShape(999.dp)
@@ -349,7 +349,8 @@ fun JoinRequestButton(group: GroupView, modifier: Modifier = Modifier) {
 
         else -> Box(
             modifier = modifier.clip(shape).background(colors.accent)
-                .clickable { actions.requestToJoin(group.ref.id) }
+                // A temporary group shows what joining means first (TIMED_GROUPS 5).
+                .clickable { if (group.lifetime != null && onTemporary != null) onTemporary() else actions.requestToJoin(group.ref.id) }
                 .padding(horizontal = 14.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center
         ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.common_request_to_join), color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }

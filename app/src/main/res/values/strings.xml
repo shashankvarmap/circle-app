@@ -282,6 +282,9 @@
     <string name="newchat_next">Next</string>
     <string name="newchat_create">Create</string>
     <string name="newchat_name_title">Name this chat (optional)</string>
+    <string name="newchat_with">WITH</string>
+    <string name="newchat_name_caps">NAME (OPTIONAL)</string>
+    <string name="newchat_create_chat">Create chat</string>
     <string name="newchat_name_hint">e.g. Weekend Trip</string>
     <string name="newchat_note">Only friends. A chat you start with several friends shows in Messages.</string>
 

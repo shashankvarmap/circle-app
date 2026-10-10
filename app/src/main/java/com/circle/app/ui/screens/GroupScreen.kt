@@ -33,6 +33,8 @@ import com.circle.app.ui.components.*
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -51,6 +53,11 @@ class GroupViewModel(repo: CircleRepository, private val groupId: String) : Repo
     fun remove(personId: String) = run({ removeMember(groupId, personId) })
     fun edit(name: String, description: String, isPublic: Boolean) = run({ editGroup(groupId, name, description, isPublic) })
     fun invite(ids: List<String>, then: (Outcome<Int>) -> Unit) = run({ inviteToGroup(groupId, ids) }, then)
+    /** A temporary group the server deleted (it and its chat, for everyone). */
+    val gone = repo.wasDeleted(groupId).state(false)
+    fun extend(days: Int, then: (Outcome<Unit>) -> Unit) = run({ extendLifetime(groupId, days) }, then)
+    fun makePermanent(then: (Outcome<Unit>) -> Unit) = run({ makePermanent(groupId) }, then)
+    fun endNow(then: (Outcome<Unit>) -> Unit) = run({ endNow(groupId) }, then)
 }
 
 private enum class GroupDialog { LEAVE, EDIT, INVITE, REPORT, REMOVE }
@@ -63,6 +70,13 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
     val vm = circleViewModel(key = "group-$groupId") { GroupViewModel(it, groupId.orEmpty()) }
     val loaded by vm.group.collectAsStateWithLifecycle()
     val groupPosts by vm.posts.collectAsStateWithLifecycle()
+    val gone by vm.gone.collectAsStateWithLifecycle()
+    if (loaded == null && gone) {
+        com.circle.app.ui.components.DeletedTimedState(onBack = {
+            nav.navigate(com.circle.app.navigation.Routes.MESSAGES) { popUpTo(com.circle.app.navigation.Routes.MESSAGES) { inclusive = true }; launchSingleTop = true }
+        })
+        return
+    }
     val group = loaded ?: run {
         Column(Modifier.fillMaxSize().background(CircleTheme.colors.background)) { DetailHeader(androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_title)) { nav.popBackStack() } }
         return
@@ -77,6 +91,21 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
     var removing by rememberSaveable { mutableStateOf<String?>(null) }
     var menu by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
+    val life = group.lifetime
+    var extending by rememberSaveable { mutableStateOf(false) }
+    fun toast(text: String) = android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show()
+    val saveSoon = stringResource(R.string.timed_save_copy_soon)
+    if (extending && life != null) {
+        val permanentDone = stringResource(R.string.extend_permanent_done_group)
+        val endDone = stringResource(R.string.extend_end_done)
+        com.circle.app.ui.components.ExtendSheet(
+            canEndNow = life.state != com.circle.app.data.lifetime.LifeState.WRAP_UP,
+            onDismiss = { extending = false },
+            onExtend = { d -> extending = false; vm.extend(d) { if (it is Outcome.Success) toast(context.resources.getQuantityString(R.plurals.extend_done, d, d)) } },
+            onPermanent = { extending = false; vm.makePermanent { if (it is Outcome.Success) toast(permanentDone) } },
+            onEndNow = { extending = false; vm.endNow { if (it is Outcome.Success) toast(endDone) } },
+        )
+    }
 
     when (dialog) {
         GroupDialog.LEAVE -> ConfirmDialog(
@@ -122,8 +151,10 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                     Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.group_options), tint = CircleTheme.colors.text)
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    if (group.iAmHost) DropdownMenuItem(text = { Text(stringResource(R.string.group_edit)) }, onClick = { menu = false; dialog = GroupDialog.EDIT })
-                    if (isMember) DropdownMenuItem(text = { Text(stringResource(R.string.group_invite)) }, onClick = { menu = false; dialog = GroupDialog.INVITE })
+                    if (life?.canSaveCopy == true) DropdownMenuItem(text = { Text(stringResource(R.string.timed_save_copy)) }, onClick = { menu = false; toast(saveSoon) })
+                    if (life?.canChange == true) DropdownMenuItem(text = { Text(stringResource(R.string.timed_menu_extend)) }, onClick = { menu = false; extending = true })
+                    if (group.iAmHost && group.isOpen) DropdownMenuItem(text = { Text(stringResource(R.string.group_edit)) }, onClick = { menu = false; dialog = GroupDialog.EDIT })
+                    if (isMember && group.isOpen) DropdownMenuItem(text = { Text(stringResource(R.string.group_invite)) }, onClick = { menu = false; dialog = GroupDialog.INVITE })
                     if (isMember) DropdownMenuItem(text = { Text(stringResource(R.string.group_leave)) }, onClick = { menu = false; dialog = GroupDialog.LEAVE })
                     if (!group.iAmHost) DropdownMenuItem(text = { Text(stringResource(R.string.group_report)) }, onClick = { menu = false; dialog = GroupDialog.REPORT })
                 }
@@ -150,6 +181,23 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                     }
                 }
             }
+            if (life != null) item {
+                // "Ends Thu 22 Oct" under the name; "Ended … · read-only" in wrap-up.
+                val ended = life.state == com.circle.app.data.lifetime.LifeState.WRAP_UP
+                com.circle.app.ui.components.TimerChip(
+                    life,
+                    label = stringResource(if (ended) R.string.group_ended_chip else R.string.group_ends_chip, com.circle.app.ui.components.lastDay(life.endsAt))
+                )
+            }
+            if (life != null && isMember && group.chatId != null) item {
+                GroupChatRow { nav.navigate(com.circle.app.navigation.Routes.chat(group.chatId)) }
+            }
+            if (life != null && isMember) item {
+                com.circle.app.ui.components.LifetimeBanner(
+                    life, isGroupChat = true, onSave = { toast(saveSoon) }, onExtend = { extending = true },
+                    modifier = Modifier.padding(horizontal = 0.dp)
+                )
+            }
             item {
                 if (group.description.isNotEmpty()) Text(group.description, color = CircleTheme.colors.body, fontSize = 13.sp)
             }
@@ -168,8 +216,8 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                     }
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (group.isPublic) {
-                            JoinRequestButton(group, modifier = Modifier.fillMaxWidth())
+                        if (group.isPublic && group.isOpen) {
+                            JoinRequestButton(group, modifier = Modifier.fillMaxWidth(), onTemporary = { nav.navigate(com.circle.app.navigation.Routes.joinGroup(group.ref.id)) })
                             Text(
                                 if (group.joinRequested) androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_request_sent_note)
                                 else androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_groups_default_to_private_this),
@@ -204,7 +252,8 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                     )
                 }
             } else if (isMember) {
-                item { ComposeToGroupRow(nav, group.id) }
+                if (group.isOpen) item { ComposeToGroupRow(nav, group.id) }
+                else item { com.circle.app.ui.components.ReadOnlyBar() }
 
                 if (groupPosts.isEmpty()) {
                     item { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.group_nothing_posted_here_yet_be), color = CircleTheme.colors.muted, fontSize = 13.sp) }
@@ -235,6 +284,25 @@ fun LockedPanel(text: String, footnote: String? = null) {
             Spacer(Modifier.height(4.dp))
             Text(it, color = CircleTheme.colors.muted, fontSize = 11.sp)
         }
+    }
+}
+
+/** A temporary group's chat: "Group chat · Ends with the group". */
+@Composable
+private fun GroupChatRow(onOpen: () -> Unit) {
+    val colors = CircleTheme.colors
+    val shape = RoundedCornerShape(14.dp)
+    Row(
+        Modifier.fillMaxWidth().clip(shape).background(colors.surface).border(1.dp, colors.border, shape)
+            .clickable(onClick = onOpen).heightIn(min = 56.dp).padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(Icons.AutoMirrored.Outlined.Send, contentDescription = null, tint = colors.accent, modifier = Modifier.size(20.dp))
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.group_chat_row), color = colors.text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(stringResource(R.string.group_chat_ends), color = colors.muted, fontSize = 12.sp, modifier = Modifier.padding(top = 1.dp))
+        }
+        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.muted, modifier = Modifier.size(18.dp))
     }
 }
 

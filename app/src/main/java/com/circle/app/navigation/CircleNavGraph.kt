@@ -24,6 +24,8 @@ object Routes {
     const val SIGNUP_AGE = "signup_age"
     const val LEGAL = "legal"
     const val TIME_TRAVEL = "time_travel"
+    const val HOW_TIMED = "how_timed"
+    fun joinGroup(groupId: String) = "join_group/$groupId"
     const val MEMBERSHIP = "membership"
     const val YOUR_DATA = "your_data"
     const val DELETE_ACCOUNT = "delete_account"
@@ -138,6 +140,8 @@ fun CircleNavGraph(
         }
         composable(Routes.LEGAL) { LegalScreen(navController) }
         composable(Routes.TIME_TRAVEL) { com.circle.app.ui.screens.TimeTravelScreen(navController) }
+        composable(Routes.HOW_TIMED) { com.circle.app.ui.screens.HowTimedScreen(navController) }
+        composable("join_group/{groupId}") { entry -> com.circle.app.ui.screens.JoinTimedGroupScreen(navController, entry.arguments?.getString("groupId").orEmpty()) }
         composable(Routes.MEMBERSHIP) { MembershipScreen(navController) }
         composable(Routes.YOUR_DATA) { YourDataScreen(navController) }
         composable(Routes.DELETE_ACCOUNT) {

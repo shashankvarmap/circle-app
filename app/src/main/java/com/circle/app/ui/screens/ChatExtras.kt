@@ -5,6 +5,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -114,7 +116,59 @@ fun ChatMediaViewerScreen(nav: NavHostController, chatId: String, messageId: Str
 
 class NewChatViewModel(repo: CircleRepository) : RepoViewModel(repo) {
     val friends = repo.friends().state(emptyList())
-    fun create(ids: List<String>, name: String?, then: (Outcome<String>) -> Unit) = run({ createChat(ids, name) }, then)
+    fun create(ids: List<String>, name: String?, lifetimeDays: Int?, then: (Outcome<String>) -> Unit) = run({ createChat(ids, name, lifetimeDays) }, then)
+    fun preview(days: Int) = repo.lifetimePreview(days)
+}
+
+/** New chat, step two: WITH, NAME (OPTIONAL), HOW LONG DOES IT LAST?, Create chat. */
+@Composable
+private fun NewChatDetails(
+    people: List<com.circle.app.data.repo.PersonRef>, name: String, onName: (String) -> Unit, lifetime: LifetimeChoice,
+    preview: (Int) -> com.circle.app.data.repo.LifetimePreview, onBack: () -> Unit, onHow: () -> Unit, onCreate: () -> Unit,
+) {
+    val colors = CircleTheme.colors
+    Column(Modifier.fillMaxSize().background(colors.background)) {
+        DetailHeader(stringResource(R.string.messages_new_chat), onBack)
+        Column(Modifier.weight(1f).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 20.dp)) {
+            Text(
+                stringResource(R.string.newchat_with), color = colors.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.32.sp,
+                modifier = Modifier.padding(top = 14.dp, bottom = 8.dp)
+            )
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                people.forEach { p ->
+                    Row(
+                        Modifier.clip(RoundedCornerShape(999.dp)).border(1.5.dp, colors.border, RoundedCornerShape(999.dp))
+                            .padding(start = 5.dp, end = 12.dp, top = 5.dp, bottom = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Avatar(p.initials, p.color, size = 26)
+                        Text(p.firstName, color = colors.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+            Text(
+                stringResource(R.string.newchat_name_caps), color = colors.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.32.sp,
+                modifier = Modifier.padding(top = 18.dp, bottom = 6.dp)
+            )
+            OutlinedTextField(
+                name, onName, placeholder = { Text(stringResource(R.string.newchat_name_hint), color = colors.muted) }, singleLine = true,
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                colors = androidx.compose.material3.TextFieldDefaults.colors(
+                    focusedContainerColor = colors.surface, unfocusedContainerColor = colors.surface,
+                    focusedIndicatorColor = colors.accent, unfocusedIndicatorColor = colors.border,
+                    focusedTextColor = colors.text, unfocusedTextColor = colors.text
+                )
+            )
+            LifetimeSection(lifetime, isGroup = false, preview = preview, onHow = onHow)
+            Spacer(Modifier.height(16.dp))
+        }
+        Box(
+            Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 30.dp).fillMaxWidth().heightIn(min = 50.dp)
+                .clip(RoundedCornerShape(999.dp)).background(colors.accent).clickable(role = Role.Button, onClick = onCreate),
+            contentAlignment = Alignment.Center
+        ) { Text(stringResource(R.string.newchat_create_chat), color = colors.onAccent, fontSize = 15.sp, fontWeight = FontWeight.Bold) }
+    }
 }
 
 /**
@@ -130,20 +184,27 @@ fun NewChatScreen(nav: NavHostController) {
     var picked by rememberSaveable { mutableStateOf(listOf<String>()) }
     var naming by rememberSaveable { mutableStateOf(false) }
     var name by rememberSaveable { mutableStateOf("") }
+    val lifetime = rememberLifetimeChoice()
     val shown = friends.filter { query.isBlank() || it.person.name.contains(query.trim(), ignoreCase = true) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val createdText = stringResource(R.string.chat_created)
 
-    fun create() = vm.create(picked, name) { if (it is Outcome.Success) nav.navigate(Routes.chat(it.value)) { popUpTo(Routes.NEW_CHAT) { inclusive = true } } }
+    fun create() = vm.create(picked, name, if (picked.size > 1) lifetime.lifetimeDays else null) {
+        if (it is Outcome.Success) {
+            if (picked.size > 1) android.widget.Toast.makeText(context, createdText, android.widget.Toast.LENGTH_SHORT).show()
+            nav.navigate(Routes.chat(it.value)) { popUpTo(Routes.NEW_CHAT) { inclusive = true } }
+        }
+    }
 
+    // Two or more friends: a second step with the name and how long the chat lasts (TIMED_GROUPS 5).
     if (naming) {
-        AlertDialog(
-            onDismissRequest = { naming = false },
-            title = { Text(stringResource(R.string.newchat_name_title)) },
-            text = {
-                OutlinedTextField(name, { name = it.take(40) }, placeholder = { Text(stringResource(R.string.newchat_name_hint)) }, singleLine = true)
-            },
-            confirmButton = { TextButton(onClick = { naming = false; create() }) { Text(stringResource(R.string.newchat_create), color = colors.accent) } },
-            dismissButton = { TextButton(onClick = { naming = false }) { Text(stringResource(R.string.cancel), color = colors.text) } }
+        androidx.activity.compose.BackHandler { naming = false }
+        NewChatDetails(
+            people = friends.filter { it.person.id in picked }.map { it.person },
+            name = name, onName = { name = it.take(40) }, lifetime = lifetime, preview = vm::preview,
+            onBack = { naming = false }, onHow = { nav.navigate(Routes.HOW_TIMED) }, onCreate = { create() }
         )
+        return
     }
 
     Column(Modifier.fillMaxSize().background(colors.background)) {

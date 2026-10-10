@@ -32,8 +32,9 @@ import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.theme.*
 
 class CreateViewModel(repo: CircleRepository) : RepoViewModel(repo) {
-    fun createGroup(name: String, category: String, description: String, isPublic: Boolean, then: (Outcome<String>) -> Unit) =
-        run({ createGroup(name, category, description, isPublic) }, then)
+    fun createGroup(name: String, category: String, description: String, isPublic: Boolean, lifetimeDays: Int?, then: (Outcome<String>) -> Unit) =
+        run({ createGroup(name, category, description, isPublic, lifetimeDays) }, then)
+    fun preview(days: Int) = repo.lifetimePreview(days)
     fun createEvent(
         title: String, visibility: com.circle.app.data.access.EventVisibility, description: String, capacity: Int,
         startsAt: java.time.Instant, topic: String, venue: String, then: (Outcome<String>) -> Unit,
@@ -47,6 +48,8 @@ fun CreateGroupScreen(nav: NavHostController) {
     var name by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    val lifetime = rememberLifetimeChoice()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Column(modifier = Modifier.fillMaxSize().background(CircleTheme.colors.background)) {
         Row(
@@ -59,7 +62,14 @@ fun CreateGroupScreen(nav: NavHostController) {
             androidx.compose.foundation.layout.Box(
                 modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(if (canCreate) CircleTheme.colors.accent else CircleTheme.colors.track)
                     .clickable(enabled = canCreate) {
-                        vm.createGroup(name, category, description, isPublic = !isPrivate) { if (it is Outcome.Success) nav.navigate(com.circle.app.navigation.Routes.groupDetail(it.value)) { popUpTo(com.circle.app.navigation.Routes.CREATE_GROUP) { inclusive = true } } }
+                        val days = lifetime.lifetimeDays
+                        val ends = days?.let { context.getString(com.circle.app.R.string.lifetime_created_until, com.circle.app.ui.components.lastDay(vm.preview(it).endsAt)) }
+                        vm.createGroup(name, category, description, isPublic = !isPrivate, lifetimeDays = days) {
+                            if (it is Outcome.Success) {
+                                ends?.let { text -> android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show() }
+                                nav.navigate(com.circle.app.navigation.Routes.groupDetail(it.value)) { popUpTo(com.circle.app.navigation.Routes.CREATE_GROUP) { inclusive = true } }
+                            }
+                        }
                     }
                     .padding(horizontal = 16.dp, vertical = 7.dp)
             ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.newchat_create), color = if (canCreate) CircleTheme.colors.onAccent else CircleTheme.colors.muted, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
@@ -92,6 +102,7 @@ fun CreateGroupScreen(nav: NavHostController) {
                 androidx.compose.ui.res.stringResource(com.circle.app.R.string.creategroup_you_can_switch_this_later),
                 color = CircleTheme.colors.muted, fontSize = 11.sp
             )
+            LifetimeSection(lifetime, isGroup = true, preview = vm::preview, onHow = { nav.navigate(com.circle.app.navigation.Routes.HOW_TIMED) })
         }
     }
 }
