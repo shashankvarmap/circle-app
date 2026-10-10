@@ -16,6 +16,13 @@ import com.circle.app.data.access.Relationship
 import com.circle.app.data.access.SharedCardAccess
 import com.circle.app.data.access.TimedAction
 import com.circle.app.data.lifetime.LifeState
+import com.circle.app.data.export.ExportBundle
+import com.circle.app.data.export.ExportComment
+import com.circle.app.data.export.ExportKind
+import com.circle.app.data.export.ExportMessage
+import com.circle.app.data.export.ExportPlan
+import com.circle.app.data.export.ExportPost
+import com.circle.app.data.export.SizeEstimate
 import com.circle.app.ui.theme.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -286,6 +293,57 @@ class FakeCircleRepository(
     override suspend fun endNow(id: String): Outcome<Unit> = changeLifetime(id, TimedAction.END_NOW) { lifetime.endNow(it) }
 
     override fun wasDeleted(id: String): Flow<Boolean> = observe { id in store.goneTimedIds }
+
+    // =========================================================================== save a copy (TIMED_GROUPS 8)
+
+    private fun displayName(personId: String): String =
+        if (personId == ME) store.profile.displayName.ifBlank { "You" } else store.person(personId)?.name.orEmpty()
+
+    private fun exportComment(c: Comment): ExportComment? = if (hiddenFromMe(c.authorId)) null else
+        ExportComment(displayName(c.authorId), c.createdAt.toString(), c.text, c.replies.mapNotNull { exportComment(it) })
+
+    /** The bundle, or why not. Every read here is one this member could already make in the app. */
+    private fun buildExport(id: String, withMedia: Boolean): Pair<ExportBundle?, DenyReason?> {
+        val o = owner(id) ?: return null to DenyReason.NOT_FOUND
+        val state = lifetime.state(o.get())
+        AccessPolicy.timed(state, TimedAction.EXPORT, o.isMember, o.isHost).let { if (it is Decision.Deny) return null to it.reason }
+        val g = store.group(id) ?: store.chat(id)?.groupId?.let { store.group(it) }
+        val chat = if (g != null) store.chats.firstOrNull { it.groupId == g.id } else store.chat(id)
+        val media = mutableListOf<Pair<String, com.circle.app.data.media.MediaRef>>()
+        fun names(refs: List<com.circle.app.data.media.MediaRef>): List<String> = if (!withMedia) emptyList() else refs.map { ref ->
+            val ext = if (ref.kind == com.circle.app.data.media.MediaKind.VIDEO) "mp4" else "jpg"
+            "%03d-%s.%s".format(media.size + 1, ref.kind.name.lowercase(), ext).also { media.add(it to ref) }
+        }
+        val messages = chat?.let { visibleMessages(it) }.orEmpty().map { m ->
+            ExportMessage(displayName(m.senderId), m.createdAt.toString(), m.kind.name, m.text, names(m.media))
+        }
+        val posts = if (g == null) emptyList() else store.posts
+            .filter { it.groupId == g.id && !hiddenFromMe(it.authorId) && decide(it, NoteAction.VIEW).allowed }
+            .sortedBy { it.createdAt }
+            .map { p -> ExportPost(displayName(p.authorId), p.createdAt.toString(), p.text, p.comments.mapNotNull { exportComment(it) }, names(p.media)) }
+        val memberIds = if (g != null) (g.hostIds + g.memberIds + ME).distinct() else (chat?.memberIds.orEmpty() + ME).distinct()
+        val term = o.get() as? com.circle.app.data.lifetime.Term.Temporary
+        return ExportBundle(
+            id = g?.id ?: id, name = o.name, kind = if (g != null) ExportKind.GROUP else ExportKind.CHAT,
+            endsAt = term?.endsAt, deleteAt = term?.let { com.circle.app.data.lifetime.Lifetime.deleteAt(it.endsAt) },
+            exportedAt = lifetime.now(),
+            members = memberIds.filterNot { hiddenFromMe(it) }.map { displayName(it) }.filter { it.isNotBlank() },
+            messages = messages, posts = posts, media = media,
+        ) to null
+    }
+
+    override fun exportPlan(id: String): Flow<ExportPlan?> = observe {
+        val b = buildExport(id, withMedia = true).first ?: return@observe null
+        val chars = b.messages.sumOf { it.text.length.toLong() } + b.posts.sumOf { p -> p.text.length.toLong() + p.comments.sumOf { it.text.length.toLong() } }
+        val text = SizeEstimate.text(b.messages.size, b.posts.size, chars)
+        ExportPlan(b.id, b.name, b.kind, b.messages.size, b.media.size, b.posts.size, SizeEstimate.everything(text, b.media.size), text)
+    }
+
+    override suspend fun exportBundle(id: String, withMedia: Boolean): Outcome<ExportBundle> {
+        offline()?.let { return it }
+        val (b, why) = buildExport(id, withMedia)
+        return b?.let { Outcome.Success(it) } ?: Outcome.Denied(why ?: DenyReason.NOT_FOUND)
+    }
 
     /** Who someone is. Null across a block, or for nobody. */
     private fun ref(personId: String): PersonRef? {

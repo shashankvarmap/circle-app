@@ -80,6 +80,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.1")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+    // Save a copy (TIMED_GROUPS 8): a job that survives leaving the screen.
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("androidx.core:core-splashscreen:1.0.1")
     // Phone numbers: real country list, validation, formatting and E.164 (ACCESS_AND_LAUNCH 1).
     implementation("com.googlecode.libphonenumber:libphonenumber:8.13.50")
@@ -92,6 +94,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     testImplementation("org.robolectric:robolectric:4.12.2")
     testImplementation("androidx.test:core:1.5.0")
+    testImplementation("androidx.work:work-testing:2.9.1")
     testImplementation(platform("androidx.compose:compose-bom:2024.09.03"))
     testImplementation("androidx.compose.ui:ui-test-junit4")
     // Orbit screenshots at 320-430dp, both themes, font 1.0/2.0 (ACCESS_AND_LAUNCH 5): ./gradlew recordRoborazziDebug

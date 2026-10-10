@@ -166,6 +166,13 @@ interface CircleRepository {
     suspend fun endNow(id: String): Outcome<Unit>
     /** True once [id] was a temporary group or chat the server has deleted for everyone. */
     fun wasDeleted(id: String): Flow<Boolean>
+    /** Save a copy: counts and sizes for the sheet; null when you may not save one (not a member, permanent, deleted). */
+    fun exportPlan(id: String): Flow<com.circle.app.data.export.ExportPlan?>
+    /**
+     * Save a copy: what you may take home, as one bundle. Members only, from Active to Wrap-up; only
+     * what you were allowed to see; people you blocked are left out; display names only.
+     */
+    suspend fun exportBundle(id: String, withMedia: Boolean): Outcome<com.circle.app.data.export.ExportBundle>
     /** Hosts only. Approving makes the person a member. */
     suspend fun approveJoinRequest(groupId: String, personId: String): Outcome<Unit>
     suspend fun declineJoinRequest(groupId: String, personId: String): Outcome<Unit>

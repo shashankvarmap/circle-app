@@ -178,7 +178,8 @@ fun CircleNavGraph(
         }
         composable(
             "${Routes.GROUP_DETAIL}?groupId={groupId}",
-            arguments = listOf(navArgument("groupId") { nullable = true; defaultValue = null })
+            arguments = listOf(navArgument("groupId") { nullable = true; defaultValue = null }),
+            deepLinks = listOf(navDeepLink { uriPattern = "$DEEP_LINK_BASE/group/{groupId}" })
         ) { entry -> GroupScreen(navController, entry.arguments?.getString("groupId")) }
         composable(
             "${Routes.EVENT_DETAIL}?eventId={eventId}",
@@ -196,7 +197,8 @@ fun CircleNavGraph(
             )
         }
         composable(Routes.PERSON, deepLinks = listOf(navDeepLink { uriPattern = "$DEEP_LINK_BASE/person/{personId}" })) { entry -> PersonProfileScreen(navController, entry.arguments?.getString("personId").orEmpty()) }
-        composable(Routes.CHAT) { entry -> ChatScreen(navController, entry.arguments?.getString("chatId").orEmpty()) }
+        // Notifications open chats by link; a deleted temporary chat then says so (TIMED_GROUPS 6).
+        composable(Routes.CHAT, deepLinks = listOf(navDeepLink { uriPattern = "$DEEP_LINK_BASE/chat/{chatId}" })) { entry -> ChatScreen(navController, entry.arguments?.getString("chatId").orEmpty()) }
         composable(Routes.EDIT_PROFILE) { EditProfileScreen(navController) }
         composable(Routes.INFO) { entry -> InfoScreen(navController, entry.arguments?.getString("page").orEmpty()) }
         composable(Routes.PEOPLE_LIST) { entry -> PeopleListScreen(navController, entry.arguments?.getString("kind").orEmpty()) }

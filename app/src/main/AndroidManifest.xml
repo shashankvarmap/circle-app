@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Only to show the "You're offline" banner. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Asked only when you tap Connect contacts (with the rationale on screen first). -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- Save a copy: a progress notification while the ZIP is prepared (shown only if notifications are allowed). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".CircleApplication"
@@ -39,5 +44,10 @@
                 <data android:scheme="https" android:host="circle.app" android:pathPrefix="/i/" />
             </intent-filter>
         </activity>
+        <!-- WorkManager's foreground service for Save a copy (Android 14 needs the type). -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
     </application>
 </manifest>
