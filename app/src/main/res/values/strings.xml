@@ -935,6 +935,7 @@
     <string name="save_fail_disk">Your phone is out of space. Free some up and try again.</string>
     <string name="save_fail_gone">This was deleted before your copy was ready. Nothing was saved.</string>
     <string name="save_fail_other">Your copy couldn\'t be saved. Try again.</string>
+    <string name="save_percent">%1$d%%</string>
     <string name="save_progress_cd">%1$d percent</string>
     <string name="timed_extend_or_keep">Extend or keep it</string>
     <string name="timed_read_only">Read-only. This chat has ended.</string>

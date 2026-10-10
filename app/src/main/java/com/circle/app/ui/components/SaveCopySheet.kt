@@ -94,7 +94,7 @@ fun SaveCopySheet(id: String, onDismiss: () -> Unit, onSaved: () -> Unit = {}) {
                         Modifier.padding(top = 20.dp).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(999.dp)).background(colors.track)
                             .semantics { progressBarRangeInfo = ProgressBarRangeInfo(p / 100f, 0f..1f) }
                     ) { Box(Modifier.fillMaxHeight().fillMaxWidth(p / 100f).background(colors.accent)) }
-                    Text("$p%", color = colors.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp).semantics { contentDescription = label })
+                    Text(stringResource(R.string.save_percent, p), color = colors.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp).semantics { contentDescription = label })
                     TextAction(stringResource(R.string.save_cancel), colors.muted) { SaveCopyJobs.cancel(context, id); started = false }
                 }
                 WorkInfo.State.SUCCEEDED -> {

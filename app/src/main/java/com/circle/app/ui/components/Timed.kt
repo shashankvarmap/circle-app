@@ -130,8 +130,9 @@ fun Modifier.dashedOutline(color: Color, corner: Dp, width: Dp = 2.dp): Modifier
 fun TemporaryGroupTile(initial: String, size: Int = 52, modifier: Modifier = Modifier) {
     val colors = CircleTheme.colors
     val corner = (size * 17 / 52f).dp
+    val label = stringResource(R.string.explore_legend_temporary)
     Box(
-        modifier.size(size.dp).clip(RoundedCornerShape(corner)).background(colors.accent.copy(alpha = 0.08f))
+        modifier.semantics { contentDescription = label }.size(size.dp).clip(RoundedCornerShape(corner)).background(colors.accent.copy(alpha = 0.08f))
             .dashedOutline(colors.accent, corner),
         contentAlignment = Alignment.Center
     ) { Text(initial, color = colors.accent, fontWeight = FontWeight.ExtraBold, fontSize = (size * 18 / 52f).sp) }
