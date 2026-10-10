@@ -231,6 +231,9 @@ fun CodeStep(vm: SignupViewModel, onBack: () -> Unit, onVerified: () -> Unit) {
                 }
             }
         }
+        if (vm.showNoSmsHint) {
+            Text(stringResource(R.string.signup_code_preview_hint), color = colors.muted, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 12.dp))
+        }
         when {
             locked -> Text(stringResource(R.string.signup_code_locked), color = colors.alertDot, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
             vm.codeError -> Text(stringResource(R.string.signup_code_wrong), color = colors.alertDot, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))

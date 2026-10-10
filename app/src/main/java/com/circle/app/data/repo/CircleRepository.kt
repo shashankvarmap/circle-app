@@ -19,6 +19,11 @@ import kotlinx.coroutines.flow.Flow
 interface CircleRepository {
 
     // ---- Getting in (the fake accepts any 6-digit code) ----
+    /**
+     * Whether [requestCode] really sends a text message. False for the fake (no SMS provider yet);
+     * a backend with an SMS provider returns true and the preview hint on the code screen goes away.
+     */
+    val sendsTextMessages: Boolean
     suspend fun requestCode(e164: String): Outcome<Unit>
     suspend fun verifyCode(e164: String, code: String): Outcome<Unit>
     /** Whether a handle is free (yours counts as free). */

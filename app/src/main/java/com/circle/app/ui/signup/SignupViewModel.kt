@@ -31,6 +31,9 @@ class SignupViewModel(repo: CircleRepository, private val saved: SavedStateHandl
 
     private fun <T> saved(key: String, initial: T) = saved.get<T>(key) ?: initial
 
+    /** Preview builds without an SMS provider say so on the code screen. */
+    val showNoSmsHint: Boolean = com.circle.app.BuildConfig.PREVIEW && !repo.sendsTextMessages
+
     var countryCode by mutableStateOf(saved("cc", ""))
         private set
     var national by mutableStateOf(saved("nat", ""))

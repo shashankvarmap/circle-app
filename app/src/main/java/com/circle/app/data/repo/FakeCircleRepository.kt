@@ -498,6 +498,9 @@ class FakeCircleRepository(
     /** Handles already used in the demo (the prototype's list plus everyone in the seed). */
     private val reservedHandles = setOf("amara", "priya", "jonah", "circle", "admin", "tomas", "elena", "support", "help")
 
+    /** No SMS provider: nothing is sent and any 6 digits are accepted. */
+    override val sendsTextMessages: Boolean = false
+
     override suspend fun requestCode(e164: String): Outcome<Unit> =
         if (e164.startsWith("+") && e164.length >= 8) Outcome.Success(Unit) else Outcome.Error("invalid number")
 

@@ -828,4 +828,7 @@
     <!-- Demo: auto-accept (preview builds only) -->
     <string name="settings_demo_auto_accept">Sample people accept my requests after 5 seconds</string>
     <string name="settings_demo_auto_accept_sub">Preview only. Lets you try Add friend from start to finish.</string>
+
+    <!-- Code screen, preview builds only (no SMS provider yet) -->
+    <string name="signup_code_preview_hint">Preview build: no text message is sent. Enter any 6 digits.</string>
 </resources>
