@@ -78,7 +78,7 @@ private fun SlideIntro() {
         contentAlignment = Alignment.Center
     ) { Icon(Icons.Outlined.Circle, contentDescription = null, tint = CircleTheme.colors.onAccent) }
     Spacer(Modifier.height(22.dp))
-    Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_circle), fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 26.sp, color = CircleTheme.colors.text)
+    com.circle.app.ui.components.Wordmark(fontSize = 26.sp)
     Spacer(Modifier.height(10.dp))
     Text(
         androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_a_place_for_the_people),

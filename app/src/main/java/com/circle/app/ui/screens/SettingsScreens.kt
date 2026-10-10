@@ -487,13 +487,7 @@ private fun AboutCircle() {
     }
     TintedCard {
         Kicker(stringResource(R.string.about_why_caps), accent = true)
-        Text(
-            buildAnnotatedString {
-                append(stringResource(R.string.wordmark_name))
-                withStyle(SpanStyle(color = colors.accent, fontWeight = FontWeight.Bold)) { append(stringResource(R.string.wordmark_stop)) }
-            },
-            fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 24.sp, color = colors.text, modifier = Modifier.padding(top = 8.dp)
-        )
+        com.circle.app.ui.components.Wordmark(fontSize = 24.sp, modifier = Modifier.padding(top = 8.dp))
         Text(stringResource(R.string.about_why_body), color = colors.body, fontSize = 15.sp, lineHeight = 23.sp, modifier = Modifier.padding(top = 6.dp))
     }
 }

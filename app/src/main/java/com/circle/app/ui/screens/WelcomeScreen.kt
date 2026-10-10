@@ -59,13 +59,8 @@ fun WelcomeScreen(
                 drawCircle(colors.border, radius = 92.dp.toPx(), center = c, style = Stroke(1.2.dp.toPx()))
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    buildAnnotatedString {
-                        append(stringResource(R.string.wordmark_name))
-                        withStyle(SpanStyle(color = colors.accent)) { append(stringResource(R.string.wordmark_stop)) }
-                    },
-                    fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 58.sp, letterSpacing = (-1.74).sp,
-                    lineHeight = 58.sp, color = colors.text, modifier = Modifier.semantics { heading() }
+                com.circle.app.ui.components.Wordmark(
+                    fontSize = 58.sp, letterSpacing = (-1.74).sp, lineHeight = 58.sp, modifier = Modifier.semantics { heading() }
                 )
                 Text(
                     stringResource(R.string.welcome_tagline), fontFamily = Display, fontStyle = FontStyle.Italic,

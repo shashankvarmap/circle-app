@@ -182,9 +182,8 @@ private fun HomeHeader(feed: Feed, onWordmark: () -> Unit, onFeed: (Feed) -> Uni
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(today, color = colors.muted, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.9.sp)
-        Text(
-            androidx.compose.ui.res.stringResource(com.circle.app.R.string.onboarding_circle), fontFamily = Display, fontWeight = FontWeight.SemiBold, fontSize = 24.sp,
-            letterSpacing = (-0.48).sp, color = colors.text,
+        com.circle.app.ui.components.Wordmark(
+            fontSize = 24.sp, letterSpacing = (-0.48).sp,
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
                 .clickable(onClickLabel = androidx.compose.ui.res.stringResource(com.circle.app.R.string.home_scroll_to_top_and_refresh), onClick = onWordmark)
