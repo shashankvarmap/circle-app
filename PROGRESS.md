@@ -122,4 +122,8 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 
 ## Owner fixes (2026-10-10)
 - [x] 1. Compose layout: text, media/quote under it, bottom bar pinned above the keyboard; ComposeScreenshotTest
-Next: 2. reproduce Add friend failure for Priya Kapoor, then seed 5 non-friends + Demo auto-accept.
+- [x] 2. Add friend: live relationship on every button (Find friends kept a stale snapshot); 6 non-friends; Demo auto-accept after 5s (preview)
+- [x] 3. Wordmark composable, accent full stop in night and day
+- [x] 4. Code screen preview line; CircleRepository.sendsTextMessages
+- [x] 5. PreviewPricing by sign-up country code behind MembershipBilling; LAUNCH_CHECKLIST note
+Next: owner re-tests on a clean install; then wire Play Billing (ProductDetails.formattedPrice) when products exist.
