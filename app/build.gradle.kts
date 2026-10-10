@@ -2,6 +2,7 @@
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("io.github.takahirom.roborazzi")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -78,6 +79,7 @@ dependencies {
     implementation("androidx.core:core-splashscreen:1.0.1")
     // Phone numbers: real country list, validation, formatting and E.164 (ACCESS_AND_LAUNCH 1).
     implementation("com.googlecode.libphonenumber:libphonenumber:8.13.50")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
