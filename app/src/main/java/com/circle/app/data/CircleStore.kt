@@ -71,6 +71,9 @@ object CircleStore {
      */
     val goneTimedIds = mutableStateListOf<String>()
 
+    /** Moderation's hold of reported items from deleted temporary groups and chats (TIMED_GROUPS 9). */
+    val heldForReview = mutableStateListOf<HeldForReview>()
+
     /** Your data-export audit log, and how many invite links you've shared (shown to you only). */
     val exportLog = mutableStateListOf<ExportEvent>()
     var invitesShared by mutableStateOf(0)
@@ -115,7 +118,7 @@ object CircleStore {
         groups.clear(); groups.addAll(Seed.groups())
         events.clear(); events.addAll(Seed.events())
         chats.clear(); chats.addAll(ChatSeed.chats()); hiddenMessageIds.clear()
-        alerts.clear(); alerts.addAll(Seed.alerts()); goneTimedIds.clear()
+        alerts.clear(); alerts.addAll(Seed.alerts()); goneTimedIds.clear(); heldForReview.clear()
         invites.clear(); sentNotices.clear(); alertsReadAt = null
         exportLog.clear(); invitesShared = 0
 

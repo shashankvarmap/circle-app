@@ -90,6 +90,13 @@ class TimedDisplayTest {
         assertTrue(CircleStore.alerts.none { it.timedId == "exam-prep" && it.kind == AlertKind.TIMED_ENDED })
     }
 
+    @Test fun `a reported message is held aside for review when its chat is deleted, the rest is gone`() = runTest {
+        repo.report(com.circle.app.data.ReportKind.MESSAGE, "ex1", com.circle.app.data.ReportReason.HARASSMENT, "")
+        repo.jumpTo("exam-prep", LifeState.DELETED)
+        assertNull(CircleStore.chat("exam-prep"))
+        assertEquals(listOf("ex1"), CircleStore.heldForReview.map { it.targetId })
+    }
+
     @Test fun `temporary group and chat from the forms`() = runTest {
         val g = (repo.createGroup("Wedding", "Family", "", isPublic = false, lifetimeDays = 14) as Outcome.Success).value
         val view = repo.group(g).first()!!

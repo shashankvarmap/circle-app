@@ -67,6 +67,15 @@ enum class ReportReason { SPAM, HARASSMENT, HATE, SEXUAL, VIOLENCE, SELF_HARM, I
 /** A report you filed. Moderation (who reviews it, how fast) comes with the backend. */
 data class Report(val kind: ReportKind, val targetId: String, val reason: ReportReason, val note: String, val at: java.time.Instant)
 
+/**
+ * Reported content from a temporary group or chat, held aside for moderation when everything else
+ * was deleted (TIMED_GROUPS 9). NEEDS LAWYER: whether this is required and for how long
+ * ([REVIEW_HOLD_DAYS] is a placeholder). Never shown to members; only moderation would read it.
+ */
+data class HeldForReview(val kind: ReportKind, val targetId: String, val authorId: String, val text: String, val heldAt: Instant) {
+    companion object { const val REVIEW_HOLD_DAYS = 30L /* placeholder: needs lawyer */ }
+}
+
 /** An incoming friend request. Its status lives in [CircleStore.requestStatus]. */
 data class FriendRequest(val personId: String, val receivedAt: Instant)
 

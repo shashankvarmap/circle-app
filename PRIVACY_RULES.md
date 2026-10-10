@@ -74,7 +74,30 @@ When a relationship changes (unfriend, block, request accepted), every response 
   thread closes to the gate; the server must stop returning them immediately (no grace period, no stale cache);
 - after a request is accepted, gated cards and threads open with no other change.
 
+## 5a. Temporary groups and chats (TIMED_GROUPS)
+
+A group, or a chat started with friends, can be Permanent or Temporary. State comes from the server's clock only:
+Active > Ending soon (last 3 days) > Wrap-up (7 days, read-only) > Deleted. A group and its chat share one clock.
+
+| What | Active, Ending soon | Wrap-up | Deleted |
+|---|---|---|---|
+| Read (members, by the normal rules above) | yes | yes | **NotFound for everyone** |
+| Post, comment, like, send, invite | members | **never** | never |
+| Join, request to join | as usual | **never**; open requests are declined at the end | never |
+| Save a copy (export) | members at the time | members at the time | never |
+| Extend, make permanent, end now | host only (group host, or whoever started the chat) | host only | never |
+
+- Save a copy contains only what that member was allowed to see, **leaves out people the member blocked**, and uses
+  **display names only** (no handles beyond what is visible, no phone numbers). Saving notifies nobody; nobody can see who
+  saved. The app remembers on the phone that it saved (to skip the last reminder); the server never knows.
+- At deletion the group, its chat, posts, comments, messages, media, alerts and invites go in one step, from storage and
+  from every cache. Copies members saved stay on their phones. Reported items may be held aside for moderation (see
+  LAUNCH_CHECKLIST: needs lawyer); nothing else is kept.
+- Enforced by `AccessPolicy.timed` / `timedRead` (tested in `TimedAccessTableTest`) and the export path in the repository
+  (`SaveCopyTest`).
+
 ## 6. Never in logs
 
 Note text, comment text and message text are never written to logs, crash reports, analytics or notification payloads for
 people who aren't allowed to see them. (The app has no logging at all; `PrivacyBoundaryTest` fails the build if any appears.)
+Save a copy writes its ZIP only to the member's own Downloads; the job logs nothing and its notification shows no content.

@@ -179,6 +179,7 @@ class FakeCircleRepository(
         val gonePostIds = gonePosts.map { it.id }.toSet()
         val goneCommentIds = gonePosts.flatMap { p -> p.comments.flatMap { c -> listOf(c.id) + c.replies.map { it.id } } }.toSet()
         val goneMessageIds = goneChats.flatMap { c -> c.messages.map { it.id } }.toSet()
+        holdReported(goneGroups, gonePosts, goneChats)
         store.posts.removeAll { it.id in gonePostIds }
         store.likedPostIds.removeAll { it in gonePostIds }
         store.likedCommentIds.removeAll { it in goneCommentIds }
@@ -217,6 +218,26 @@ class FakeCircleRepository(
             if (store.alerts.none { it.id == alertId }) {
                 store.alerts.add(0, Alert(alertId, ME, due.first, due.second, timedId = id, timedAt = deleteAt))
             }
+        }
+    }
+
+    /**
+     * The hook for reported content (TIMED_GROUPS 9): before a temporary group or chat is deleted,
+     * anything in it that was reported is held aside for moderation. NEEDS LAWYER (see LAUNCH_CHECKLIST).
+     */
+    private fun holdReported(goneGroups: Set<String>, gonePosts: List<Post>, goneChats: List<Chat>) {
+        val now = lifetime.now()
+        store.reports.forEach { r ->
+            val held = when (r.kind) {
+                ReportKind.NOTE -> gonePosts.firstOrNull { it.id == r.targetId }?.let { HeldForReview(r.kind, it.id, it.authorId, it.text, now) }
+                ReportKind.COMMENT -> gonePosts.asSequence().flatMap { p -> p.comments.asSequence().flatMap { sequenceOf(it) + it.replies.asSequence() } }
+                    .firstOrNull { it.id == r.targetId }?.let { HeldForReview(r.kind, it.id, it.authorId, it.text, now) }
+                ReportKind.MESSAGE -> goneChats.asSequence().flatMap { it.messages.asSequence() }.firstOrNull { it.id == r.targetId }
+                    ?.let { HeldForReview(r.kind, it.id, it.senderId, it.text, now) }
+                ReportKind.GROUP -> if (r.targetId in goneGroups) HeldForReview(r.kind, r.targetId, "", "", now) else null
+                else -> null
+            }
+            if (held != null && store.heldForReview.none { it.targetId == held.targetId }) store.heldForReview.add(held)
         }
     }
 

@@ -62,6 +62,10 @@ legal item.** Status: **Done** (in the app now) · **Owner** (a decision, an acc
 | SMS codes: provider, per-country rules (India DLT), costs, rate limits | Owner + Backend | |
 | Report handling across time zones; EU DSA / UK OSA duties | Owner + Lawyer | |
 | Launch in a few countries first | Owner | Play Console country list |
+| **Temporary groups: reported content.** If something in a temporary group or chat is reported, may (or must) it be kept for review after the group is deleted, and for how long? Hook built: `HeldForReview`, placeholder 30 days | **Needs lawyer** | TIMED_GROUPS 9 |
+| **Temporary groups: the consent line** "Everything in it can be saved by its members" is shown before joining and is part of the terms | **Needs lawyer** | Join card; add to Terms |
+| **Temporary groups: deletion claims** "deleted for everyone", 7-day wrap-up, 90-day maximum must match the servers, including backup clearing (window placeholder) | Owner + Backend + Lawyer | CLAIMS.md rows; BACKEND_READINESS lifetime job |
+| Save a copy: WorkManager foreground service type `dataSync` declared; Play Console foreground-service declaration | Owner | Android 14 requires the declaration |
 
 ## Claims
 

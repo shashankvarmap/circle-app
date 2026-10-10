@@ -145,6 +145,8 @@ Sends (notes, comments, messages) carry a client id so "Not sent · tap to retry
   removal and appeal rules, and cover across time zones. EU and UK platform-safety laws may apply; the lawyer says which.
 - Tools needed: see the reported item with context, remove content, suspend an account, audit trail.
 - Blocking is immediate and needs no review.
+- **Temporary groups:** when a temporary group or chat is deleted, reported items in it are held aside (`HeldForReview`,
+  placeholder 30 days) for review and nothing else is kept. **Needs lawyer** whether this is required and for how long.
 
 ## Data export and deletion
 
@@ -155,6 +157,27 @@ Sends (notes, comments, messages) carry a client id so "Not sent · tap to retry
   likes, media, memberships and seats; the person's chat messages are removed or shown as from "Deleted account" (owner to
   decide). Friends aren't told why. Backups cleared within the stated window (placeholder 30 days: confirm). The app tells
   members to cancel their Play subscription first.
+
+## Temporary groups and chats (TIMED_GROUPS)
+
+- **Model:** `term` on groups and on chats with friends: `Permanent` or `Temporary(endsAt)`, endsAt in UTC = the end of the
+  chosen calendar day in the creator's time zone. A group's chat has no term of its own: it follows the group. Chats record
+  `startedBy` (their host).
+- **Rules:** see PRIVACY_RULES 5a. Only the server's clock decides the state; the app only displays it.
+- **The lifetime job (server, idempotent, by server time only):**
+  1. At endsAt: the state becomes Wrap-up; open join requests are declined; send "<name> has ended" to members.
+  2. At endsAt + 7 days: **hard-delete the group and its chat in one atomic step** (group, chat, posts, comments, likes,
+     messages, media objects, alerts, invites, search index entries, caches), then purge backups within the stated
+     window. No undo, no recovery, no soft delete. Running it twice does nothing the second time.
+  3. Before deleting, move reported items to the moderation hold (see Moderation) if the lawyer says so.
+- **Reminders (push + Alerts):** 3 days and 1 day before the end, at the end, and 1 day before deletion (the app hides this
+  last one if it saved a copy; the server never learns who saved). On extend / make permanent / end now, notify members
+  ("Priya extended Project Alps. It now ends Fri 6 Nov.") and withdraw reminders about the old end.
+- **Operations:** `PATCH /groups/{id}/term` and `PATCH /chats/{id}/term` with `extend(days)`, `makePermanent`, `endNow`
+  (host only; extend from wrap-up reopens it and cancels deletion; max 90 days from today per stretch). Create calls take
+  `lifetimeDays` (1-90) or none. Deleted ids answer `410 Gone` so the app can show "ended and was deleted".
+- **Export:** the app builds the ZIP itself from data it may read (`exportBundle`), so the server needs only normal read
+  endpoints for members, available until deletion. No export is stored or logged server-side.
 
 ## Sessions and sign-in
 
