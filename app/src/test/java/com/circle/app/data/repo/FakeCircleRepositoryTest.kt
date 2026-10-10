@@ -290,7 +290,7 @@ class FakeCircleRepositoryTest {
 
     @Test fun `home Groups tab only shows groups you're in, and you can only post to those`() = runTest {
         val feed = repo.groupFeed().first()
-        assertTrue(feed.all { it.group?.id == "photo-walk" })
+        assertTrue(feed.all { it.group?.id in setOf("photo-walk", "project-alps") })
         assertFalse(repo.homeFeed().first().any { it.group != null })
         assertEquals(Outcome.Denied(DenyReason.GROUP_NOT_MEMBER), repo.post("hi", Audience.FRIENDS, groupId = "board-game-club"))
         val id = repo.post("hi", Audience.FRIENDS, groupId = "photo-walk").value()
@@ -337,7 +337,7 @@ class FakeCircleRepositoryTest {
         assertTrue(g.joinRequested)
         assertFalse(g.isMember)
         assertEquals(null, g.people) // people are for members only
-        assertEquals(listOf("photo-walk"), repo.memberGroups().first().map { it.id })
+        assertEquals(listOf("photo-walk", "project-alps"), repo.memberGroups().first().map { it.id })
     }
 
     // ======================================================================== profile & settings
@@ -406,9 +406,9 @@ class FakeCircleRepositoryTest {
 
     @Test fun `group chats only for groups you're in`() = runTest {
         val groupChats = repo.chats().first().filter { it.kind == ChatKind.GROUP }
-        assertEquals(listOf("g-photo-walk"), groupChats.map { it.id })
+        assertEquals(setOf("g-photo-walk", "g-project-alps"), groupChats.map { it.id }.toSet())
         repo.leaveGroup("photo-walk")
-        assertTrue(repo.chats().first().none { it.kind == ChatKind.GROUP })
+        assertTrue(repo.chats().first().none { it.id == "g-photo-walk" })
         assertEquals(null, repo.chat("g-photo-walk").first())
     }
 

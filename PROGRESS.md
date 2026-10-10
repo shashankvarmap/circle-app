@@ -130,4 +130,5 @@ Later: wire Play Billing (ProductDetails.formattedPrice) when products exist.
 
 ## Timed groups (design-handoff/TIMED_GROUPS.md)
 - [x] T1: `Lifetime` + injectable java.time.Clock (data/lifetime), state machine + boundary/DST tests; `term` on GroupInfo and Chat (+ `startedBy`), saved in the store file; AccessPolicy `timed`/`timedRead` + ENDED/NOT_HOST/NOT_TEMPORARY with table tests; fake repo: read-only in wrap-up, no joins, auto-decline, hard delete at deleteAt (`sweepLifetimes`)
-Next: T2: Settings > Demo time travel (advance fake clock 1/3/7 days, jump to a state) + timed seed (friends chat 12 days left, one ending soon, one ended, "Project Alps" group + chat, "Alps Hiking Crew", "Exam Prep Circle").
+- [x] T2: Settings > Demo > Time travel (preview builds): +1/+3/+7 days, back to real time, jump any temporary group or chat to Active/Ending soon/Wrap-up/Deleted; `Clock.shift` is snapshot state (live everywhere) and saved with the demo data; seed: Alps trip (12 days, you host), Study group (3 days, member), Exam prep (ended, 5 days to delete), Project Alps group + chat (12 days, Priya hosts), Alps Hiking Crew and Exam Prep Circle (public); TimeTravelTest
+Next: T3 sub-item 1: `TimerChip(state, daysLeft)` composable + lifetime fields (state, endsAt, deleteAt, daysLeft, isHost) on chat/group views.
