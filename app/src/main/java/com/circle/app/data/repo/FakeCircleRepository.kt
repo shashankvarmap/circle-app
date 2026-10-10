@@ -1,5 +1,7 @@
 package com.circle.app.data.repo
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import com.circle.app.data.*
 import com.circle.app.data.access.AccessPolicy
@@ -23,9 +25,30 @@ import kotlinx.coroutines.flow.Flow
 class FakeCircleRepository(
     private val store: CircleStore = CircleStore,
     val cache: ContentCache = ContentCache(),
-) : CircleRepository {
+) : CircleRepository, DemoControls {
 
     private fun <T> observe(block: () -> T): Flow<T> = snapshotFlow(block)
+
+    // =========================================================================== demo controls
+
+    private var failingState by androidx.compose.runtime.mutableStateOf(false)
+
+    override fun failing(): Flow<Boolean> = observe { failingState }
+    override suspend fun setFailing(on: Boolean) { failingState = on }
+
+    override suspend fun resetDemoData() {
+        store.reset()
+        store.people.keys.forEach { cache.purgeAuthor(it) }
+    }
+
+    /** While the debug switch is on, every action fails as if the network were down. */
+    private fun offline(): Outcome.Error? = if (failingState) Outcome.Error("offline") else null
+
+    /** A list loaded from the "network": throws while failing, so the screen shows its error state. */
+    private fun <T> observeLoaded(block: () -> T): Flow<T> = snapshotFlow {
+        if (failingState) throw java.io.IOException("offline (debug switch)")
+        block()
+    }
 
     // =========================================================================== relationship
 
@@ -118,7 +141,7 @@ class FakeCircleRepository(
     private fun visibleNotes(posts: List<Post>): List<Note> =
         posts.filter { decide(it, NoteAction.VIEW).allowed }.mapNotNull { toNote(it) }
 
-    override fun homeFeed(): Flow<List<Note>> = observe {
+    override fun homeFeed(): Flow<List<Note>> = observeLoaded {
         visibleNotes(store.posts.filter { it.groupId == null && it.authorId !in store.mutedIds })
     }
 
@@ -157,6 +180,7 @@ class FakeCircleRepository(
     private fun denied(d: Decision): Outcome.Denied? = (d as? Decision.Deny)?.let { Outcome.Denied(it.reason) }
 
     override suspend fun toggleLike(noteId: String): Outcome<Boolean> {
+        offline()?.let { return it }
         val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         denied(decide(p, NoteAction.LIKE))?.let { return it }
         val nowLiked = !store.likedPostIds.remove(p.id)
@@ -165,6 +189,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun addComment(noteId: String, text: String, replyToCommentId: String?): Outcome<Unit> {
+        offline()?.let { return it }
         val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         denied(decide(p, NoteAction.COMMENT))?.let { return it }
         val t = text.trim()
@@ -187,6 +212,7 @@ class FakeCircleRepository(
         p.comments.firstOrNull { it.id == commentId } ?: p.comments.flatMap { it.replies }.firstOrNull { it.id == commentId }
 
     override suspend fun toggleCommentLike(noteId: String, commentId: String): Outcome<Boolean> {
+        offline()?.let { return it }
         val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         denied(decide(p, NoteAction.LIKE))?.let { return it }
         val c = findComment(p, commentId)?.takeIf { !hiddenFromMe(it.authorId) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
@@ -196,6 +222,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun deleteComment(noteId: String, commentId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         val c = findComment(p, commentId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         if (c.authorId != ME) return Outcome.Error("not yours")
@@ -208,6 +235,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun repost(noteId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         denied(decide(p, NoteAction.REPOST))?.let { return it }
         if (!isReposted(p.id)) store.posts.add(0, Post(newId("rp"), ME, Clock.now(), "", repostOfId = p.id))
@@ -215,6 +243,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun undoRepost(noteId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val target = store.post(noteId)?.let { original(it) }?.id ?: noteId
         store.posts.removeAll { it.authorId == ME && it.repostOfId == target }
         return Outcome.Success(Unit)
@@ -227,6 +256,7 @@ class FakeCircleRepository(
         groupId: String?,
         media: List<com.circle.app.data.media.MediaRef>,
     ): Outcome<String> {
+        offline()?.let { return it }
         val t = text.trim()
         if (t.isEmpty() && media.isEmpty()) return Outcome.Error("empty")
         val quoted = quotedNoteId?.let { id -> store.post(id)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND) }
@@ -251,6 +281,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun editNote(noteId: String, text: String): Outcome<Unit> {
+        offline()?.let { return it }
         val (i, p) = ownNote(noteId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         val t = text.trim()
         if (t.isEmpty() && p.media.isEmpty() && !p.hasMedia) return Outcome.Error("empty")
@@ -259,6 +290,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun setAudience(noteId: String, audience: Audience): Outcome<Unit> {
+        offline()?.let { return it }
         val (i, p) = ownNote(noteId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         if (p.groupId != null) return Outcome.Denied(DenyReason.GROUP_POST)
         store.posts[i] = p.edited(audience = audience)
@@ -268,6 +300,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun deleteNote(noteId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val (_, p) = ownNote(noteId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         store.posts.remove(p)
         store.posts.removeAll { it.repostOfId == noteId } // its "You reposted" cards go with it
@@ -284,6 +317,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun shareNoteWithFriend(noteId: String, friendId: String): Outcome<String> {
+        offline()?.let { return it }
         val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         // Check before creating a chat, as if sharing into a 1:1 chat with this friend.
         val allInner = p.authorId == ME && friendId in store.innerCircle
@@ -350,6 +384,7 @@ class FakeCircleRepository(
     override fun muted(): Flow<List<PersonRef>> = observe { store.mutedIds.mapNotNull { ref(it) } }
 
     override suspend fun sendFriendRequest(personId: String): Outcome<Unit> {
+        offline()?.let { return it }
         if (store.person(personId) == null) return Outcome.Denied(DenyReason.NOT_FOUND)
         return when (rel(personId)) {
             Relationship.NONE -> { store.outgoingRequestIds.add(personId); Outcome.Success(Unit) }
@@ -360,11 +395,13 @@ class FakeCircleRepository(
     }
 
     override suspend fun cancelFriendRequest(personId: String): Outcome<Unit> {
+        offline()?.let { return it }
         store.outgoingRequestIds.remove(personId)
         return Outcome.Success(Unit)
     }
 
     override suspend fun acceptRequest(personId: String): Outcome<Unit> {
+        offline()?.let { return it }
         if (rel(personId) != Relationship.REQUEST_RECEIVED) return Outcome.Error("no request")
         store.requestStatus[personId] = RequestStatus.ACCEPTED
         if (personId !in store.friendIds) store.friendIds.add(personId)
@@ -372,6 +409,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun declineRequest(personId: String): Outcome<Unit> {
+        offline()?.let { return it }
         if (store.requestStatus[personId] == RequestStatus.PENDING) store.requestStatus[personId] = RequestStatus.DECLINED
         return Outcome.Success(Unit)
     }
@@ -395,6 +433,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun unfriend(personId: String): Outcome<Unit> {
+        offline()?.let { return it }
         if (rel(personId) != Relationship.FRIEND) return Outcome.Error("not a friend")
         store.friendIds.remove(personId); store.innerCircle.remove(personId); store.mutedIds.remove(personId)
         cache.purgeAuthor(personId)
@@ -402,6 +441,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun block(personId: String): Outcome<Unit> {
+        offline()?.let { return it }
         if (personId == ME || store.person(personId) == null) return Outcome.Denied(DenyReason.NOT_FOUND)
         if (personId !in store.blockedIds) store.blockedIds.add(personId)
         endFriendship(personId)
@@ -409,22 +449,26 @@ class FakeCircleRepository(
     }
 
     override suspend fun unblock(personId: String): Outcome<Unit> {
+        offline()?.let { return it }
         store.blockedIds.remove(personId)
         return Outcome.Success(Unit)
     }
 
     override suspend fun mute(personId: String): Outcome<Unit> {
+        offline()?.let { return it }
         if (rel(personId) != Relationship.FRIEND) return Outcome.Denied(DenyReason.NOT_FRIENDS)
         if (personId !in store.mutedIds) store.mutedIds.add(personId)
         return Outcome.Success(Unit)
     }
 
     override suspend fun unmute(personId: String): Outcome<Unit> {
+        offline()?.let { return it }
         store.mutedIds.remove(personId)
         return Outcome.Success(Unit)
     }
 
     override suspend fun report(kind: ReportKind, targetId: String, reason: ReportReason, note: String): Outcome<Unit> {
+        offline()?.let { return it }
         store.reports.add(Report(kind, targetId, reason, note.trim().take(500), Clock.now()))
         return Outcome.Success(Unit)
     }
@@ -447,6 +491,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun createAccount(name: String, handle: String, pinnedThought: String, avatarUri: String?): Outcome<Unit> {
+        offline()?.let { return it }
         val n = name.trim().take(30)
         if (n.isEmpty()) return Outcome.Error("Add your name")
         if (com.circle.app.data.signup.SignupHandle.problem(handle) != null || !isHandleFree(handle)) return Outcome.Error("handle")
@@ -456,12 +501,14 @@ class FakeCircleRepository(
     }
 
     override suspend fun logIn(e164: String): Outcome<Unit> {
+        offline()?.let { return it }
         cache.clear()
         store.reset() // the demo account
         return Outcome.Success(Unit)
     }
 
     override suspend fun matchContacts(hashes: List<String>): Outcome<List<PersonResult>> {
+        offline()?.let { return it }
         // The fake has no phone numbers on file, so it can't match; it returns the demo's "people you may know"
         // and keeps nothing. The real server matches the hashes and deletes them at once.
         return Outcome.Success(listOf("PK", "JL", "AO", "LB").mapNotNull { id -> store.person(id)?.takeIf { !hiddenFromMe(id) }?.let { result(it) } })
@@ -472,6 +519,7 @@ class FakeCircleRepository(
     override suspend fun recordInviteShared() { store.invitesShared += 1 }
 
     override suspend fun personByHandle(handle: String): Outcome<String> {
+        offline()?.let { return it }
         val p = store.people.values.firstOrNull { it.handle == handle.lowercase() && it.id != ME } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         if (hiddenFromMe(p.id)) return Outcome.Denied(DenyReason.NOT_FOUND)
         return Outcome.Success(p.id)
@@ -480,6 +528,7 @@ class FakeCircleRepository(
     override fun exportLog(): Flow<List<ExportEvent>> = observe { store.exportLog.toList() }
 
     override suspend fun requestDataExport(): Outcome<Unit> {
+        offline()?.let { return it }
         // The export is prepared by an automated job on the server; the fake can only record the request.
         if (store.exportLog.none { it.kind == ExportStep.REQUESTED }) store.exportLog.add(ExportEvent(ExportStep.REQUESTED, Clock.now()))
         return Outcome.Success(Unit)
@@ -500,6 +549,7 @@ class FakeCircleRepository(
     override suspend fun setNotificationPrefs(prefs: NotificationPrefs) { store.notifications = prefs }
 
     override suspend fun saveProfile(displayName: String, handle: String, pinnedThought: String, avatarUri: String?): Outcome<MyProfile> {
+        offline()?.let { return it }
         val name = displayName.trim()
         val h = handle.trim().removePrefix("@").lowercase()
         if (name.isEmpty()) return Outcome.Error("Add a display name")
@@ -509,6 +559,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun deleteAccount(): Outcome<Unit> {
+        offline()?.let { return it }
         // The demo restores its seed; with a backend this deletes the account.
         store.reset()
         cache.clear()
@@ -528,6 +579,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun toggleInnerCircle(personId: String): Outcome<Boolean> {
+        offline()?.let { return it }
         if (store.innerCircle.remove(personId)) return Outcome.Success(false)
         if (rel(personId) != Relationship.FRIEND) return Outcome.Denied(DenyReason.NOT_FRIENDS)
         store.innerCircle.add(personId)
@@ -561,7 +613,7 @@ class FakeCircleRepository(
 
     private fun groupRef(id: String?) = id?.let { store.group(it) }?.let { GroupRef(it.id, it.name, it.initial, it.color) }
 
-    override fun chats(): Flow<List<ChatRowView>> = observe {
+    override fun chats(): Flow<List<ChatRowView>> = observeLoaded {
         store.chats.filter { chatVisible(it) }.map { c ->
             val last = visibleMessages(c).lastOrNull()
             val kind = chatKind(c)
@@ -627,6 +679,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun createChat(friendIds: List<String>, name: String?): Outcome<String> {
+        offline()?.let { return it }
         val ids = friendIds.distinct().filter { it != ME }
         if (ids.isEmpty()) return Outcome.Error("empty")
         ids.forEach { id -> denied(AccessPolicy.directMessage(rel(id)))?.let { return it } }
@@ -639,6 +692,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun sendMedia(chatId: String, media: List<com.circle.app.data.media.MediaRef>): Outcome<Unit> {
+        offline()?.let { return it }
         val (c, d) = writableChat(chatId); d?.let { return it }
         if (media.isEmpty()) return Outcome.Error("empty")
         c!!.messages.add(ChatMessage(newId("m"), ME, Clock.now(), MessageKind.PHOTO, media = media))
@@ -646,6 +700,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun sendEventInvite(chatId: String, eventId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val (c, d) = writableChat(chatId); d?.let { return it }
         val e = store.event(eventId)?.takeIf { eventVisible(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         c!!.messages.add(ChatMessage(newId("m"), ME, Clock.now(), MessageKind.EVENT_INVITE, eventId = e.id))
@@ -655,24 +710,28 @@ class FakeCircleRepository(
     private fun mineChat(chatId: String) = store.chat(chatId)?.takeIf { chatVisible(it) }
 
     override suspend fun setChatPinned(chatId: String, pinned: Boolean): Outcome<Unit> {
+        offline()?.let { return it }
         val c = mineChat(chatId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         c.pinned = pinned
         return Outcome.Success(Unit)
     }
 
     override suspend fun setChatMuted(chatId: String, muted: Boolean): Outcome<Unit> {
+        offline()?.let { return it }
         val c = mineChat(chatId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         c.muted = muted
         return Outcome.Success(Unit)
     }
 
     override suspend fun deleteChat(chatId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val c = mineChat(chatId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         c.clearedAt = Clock.now(); c.hiddenForMe = true; c.pinned = false; c.unread = false
         return Outcome.Success(Unit)
     }
 
     override suspend fun clearChat(chatId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val c = mineChat(chatId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         c.clearedAt = Clock.now()
         return Outcome.Success(Unit)
@@ -683,6 +742,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun sendMessage(chatId: String, text: String, replyToId: String?): Outcome<Unit> {
+        offline()?.let { return it }
         val (c, d) = writableChat(chatId); d?.let { return it }
         c!!
         val t = text.trim()
@@ -693,6 +753,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun shareNote(chatId: String, noteId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val c = store.chat(chatId)?.takeIf { chatVisible(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         val p = store.post(noteId)?.let { original(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         c.directPersonId?.let { denied(AccessPolicy.directMessage(rel(it)))?.let { d -> return d } }
@@ -703,11 +764,13 @@ class FakeCircleRepository(
     }
 
     override suspend fun deleteForMe(chatId: String, messageId: String): Outcome<Unit> {
+        offline()?.let { return it }
         if (messageId !in store.hiddenMessageIds) store.hiddenMessageIds.add(messageId)
         return Outcome.Success(Unit)
     }
 
     override suspend fun unsend(chatId: String, messageId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val c = store.chat(chatId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         val m = c.messages.firstOrNull { it.id == messageId } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         if (m.senderId != ME) return Outcome.Error("not yours")
@@ -720,6 +783,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun openDirectChat(personId: String): Outcome<String> {
+        offline()?.let { return it }
         denied(AccessPolicy.directMessage(rel(personId)))?.let { return it }
         store.chats.firstOrNull { it.directPersonId == personId }?.let { return Outcome.Success(it.id) }
         val c = Chat(newId("dm"), listOf(personId), messages = emptyList())
@@ -790,6 +854,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun requestToJoin(groupId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val g = store.group(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         if (!g.isPublic) return Outcome.Denied(DenyReason.NOT_FOUND)
         if (!g.isMember) g.joinRequested = true // never instant: a host approves it
@@ -797,6 +862,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun leaveGroup(groupId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val g = store.group(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         if (g.isMember) {
             g.isMember = false
@@ -809,6 +875,7 @@ class FakeCircleRepository(
     private fun hostedGroup(groupId: String): GroupInfo? = store.group(groupId)?.takeIf { it.isMember && ME in it.hostIds }
 
     override suspend fun approveJoinRequest(groupId: String, personId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val g = hostedGroup(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         if (!g.joinRequests.removeAll { it.first == personId }) return Outcome.Error("no request")
         if (personId !in g.memberIds) g.memberIds.add(personId)
@@ -817,12 +884,14 @@ class FakeCircleRepository(
     }
 
     override suspend fun declineJoinRequest(groupId: String, personId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val g = hostedGroup(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         g.joinRequests.removeAll { it.first == personId }
         return Outcome.Success(Unit)
     }
 
     override suspend fun editGroup(groupId: String, name: String, description: String, isPublic: Boolean): Outcome<Unit> {
+        offline()?.let { return it }
         val g = hostedGroup(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         if (name.isBlank()) return Outcome.Error("Add a name")
         g.name = name.trim(); g.description = description.trim(); g.isPublic = isPublic
@@ -830,6 +899,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun removeMember(groupId: String, personId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val g = hostedGroup(groupId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         if (personId == ME || personId in g.hostIds) return Outcome.Error("can't remove a host")
         if (g.memberIds.remove(personId)) g.memberCount = (g.memberCount - 1).coerceAtLeast(1)
@@ -843,11 +913,13 @@ class FakeCircleRepository(
     }
 
     override suspend fun inviteToGroup(groupId: String, friendIds: List<String>): Outcome<Int> {
+        offline()?.let { return it }
         val g = store.group(groupId)?.takeIf { it.isMember } ?: return Outcome.Denied(DenyReason.GROUP_NOT_MEMBER)
         return invite(friendIds, g.id, null)
     }
 
     override suspend fun inviteToEvent(eventId: String, friendIds: List<String>): Outcome<Int> {
+        offline()?.let { return it }
         val e = store.event(eventId)?.takeIf { eventVisible(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         return invite(friendIds, null, e.id)
     }
@@ -855,6 +927,7 @@ class FakeCircleRepository(
     private val tileColors = listOf(AvatarOrange, AvatarSage, AvatarBlue, AvatarRose, AvatarTeal, AvatarAmber)
 
     override suspend fun createGroup(name: String, category: String, description: String, isPublic: Boolean): Outcome<String> {
+        offline()?.let { return it }
         if (name.isBlank()) return Outcome.Error("Add a name")
         val cat = category.trim().ifEmpty { "General" }
         val g = GroupInfo(
@@ -869,6 +942,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun takeSeat(eventId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val e = store.event(eventId)?.takeIf { eventVisible(it) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         if (e.joined || e.hostId == ME) return Outcome.Success(Unit)
         if (e.isFull) return Outcome.Error("full")
@@ -877,6 +951,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun leaveSeat(eventId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val e = store.event(eventId) ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         if (e.joined) {
             e.joined = false // the thread locks again
@@ -894,6 +969,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun addEventComment(eventId: String, text: String, replyToCommentId: String?): Outcome<Unit> {
+        offline()?.let { return it }
         val (e, d) = seatedThread(eventId); d?.let { return it }
         val t = text.trim()
         if (t.isEmpty()) return Outcome.Error("empty")
@@ -901,6 +977,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun toggleEventCommentLike(eventId: String, commentId: String): Outcome<Boolean> {
+        offline()?.let { return it }
         val (e, d) = seatedThread(eventId); d?.let { return it }
         val c = (e!!.comments + e.comments.flatMap { it.replies }).firstOrNull { it.id == commentId }
             ?.takeIf { !hiddenFromMe(it.authorId) } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
@@ -910,6 +987,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun deleteEventComment(eventId: String, commentId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val (e, d) = seatedThread(eventId); d?.let { return it }
         return deleteFrom(e!!.comments, commentId)
     }
@@ -942,6 +1020,7 @@ class FakeCircleRepository(
         topic: String,
         venue: String,
     ): Outcome<String> {
+        offline()?.let { return it }
         if (title.isBlank()) return Outcome.Error("Add a title")
         if (startsAt.isBefore(Clock.now())) return Outcome.Error("past")
         // On the map (inner ring, at its topic's angle) only if it's within the next 7 days; else the list.
@@ -963,6 +1042,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun editEvent(eventId: String, title: String, venue: String, description: String): Outcome<Unit> {
+        offline()?.let { return it }
         val e = store.event(eventId)?.takeIf { it.hostId == ME } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         if (title.isBlank()) return Outcome.Error("Add a title")
         e.title = title.trim(); e.venue = venue.trim(); e.description = description.trim()
@@ -970,6 +1050,7 @@ class FakeCircleRepository(
     }
 
     override suspend fun cancelEvent(eventId: String): Outcome<Unit> {
+        offline()?.let { return it }
         val e = store.event(eventId)?.takeIf { it.hostId == ME } ?: return Outcome.Denied(DenyReason.NOT_FOUND)
         store.events.remove(e)
         // Everyone with a seat is told (the seed's going people stand in for them).
@@ -1012,13 +1093,14 @@ class FakeCircleRepository(
     }
 
     override suspend fun markAllAlertsRead(): Outcome<Unit> {
+        offline()?.let { return it }
         store.alertsReadAt = Clock.now()
         return Outcome.Success(Unit)
     }
 
     private val aimedAtYou = setOf(AlertKind.LIKED_YOUR_NOTE, AlertKind.COMMENTED_ON_YOUR_NOTE, AlertKind.REPOSTED_YOUR_NOTE, AlertKind.QUOTED_YOUR_NOTE)
 
-    override fun alerts(): Flow<List<AlertView>> = observe {
+    override fun alerts(): Flow<List<AlertView>> = observeLoaded {
         store.alerts.filter { it.kind in aimedAtYou && wanted(it) }.mapNotNull { alertView(it) }
     }
 

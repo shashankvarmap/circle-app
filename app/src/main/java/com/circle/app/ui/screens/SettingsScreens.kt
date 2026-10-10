@@ -90,6 +90,13 @@ class SettingsViewModel(repo: CircleRepository) : RepoViewModel(repo) {
     fun unmute(id: String) = run({ unmute(id) })
     fun saveProfile(name: String, handle: String, pinned: String, avatar: String?, then: (Outcome<*>) -> Unit) =
         run({ saveProfile(name, handle, pinned, avatar) }, then)
+
+    /** Demo-only controls; null with a real backend (the rows are hidden). */
+    private val demo = repo as? com.circle.app.data.repo.DemoControls
+    val hasDemo = demo != null
+    val failing = (demo?.failing() ?: kotlinx.coroutines.flow.flowOf(false)).state(false)
+    fun setFailing(on: Boolean) = run({ demo?.setFailing(on); Outcome.Success(Unit) })
+    fun resetDemo(then: () -> Unit) = run({ demo?.resetDemoData(); Outcome.Success(Unit) }) { then() }
 }
 
 @Composable
@@ -98,6 +105,7 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
     val context = LocalContext.current
     var confirmLogout by rememberSaveable { mutableStateOf(false) }
     var inviting by rememberSaveable { mutableStateOf(false) }
+    var confirmReset by rememberSaveable { mutableStateOf(false) }
     if (inviting) com.circle.app.ui.components.InviteSheet { inviting = false }
     val vm = circleViewModel { SettingsViewModel(it) }
     val privacy by vm.privacy.collectAsStateWithLifecycle()
@@ -106,6 +114,22 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
     val circle by vm.circle.collectAsStateWithLifecycle()
     val blockedList by vm.blocked.collectAsStateWithLifecycle()
     val mutedList by vm.muted.collectAsStateWithLifecycle()
+    val failing by vm.failing.collectAsStateWithLifecycle()
+    val debuggable = remember { context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0 }
+    if (confirmReset) {
+        AlertDialog(
+            onDismissRequest = { confirmReset = false },
+            title = { Text(stringResource(R.string.settings_reset_demo_title)) },
+            text = { Text(stringResource(R.string.settings_reset_demo_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmReset = false
+                    vm.resetDemo { android.widget.Toast.makeText(context, context.getString(R.string.settings_reset_demo_done), android.widget.Toast.LENGTH_SHORT).show() }
+                }) { Text(stringResource(R.string.settings_reset_demo_confirm), color = colors.accent) }
+            },
+            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text(stringResource(R.string.cancel), color = colors.text) } }
+        )
+    }
     val version = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "?"
     }
@@ -184,6 +208,16 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
             item { NavRow(stringResource(R.string.settings_legal), null) { nav.navigate(Routes.LEGAL) } }
             item { NavRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_open_source_licenses), "Fraunces and Public Sans (SIL Open Font License)") { nav.navigate(Routes.info("licenses")) } }
             item { InfoRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_version), version) }
+
+            if (vm.hasDemo) {
+                item { SectionHeading(stringResource(R.string.settings_demo)) }
+                item { NavRow(stringResource(R.string.settings_reset_demo), stringResource(R.string.settings_reset_demo_sub)) { confirmReset = true } }
+                if (debuggable) {
+                    item {
+                        ToggleRow(stringResource(R.string.settings_debug_fail), stringResource(R.string.settings_debug_fail_sub), failing) { vm.setFailing(it) }
+                    }
+                }
+            }
 
             item { Spacer(Modifier.height(20.dp)) }
             item { ActionRow(androidx.compose.ui.res.stringResource(com.circle.app.R.string.settings_log_out), colors.text) { confirmLogout = true } }

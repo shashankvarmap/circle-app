@@ -809,4 +809,16 @@
     <string name="event_thread_empty_caps">THREAD · NO REPLIES YET</string>
     <string name="event_thread_caps">THREAD · %1$s</string>
     <string name="edit_find_by_handle">Friends can find you by @%1$s.</string>
+    <!-- Phase 11: demo controls -->
+    <string name="settings_demo">Demo</string>
+    <string name="settings_reset_demo">Reset demo data</string>
+    <string name="settings_reset_demo_sub">Puts every note, chat, friend and setting back to the start</string>
+    <string name="settings_reset_demo_title">Reset demo data?</string>
+    <string name="settings_reset_demo_body">Everything you changed in the demo goes back to how it started. You stay logged in.</string>
+    <string name="settings_reset_demo_confirm">Reset</string>
+    <string name="settings_reset_demo_done">Demo data reset.</string>
+    <string name="settings_debug_fail">Make the network fail (debug)</string>
+    <string name="settings_debug_fail_sub">Actions fail and lists show their error state, so the error screens can be checked</string>
+    <string name="chat_sending">Sending…</string>
+    <string name="chat_not_sent">Not sent · tap to retry</string>
 </resources>

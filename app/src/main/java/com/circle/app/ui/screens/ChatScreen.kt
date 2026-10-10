@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import com.circle.app.R
 import com.circle.app.data.MessageKind
@@ -104,8 +105,29 @@ class ChatViewModel(repo: CircleRepository, private val chatId: String) : RepoVi
     /** Null while loading, or when the chat isn't available to you. */
     val chat = repo.chat(chatId).state(null)
     fun markRead() = run({ markRead(chatId); com.circle.app.data.repo.Outcome.Success(Unit) })
-    fun send(text: String, replyToId: String?, then: () -> Unit) = run({ sendMessage(chatId, text, replyToId) }) {
-        if (it is com.circle.app.data.repo.Outcome.Success) then()
+    /** Messages on their way: shown as "Sending…", then "Not sent · tap to retry" if the send fails. */
+    val pending = kotlinx.coroutines.flow.MutableStateFlow<List<PendingMessage>>(emptyList())
+
+    fun send(text: String, replyToId: String?) {
+        val p = PendingMessage(java.util.UUID.randomUUID().toString(), text.trim(), replyToId)
+        if (p.text.isEmpty()) return
+        pending.value = pending.value + p
+        deliver(p)
+    }
+
+    fun retry(id: String) {
+        val p = pending.value.firstOrNull { it.id == id } ?: return
+        pending.value = pending.value.map { if (it.id == id) it.copy(failed = false) else it }
+        deliver(p)
+    }
+
+    // The inline status says what happened, so no app-wide message here.
+    private fun deliver(p: PendingMessage) {
+        viewModelScope.launch {
+            val ok = repo.sendMessage(chatId, p.text, p.replyToId) is com.circle.app.data.repo.Outcome.Success
+            pending.value = if (ok) pending.value.filterNot { it.id == p.id }
+            else pending.value.map { if (it.id == p.id) it.copy(failed = true) else it }
+        }
     }
     fun deleteForMe(messageId: String) = run({ deleteForMe(chatId, messageId) })
     fun unsend(messageId: String) = run({ unsend(chatId, messageId) })
@@ -116,6 +138,8 @@ class ChatViewModel(repo: CircleRepository, private val chatId: String) : RepoVi
     fun clearMessages() = run({ clearChat(chatId) })
     fun block(personId: String, then: () -> Unit) = run({ block(personId) }) { if (it is com.circle.app.data.repo.Outcome.Success) then() }
 }
+
+data class PendingMessage(val id: String, val text: String, val replyToId: String?, val failed: Boolean = false)
 
 /** One row of the conversation, oldest first. */
 private sealed interface ChatEntry {
@@ -181,6 +205,7 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
     }
 
     val messages = c.messages
+    val pendingList by vm.pending.collectAsStateWithLifecycle()
     val q = search.trim()
     val shownMessages = if (searching && q.isNotEmpty()) messages.filter { it.text.contains(q, ignoreCase = true) } else messages
     val rows = entries(shownMessages, if (searching) null else unreadMarker).asReversed() // reverse layout: index 0 is the newest
@@ -190,10 +215,10 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
     fun senderName(m: MessageView) = if (m.mine) youName else m.sender.firstName
 
     fun send() {
-        vm.send(draft, replyTo?.id) {
-            draft = ""; replyToId = null
-            scope.launch { listState.animateScrollToItem(0) }
-        }
+        if (draft.isBlank()) return
+        vm.send(draft, replyTo?.id)
+        draft = ""; replyToId = null
+        scope.launch { listState.animateScrollToItem(0) }
     }
 
     val baseConfig = LocalViewConfiguration.current
@@ -231,6 +256,9 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
             ) {
                 if (searching && q.isNotEmpty() && shownMessages.isEmpty()) item(key = "nomatch") {
                     Text(stringResource(R.string.chat_search_none, q), color = colors.muted, fontSize = 13.sp, modifier = Modifier.fillMaxWidth().padding(24.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+                items(pendingList.asReversed(), key = { "pending-" + it.id }) { p ->
+                    PendingRow(p) { vm.retry(p.id) }
                 }
                 items(rows, key = { it.key }) { entry ->
                     when (entry) {
@@ -596,6 +624,30 @@ private fun Bubble(m: MessageView, lastOfRun: Boolean) {
     ) {
         m.replyTo?.let { quoted -> QuotedSnippet(quoted, mine, fg) }
         Text(m.text, color = fg, fontSize = 14.5.sp, lineHeight = 20.3.sp)
+    }
+}
+
+/** A message of yours still on its way, or one that failed (tap to send it again). */
+@Composable
+private fun PendingRow(p: PendingMessage, onRetry: () -> Unit) {
+    val colors = CircleTheme.colors
+    val retryLabel = stringResource(R.string.chat_not_sent)
+    Column(
+        Modifier.fillMaxWidth().padding(top = 4.dp)
+            .then(if (p.failed) Modifier.clickable(onClickLabel = retryLabel, onClick = onRetry) else Modifier),
+        horizontalAlignment = Alignment.End
+    ) {
+        Text(
+            p.text, color = colors.onAccent, fontSize = 14.5.sp, lineHeight = 20.3.sp,
+            modifier = Modifier.widthIn(max = BubbleMaxWidth).clip(RoundedCornerShape(18.dp, 18.dp, 5.dp, 18.dp))
+                .background(colors.accent.copy(alpha = if (p.failed) 0.45f else 0.7f)).padding(horizontal = 13.dp, vertical = 9.dp)
+        )
+        Text(
+            if (p.failed) retryLabel else stringResource(R.string.chat_sending),
+            color = if (p.failed) colors.alertDot else colors.muted, fontSize = 11.5.sp,
+            fontWeight = if (p.failed) FontWeight.SemiBold else FontWeight.Normal,
+            modifier = Modifier.padding(top = 3.dp, end = 4.dp)
+        )
     }
 }
 

@@ -2,6 +2,10 @@ package com.circle.app
 
 import android.app.Application
 import android.content.Context
+import android.os.Build
+import com.circle.app.data.persist.StorePersistence
+import com.circle.app.data.repo.DemoControls
+import java.io.File
 import com.circle.app.data.media.LocalMediaStore
 import com.circle.app.data.media.MediaStore
 import com.circle.app.data.repo.CircleRepository
@@ -32,8 +36,16 @@ object AppGraph {
 
     val sessionStore: SessionStore get() = checkNotNull(session) { "AppGraph.init was not called" }
 
+    /** Demo-only controls (reset, fail switch); null when the repository is a real backend. */
+    val demo: DemoControls? get() = repository as? DemoControls
+
     fun init(context: Context) {
-        if (session == null) session = DataStoreSessionStore(context)
+        if (session != null) return
+        session = DataStoreSessionStore(context)
+        // The fake server's data survives restarts (F6). Robolectric tests start from the seed every time.
+        if (Build.FINGERPRINT != "robolectric") {
+            StorePersistence(File(context.filesDir, "circle-demo-store.json")).apply { load(); watch() }
+        }
     }
 
     /** Tests: replace the real objects. */
