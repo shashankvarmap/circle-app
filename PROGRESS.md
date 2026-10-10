@@ -43,7 +43,7 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] Failed actions (Outcome.Error / Denied) surface app-wide as a short message (`UiMessages` + `FailureMessages`); full-screen error states come with Phase 8
 - [x] String ids (UUID for new items), `Instant` timestamps (landed in Phase 2)
 - [x] `MediaStore` abstraction for media URIs (`LocalMediaStore`, 30-second video limit, test)
-- [ ] Debug "fail" switch on the fake (Phase 11)
+- [x] Debug "fail" switch on the fake (Phase 11)
 
 ## Phase 4: Posts and threads (F1)
 - [x] Quote cause found + fixed (f2886fb); Repost / Undo repost / Quote from the store
@@ -71,7 +71,7 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] List: "+" New chat, search, Messages | Groups tabs, Pinned / All chats, unread tint + dot, swipe-left Pin/Mute/Delete + long-press menu, footer, empty states, newest first
 - [x] Chat: bubbles, runs, day pills, swipe-right reply, hold Copy / Delete for me / Unsend
 - [x] Chat: ⋯ menu (Mute, Search in chat, Clear chat, Block, Report), + sheet (Photo, Invite to an event), photo messages + viewer, Jump to latest, New messages divider, Seen only with receipts on
-- [ ] Chat: "Sending…" / "Not sent · tap to retry" states (the fake never fails; comes with the Phase 11 fail switch)
+- [x] Chat: "Sending…" / "Not sent · tap to retry" states (Phase 11)
 - [x] Shared note opens thread only if allowed (NoteView); event invite opens only if visible, else the gate
 - [x] New chat flow (friends only; 1:1 or named multi-person chat in Messages)
 - [x] Group chat member avatars/names open the profile (Limited for non-friends)
@@ -107,9 +107,10 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] 48dp audit (TouchTargetTest over 14 screens), device-pass table in REPORT.md, large-font/landscape/RTL fixes
 
 ## Phase 11: Persistence (F6)
-- [ ] Room/DataStore so state survives restarts
-- [ ] "Reset demo data" in Settings
-- [ ] Debug switch: fake repository fails -> error UI
+- [x] State survives restarts (`StorePersistence`: the fake server as one JSON file, saved 300ms after changes; PersistenceTest)
+- [x] "Reset demo data" in Settings (Demo section, confirmed)
+- [x] Debug switch (debug builds): actions fail, Home/Messages/Alerts show the error state, chat shows Not sent · tap to retry
+- [ ] Verify Phase 11 on the emulator (restart keeps a like; reset; fail switch)
 
 ## Phase 12: Final pass
 - [ ] Click-through (section 5) in night and day, pass/fail table
