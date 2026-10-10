@@ -96,6 +96,8 @@ class SettingsViewModel(repo: CircleRepository) : RepoViewModel(repo) {
     val hasDemo = demo != null
     val failing = (demo?.failing() ?: kotlinx.coroutines.flow.flowOf(false)).state(false)
     fun setFailing(on: Boolean) = run({ demo?.setFailing(on); Outcome.Success(Unit) })
+    val autoAccept = (demo?.autoAccept() ?: kotlinx.coroutines.flow.flowOf(false)).state(false)
+    fun setAutoAccept(on: Boolean) = run({ demo?.setAutoAccept(on); Outcome.Success(Unit) })
     fun resetDemo(then: () -> Unit) = run({ demo?.resetDemoData(); Outcome.Success(Unit) }) { then() }
 }
 
@@ -115,6 +117,7 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
     val blockedList by vm.blocked.collectAsStateWithLifecycle()
     val mutedList by vm.muted.collectAsStateWithLifecycle()
     val failing by vm.failing.collectAsStateWithLifecycle()
+    val autoAccept by vm.autoAccept.collectAsStateWithLifecycle()
     val debuggable = remember { context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0 }
     if (confirmReset) {
         AlertDialog(
@@ -212,6 +215,11 @@ fun SettingsScreen(nav: NavHostController, onLogOut: () -> Unit, onAccountDelete
             if (vm.hasDemo) {
                 item { SectionHeading(stringResource(R.string.settings_demo)) }
                 item { NavRow(stringResource(R.string.settings_reset_demo), stringResource(R.string.settings_reset_demo_sub)) { confirmReset = true } }
+                if (com.circle.app.BuildConfig.PREVIEW) {
+                    item {
+                        ToggleRow(stringResource(R.string.settings_demo_auto_accept), stringResource(R.string.settings_demo_auto_accept_sub), autoAccept) { vm.setAutoAccept(it) }
+                    }
+                }
                 if (debuggable) {
                     item {
                         ToggleRow(stringResource(R.string.settings_debug_fail), stringResource(R.string.settings_debug_fail_sub), failing) { vm.setFailing(it) }

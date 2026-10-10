@@ -13,4 +13,8 @@ interface DemoControls {
 
     /** Puts the demo back to its seed data (the saved copy follows). */
     suspend fun resetDemoData()
+
+    /** Preview builds: sample people accept your friend requests a few seconds after you send them. */
+    fun autoAccept(): Flow<Boolean>
+    suspend fun setAutoAccept(on: Boolean)
 }

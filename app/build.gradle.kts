@@ -21,9 +21,12 @@ android {
         debug {
             // en-XA (longer text) and ar-XB (right to left) appear in the phone's language list for the device pass.
             isPseudoLocalesEnabled = true
+            // Preview build: demo-only helpers (Settings > Demo, the "no text message is sent" line, preview prices).
+            buildConfigField("boolean", "PREVIEW", "true")
         }
         release {
             isMinifyEnabled = false
+            buildConfigField("boolean", "PREVIEW", "false")
         }
     }
 
@@ -41,6 +44,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     testOptions {
         unitTests.isReturnDefaultValues = true

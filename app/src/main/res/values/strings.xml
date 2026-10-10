@@ -825,4 +825,8 @@
     <string name="settings_licenses_sub">Fraunces and Public Sans (SIL Open Font License)</string>
     <string name="chat_sending">Sending…</string>
     <string name="chat_not_sent">Not sent · tap to retry</string>
+
+    <!-- Demo: auto-accept (preview builds only) -->
+    <string name="settings_demo_auto_accept">Sample people accept my requests after 5 seconds</string>
+    <string name="settings_demo_auto_accept_sub">Preview only. Lets you try Add friend from start to finish.</string>
 </resources>

@@ -32,7 +32,7 @@ object AppGraph {
 
     /** The only door to data for the UI (through ViewModels). */
     val repository: CircleRepository
-        get() = repo ?: FakeCircleRepository().also { repo = it }
+        get() = repo ?: FakeCircleRepository(autoAccept = BuildConfig.PREVIEW).also { repo = it }
 
     val sessionStore: SessionStore get() = checkNotNull(session) { "AppGraph.init was not called" }
 

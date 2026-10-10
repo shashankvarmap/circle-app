@@ -16,6 +16,7 @@ import com.circle.app.data.access.Relationship
 import com.circle.app.data.access.SharedCardAccess
 import com.circle.app.ui.theme.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 /**
  * The repository over the in-memory [CircleStore] (the fake server). Every read asks
@@ -25,6 +26,10 @@ import kotlinx.coroutines.flow.Flow
 class FakeCircleRepository(
     private val store: CircleStore = CircleStore,
     val cache: ContentCache = ContentCache(),
+    /** Demo switch "Sample people accept my requests after 5 seconds"; the app turns it on in preview builds. */
+    autoAccept: Boolean = false,
+    private val autoAcceptDelayMs: Long = 5_000,
+    demoDispatcher: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.Main,
 ) : CircleRepository, DemoControls {
 
     private fun <T> observe(block: () -> T): Flow<T> = snapshotFlow(block)
@@ -35,6 +40,21 @@ class FakeCircleRepository(
 
     override fun failing(): Flow<Boolean> = observe { failingState }
     override suspend fun setFailing(on: Boolean) { failingState = on }
+
+    private var autoAcceptState by androidx.compose.runtime.mutableStateOf(autoAccept)
+    private val demoScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + demoDispatcher)
+
+    override fun autoAccept(): Flow<Boolean> = observe { autoAcceptState }
+    override suspend fun setAutoAccept(on: Boolean) { autoAcceptState = on }
+
+    /** Stands in for the other person tapping Accept. Does nothing if you cancelled meanwhile. */
+    private fun scheduleAutoAccept(personId: String) {
+        if (!autoAcceptState) return
+        demoScope.launch {
+            kotlinx.coroutines.delay(autoAcceptDelayMs)
+            if (autoAcceptState) acceptedByThem(personId)
+        }
+    }
 
     override suspend fun resetDemoData() {
         store.reset()
@@ -367,7 +387,7 @@ class FakeCircleRepository(
     }
 
     override fun contactMatches(): Flow<List<PersonResult>> = observe {
-        listOf("PK", "JL", "AO", "LB").mapNotNull { id -> store.person(id)?.takeIf { !hiddenFromMe(id) }?.let { result(it) } }
+        Seed.contactMatchIds.mapNotNull { id -> store.person(id)?.takeIf { !hiddenFromMe(id) }?.let { result(it) } }
     }
 
     override fun incomingRequests(): Flow<List<RequestView>> = observe {
@@ -387,7 +407,7 @@ class FakeCircleRepository(
         offline()?.let { return it }
         if (store.person(personId) == null) return Outcome.Denied(DenyReason.NOT_FOUND)
         return when (rel(personId)) {
-            Relationship.NONE -> { store.outgoingRequestIds.add(personId); Outcome.Success(Unit) }
+            Relationship.NONE -> { store.outgoingRequestIds.add(personId); scheduleAutoAccept(personId); Outcome.Success(Unit) }
             Relationship.REQUEST_SENT -> Outcome.Success(Unit)
             Relationship.BLOCKED_BY_ME, Relationship.BLOCKED_ME -> Outcome.Denied(DenyReason.BLOCKED)
             else -> Outcome.Error("not possible")
@@ -511,7 +531,7 @@ class FakeCircleRepository(
         offline()?.let { return it }
         // The fake has no phone numbers on file, so it can't match; it returns the demo's "people you may know"
         // and keeps nothing. The real server matches the hashes and deletes them at once.
-        return Outcome.Success(listOf("PK", "JL", "AO", "LB").mapNotNull { id -> store.person(id)?.takeIf { !hiddenFromMe(id) }?.let { result(it) } })
+        return Outcome.Success(Seed.contactMatchIds.mapNotNull { id -> store.person(id)?.takeIf { !hiddenFromMe(id) }?.let { result(it) } })
     }
 
     override fun inviteLink(): Flow<String> = observe { "circle.app/i/${store.profile.handle}" }

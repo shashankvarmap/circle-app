@@ -13,6 +13,8 @@ class ActionsViewModel(repo: CircleRepository) : RepoViewModel(repo) {
     fun repost(noteId: String) = run({ repost(noteId) })
     fun undoRepost(noteId: String) = run({ undoRepost(noteId) })
 
+    /** Your relationship to someone, live (only yours: never who they are friends with). */
+    fun relationship(personId: String) = repo.relationshipTo(personId)
     fun sendFriendRequest(personId: String, onResult: (Outcome<Unit>) -> Unit = {}) = run({ sendFriendRequest(personId) }, onResult)
     fun cancelFriendRequest(personId: String, onResult: (Outcome<Unit>) -> Unit = {}) = run({ cancelFriendRequest(personId) }, onResult)
     fun acceptRequest(personId: String, onResult: (Outcome<Unit>) -> Unit = {}) = run({ acceptRequest(personId) }, onResult)

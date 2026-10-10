@@ -23,6 +23,7 @@ import androidx.compose.foundation.border
 import androidx.compose.ui.res.stringResource
 import com.circle.app.R
 import com.circle.app.ui.a11y.rememberReduceMotion
+import com.circle.app.ui.components.FriendRequestButton
 import com.circle.app.ui.components.Avatar
 import com.circle.app.ui.components.GroupTile
 import com.circle.app.ui.components.SectionLabel
@@ -123,11 +124,16 @@ private fun GroupOrbit(group: GroupView, hosts: List<PersonRef>, members: List<P
 private fun GroupList(hosts: List<PersonRef>, members: List<PersonRef>, hidden: Int, onPerson: (String) -> Unit, host: HostActions?) {
     Column {
         ListHeading(androidx.compose.ui.res.stringResource(com.circle.app.R.string.grouppeople_hosts))
-        hosts.forEach { PersonListRow(it, androidx.compose.ui.res.stringResource(com.circle.app.R.string.grouppeople_host), onPerson) }
+        hosts.forEach { h ->
+            PersonListRow(h, androidx.compose.ui.res.stringResource(com.circle.app.R.string.grouppeople_host), onPerson) {
+                if (!h.isMe) FriendRequestButton(h.id, null)
+            }
+        }
         ListHeading(androidx.compose.ui.res.stringResource(com.circle.app.R.string.grouppeople_members))
         members.forEach { m ->
             PersonListRow(m, androidx.compose.ui.res.stringResource(com.circle.app.R.string.grouppeople_member), onPerson) {
                 if (host != null) SmallPill(stringResource(R.string.group_remove), filled = false) { host.remove(m.id) }
+                else if (!m.isMe) FriendRequestButton(m.id, null)
             }
         }
         if (hidden > 0) {

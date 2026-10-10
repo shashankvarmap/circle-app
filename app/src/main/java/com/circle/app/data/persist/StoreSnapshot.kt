@@ -74,7 +74,7 @@ data class StoreSnapshot(
     val notifications: NotifS,
 ) {
     companion object {
-        const val VERSION = 1
+        const val VERSION = 2
     }
 }
 

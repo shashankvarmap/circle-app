@@ -53,7 +53,13 @@ internal object Seed {
         Person("EV", "Elena Voss", AvatarRose, 0, "Museums on rainy days, the Lousberg on sunny ones."),
         Person("LB", "Lukas Brandt", AvatarRose, 0, "Architecture student. Always sketching."),
         Person("NK", "Nora Kim", AvatarAmber, 0, "Cyclist. Will talk about bread."),
+        Person("DW", "Daniel Weiss", AvatarBlue, 0, "Film photography, slow mornings."),
+        Person("HS", "Hana Sato", AvatarTeal, 0, "Climbing on weekdays, ramen on weekends."),
+        Person("FB", "Felix Braun", AvatarSage, 0, "Teaching myself the piano, one song at a time."),
     )
+
+    /** "People you may know" from contacts: three friends and every non-friend above. */
+    val contactMatchIds = listOf("PK", "JL", "AO") + others.map { it.id }
     fun incomingRequests() = listOf(
         FriendRequest("RS", ago(m = 50)),
         FriendRequest("MD", ago(h = 3)),
@@ -157,7 +163,7 @@ internal object Seed {
             AvatarOrange, isPublic = true, compassDeg = 322f, memberCount = 128, isMember = true
         ).apply {
             hostIds.addAll(listOf("PK", "JL"))
-            memberIds.addAll(listOf("AO", "TN", "RS", "EK", "MD", "SY", "NB", "EV", "OH"))
+            memberIds.addAll(listOf("AO", "TN", "RS", "EK", "MD", "SY", "NB", "EV", "OH", "NK", "DW", "HS", "FB"))
             joinRequests.addAll(listOf("LB" to ago(h = 2), "CZ" to ago(d = 1)))
         },
         GroupInfo(

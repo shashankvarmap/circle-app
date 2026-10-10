@@ -274,29 +274,54 @@ fun ReplyComposer(
 }
 
 /**
- * Add friend / Requested (tap to cancel) / Accept / ✓ Friends, by relationship. Requests are
- * never instant. Shared by Contacts, Explore search and lists of people.
+ * Add friend -> Requested (tap: Cancel request) / Accept / ✓ Friends, by relationship. Requests are
+ * never instant. Follows the live relationship, so the button changes as soon as a request is sent,
+ * cancelled or accepted; [relationship] is only the first value (null: draw nothing until known).
+ * Shared by Find friends, Explore search and group member lists.
  */
 @Composable
-fun FriendRequestButton(personId: String, relationship: Relationship, addLabel: String = androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_add_friend)) {
+fun FriendRequestButton(personId: String, relationship: Relationship?, addLabel: String = androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_add_friend)) {
     val colors = CircleTheme.colors
     val actions = circleViewModel { ActionsViewModel(it) }
+    val live by remember(personId) { actions.relationship(personId) }.collectAsState(relationship)
     val shape = RoundedCornerShape(999.dp)
-    when (relationship) {
+    // 48dp touch height around a compact pill.
+    val target = Modifier.heightIn(min = 48.dp)
+    when (live) {
         Relationship.NONE -> Box(
-            Modifier.clip(shape).background(colors.accent).clickable { actions.sendFriendRequest(personId) }
-                .padding(horizontal = 14.dp, vertical = 7.dp)
-        ) { Text(addLabel, color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
-        Relationship.REQUEST_SENT -> Box(
-            Modifier.clip(shape).border(1.dp, colors.border, shape)
-                .clickable { actions.cancelFriendRequest(personId) }
-                .then(Modifier.label(androidx.compose.ui.res.stringResource(com.circle.app.R.string.request_cancel_label)))
-                .padding(horizontal = 14.dp, vertical = 7.dp)
-        ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_requested), color = colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
+            target.clip(shape).clickable(role = androidx.compose.ui.semantics.Role.Button) { actions.sendFriendRequest(personId) },
+            contentAlignment = Alignment.Center
+        ) {
+            Box(Modifier.clip(shape).background(colors.accent).padding(horizontal = 14.dp, vertical = 7.dp)) {
+                Text(addLabel, color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+        }
+        Relationship.REQUEST_SENT -> {
+            var menu by remember { mutableStateOf(false) }
+            Box(
+                target.clip(shape).clickable(role = androidx.compose.ui.semantics.Role.Button) { menu = true }
+                    .then(Modifier.label(androidx.compose.ui.res.stringResource(com.circle.app.R.string.request_cancel_label))),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(Modifier.clip(shape).border(1.dp, colors.border, shape).padding(horizontal = 14.dp, vertical = 7.dp)) {
+                    Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_requested), color = colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                }
+                androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = colors.surface) {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_cancel_request), color = colors.text) },
+                        onClick = { menu = false; actions.cancelFriendRequest(personId) }
+                    )
+                }
+            }
+        }
         Relationship.REQUEST_RECEIVED -> Box(
-            Modifier.clip(shape).background(colors.accent).clickable { actions.acceptRequest(personId) }
-                .padding(horizontal = 14.dp, vertical = 7.dp)
-        ) { Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_accept), color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+            target.clip(shape).clickable(role = androidx.compose.ui.semantics.Role.Button) { actions.acceptRequest(personId) },
+            contentAlignment = Alignment.Center
+        ) {
+            Box(Modifier.clip(shape).background(colors.accent).padding(horizontal = 14.dp, vertical = 7.dp)) {
+                Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_accept), color = colors.onAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+        }
         Relationship.FRIEND -> Box(Modifier.padding(horizontal = 14.dp, vertical = 7.dp)) {
             Text(androidx.compose.ui.res.stringResource(com.circle.app.R.string.profile_friends_check), color = colors.accent, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
         }
