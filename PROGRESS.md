@@ -119,3 +119,7 @@ Build/verify notes: run gradle from PowerShell (`.\gradlew.bat build *>&1`) so K
 - [x] Remove dead buttons; re-read Rejected list
 - [x] BACKEND_READINESS.md (complete), LAUNCH_CHECKLIST.md
 - [x] Fresh-install commands + summary to the owner
+
+## Owner fixes (2026-10-10)
+- [x] 1. Compose layout: text, media/quote under it, bottom bar pinned above the keyboard; ComposeScreenshotTest
+Next: 2. reproduce Add friend failure for Priya Kapoor, then seed 5 non-friends + Demo auto-accept.
