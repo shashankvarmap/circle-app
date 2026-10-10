@@ -94,7 +94,9 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
     val life = group.lifetime
     var extending by rememberSaveable { mutableStateOf(false) }
     fun toast(text: String) = android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show()
-    val saveSoon = stringResource(R.string.timed_save_copy_soon)
+    var saving by rememberSaveable { mutableStateOf(false) }
+    val savedToast = stringResource(R.string.save_done_toast)
+    if (saving) com.circle.app.ui.components.SaveCopySheet(group.id, onDismiss = { saving = false }, onSaved = { toast(savedToast) })
     if (extending && life != null) {
         val permanentDone = stringResource(R.string.extend_permanent_done_group)
         val endDone = stringResource(R.string.extend_end_done)
@@ -151,7 +153,7 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
                     Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.group_options), tint = CircleTheme.colors.text)
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    if (life?.canSaveCopy == true) DropdownMenuItem(text = { Text(stringResource(R.string.timed_save_copy)) }, onClick = { menu = false; toast(saveSoon) })
+                    if (life?.canSaveCopy == true) DropdownMenuItem(text = { Text(stringResource(R.string.timed_save_copy)) }, onClick = { menu = false; saving = true })
                     if (life?.canChange == true) DropdownMenuItem(text = { Text(stringResource(R.string.timed_menu_extend)) }, onClick = { menu = false; extending = true })
                     if (group.iAmHost && group.isOpen) DropdownMenuItem(text = { Text(stringResource(R.string.group_edit)) }, onClick = { menu = false; dialog = GroupDialog.EDIT })
                     if (isMember && group.isOpen) DropdownMenuItem(text = { Text(stringResource(R.string.group_invite)) }, onClick = { menu = false; dialog = GroupDialog.INVITE })
@@ -194,7 +196,7 @@ fun GroupScreen(nav: NavHostController, groupId: String?) {
             }
             if (life != null && isMember) item {
                 com.circle.app.ui.components.LifetimeBanner(
-                    life, isGroupChat = true, onSave = { toast(saveSoon) }, onExtend = { extending = true },
+                    life, isGroupChat = true, onSave = { saving = true }, onExtend = { extending = true },
                     modifier = Modifier.padding(horizontal = 0.dp), onGroupScreen = true
                 )
             }

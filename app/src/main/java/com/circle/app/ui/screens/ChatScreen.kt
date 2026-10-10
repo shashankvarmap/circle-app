@@ -220,7 +220,9 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
     }
     var extending by rememberSaveable { mutableStateOf(false) }
     fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
-    val saveSoon = stringResource(R.string.timed_save_copy_soon)
+    var saving by rememberSaveable { mutableStateOf(false) }
+    val savedToast = stringResource(R.string.save_done_toast)
+    if (saving) com.circle.app.ui.components.SaveCopySheet(c.id, onDismiss = { saving = false }, onSaved = { toast(savedToast) })
     val life = c.lifetime
     if (extending && life != null) {
         val permanentDone = stringResource(if (c.kind == ChatKind.GROUP) R.string.extend_permanent_done_group else R.string.extend_permanent_done_chat)
@@ -277,10 +279,10 @@ fun ChatScreen(nav: NavHostController, chatId: String) {
         if (searching) ChatSearchBar(search, { search = it }, onClose = { searching = false; search = "" })
         else ChatTopBar(
             nav, c, vm, onSearch = { searching = true }, onReport = { reporting = true },
-            onSave = { toast(saveSoon) }, onExtend = { extending = true },
+            onSave = { saving = true }, onExtend = { extending = true },
         )
         if (life != null && !searching) {
-            com.circle.app.ui.components.LifetimeBanner(life, isGroupChat = c.kind == ChatKind.GROUP, onSave = { toast(saveSoon) }, onExtend = { extending = true })
+            com.circle.app.ui.components.LifetimeBanner(life, isGroupChat = c.kind == ChatKind.GROUP, onSave = { saving = true }, onExtend = { extending = true })
         }
 
         Box(Modifier.weight(1f).fillMaxWidth()) {

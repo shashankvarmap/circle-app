@@ -54,7 +54,10 @@ fun NotificationsScreen(nav: NavHostController) {
     val vm = circleViewModel { AlertsViewModel(it) }
     val requests by vm.requests.collectAsStateWithLifecycle()
     val alertsLoad by vm.alerts.collectAsStateWithLifecycle()
+    // The server doesn't know who saved a copy; this phone does, and hides "deleted tomorrow" for those (TIMED_GROUPS 7).
+    val savedCopies by androidx.compose.runtime.remember { com.circle.app.AppGraph.savedCopies.saved() }.collectAsStateWithLifecycle(emptySet())
     val alerts = (alertsLoad as? com.circle.app.ui.vm.Load.Ready)?.value.orEmpty()
+        .filterNot { it.kind == AlertKind.TIMED_DELETED_TOMORROW && it.timed?.id in savedCopies }
     val hasUnread by vm.hasUnread.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()

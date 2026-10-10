@@ -899,7 +899,43 @@
     <string name="timed_deleted_on">Deleted on %1$s.</string>
     <string name="timed_ended_body">It\'s read-only now. Save a copy before it goes. Anything you saved stays on your phone.</string>
     <string name="timed_save_copy">Save a copy</string>
-    <string name="timed_save_copy_soon">Saving a copy comes in the next update.</string>
+    <string name="save_channel">Saving a copy</string>
+    <string name="save_title">Save a copy</string>
+    <string name="save_intro">A ZIP file on your phone. Only you get it. Circle doesn\'t keep a copy of your copy, and nobody sees whether you saved one.</string>
+    <string name="save_everything">Everything</string>
+    <string name="save_text_only">Text only</string>
+    <plurals name="save_n_chat_messages">
+        <item quantity="one">%1$s chat message</item>
+        <item quantity="other">%1$s chat messages</item>
+    </plurals>
+    <plurals name="save_n_messages">
+        <item quantity="one">%1$s message</item>
+        <item quantity="other">%1$s messages</item>
+    </plurals>
+    <plurals name="save_n_media">
+        <item quantity="one">%1$s photo or video</item>
+        <item quantity="other">%1$s photos and videos</item>
+    </plurals>
+    <string name="save_desc_group_all">Posts, comments, %1$s, %2$s, member names</string>
+    <string name="save_desc_chat_all">%1$s, %2$s, member names</string>
+    <string name="save_desc_group_text">Posts, comments and chat messages, no photos or videos</string>
+    <string name="save_desc_chat_text">Messages and member names, no photos or videos</string>
+    <string name="save_names_only">Member names only. No phone numbers.</string>
+    <string name="save_to_phone">Save to my phone</string>
+    <string name="save_preparing">Preparing your copy</string>
+    <string name="save_keep_open">Keep Circle open for a moment.</string>
+    <string name="save_cancel">Cancel</string>
+    <string name="save_done_title">Saved to your phone</string>
+    <string name="save_where_downloads">Downloads · %1$s</string>
+    <string name="save_where_app">Downloads (Circle\'s folder) · %1$s</string>
+    <string name="save_done">Done</string>
+    <string name="save_done_toast">Saved to Downloads</string>
+    <string name="save_try_again">Try again</string>
+    <string name="save_fail_offline">You\'re offline. Try again when you\'re connected.</string>
+    <string name="save_fail_disk">Your phone is out of space. Free some up and try again.</string>
+    <string name="save_fail_gone">This was deleted before your copy was ready. Nothing was saved.</string>
+    <string name="save_fail_other">Your copy couldn\'t be saved. Try again.</string>
+    <string name="save_progress_cd">%1$d percent</string>
     <string name="timed_extend_or_keep">Extend or keep it</string>
     <string name="timed_read_only">Read-only. This chat has ended.</string>
     <string name="timed_deleted_title">This chat has ended and was deleted.</string>

@@ -22,6 +22,11 @@ object AppGraph {
     private var repo: CircleRepository? = null
     private var media: MediaStore? = null
     private var billingImpl: com.circle.app.data.billing.MembershipBilling? = null
+    private var saved: com.circle.app.data.session.SavedCopies? = null
+
+    /** Which temporary groups and chats this phone saved a copy of (local only; the server never knows). */
+    val savedCopies: com.circle.app.data.session.SavedCopies
+        get() = saved ?: com.circle.app.data.session.MemorySavedCopies().also { saved = it }
 
     /** Membership billing: a fake with preview prices for the sign-up country until Play Billing is set up. */
     val billing: com.circle.app.data.billing.MembershipBilling
@@ -44,6 +49,7 @@ object AppGraph {
     fun init(context: Context) {
         if (session != null) return
         session = DataStoreSessionStore(context)
+        saved = com.circle.app.data.session.PrefsSavedCopies(context)
         // The fake server's data survives restarts (F6). Robolectric tests start from the seed every time.
         if (Build.FINGERPRINT != "robolectric") {
             StorePersistence(File(context.filesDir, "circle-demo-store.json")).apply { load(); watch() }
